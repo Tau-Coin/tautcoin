@@ -25,6 +25,8 @@
 
 #include <univalue.h>
 
+#include "txdb.h"
+
 using namespace std;
 
 int64_t nWalletUnlockTime;
@@ -713,6 +715,13 @@ UniValue getbalance(const UniValue& params, bool fHelp)
             nBalance -= allFee;
         }
         return  ValueFromAmount(nBalance);
+    }
+    else if(params[0].get_str().length() > 32 && params[0].get_str().length() < 36)
+    {
+        CAmount value;
+        CBalanceViewDB balance;
+        balance.GetBalance(params[0].get_str(), value);
+        return value / 1.0 / COIN;
     }
 
     string strAccount = AccountFromValue(params[0]);

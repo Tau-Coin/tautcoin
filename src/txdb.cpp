@@ -213,3 +213,132 @@ bool CBlockTreeDB::LoadBlockIndexGuts(boost::function<CBlockIndex*(const uint256
 
     return true;
 }
+
+bool CBalanceViewDB::WriteDB(std::string key, CAmount value, int nHeight)
+{
+    leveldb::DB* db;
+    leveldb::Options options;
+    options.create_if_missing = true;
+    std::string db_path = GetDataDir(true).string() + std::string("/balance");
+
+
+    leveldb::Status status = leveldb::DB::Open(options, db_path, &db);
+    if(!status.ok()){
+        std::cout<<"Failed to open leveldb: "<<db_path<<std::endl;
+        return false;
+    }
+
+    std::stringstream ssVal;
+    ssVal << value;
+    std::string strValue;
+    ssVal >> strValue;
+
+    std::stringstream ssHeight;
+    std::string strHeight;
+    ssHeight << nHeight;
+    ssHeight >> strHeight;
+
+    status = db->Put(leveldb::WriteOptions(), key+"_"+strHeight, strValue);
+    if(!status.ok()){
+        std::cout<<"Failed to write leveldb: "<<db_path<<std::endl;
+        return false;
+    }
+
+    delete db;
+    return true;
+}
+
+bool CBalanceViewDB::ReadDB(std::string key, CAmount& value, int nHeight)
+{
+    leveldb::DB* db;
+    leveldb::Options options;
+    options.create_if_missing = false;
+    std::string db_path = GetDataDir(true).string() + "/balance";
+
+    leveldb::Status status = leveldb::DB::Open(options, db_path, &db);
+    if(!status.ok()){
+        std::cout<<"Failed to open leveldb: "<<db_path<<std::endl;
+        return false;
+    }
+
+    std::stringstream ssHeight;
+    std::string strHeight;
+    ssHeight << nHeight;
+    ssHeight >> strHeight;
+
+    std::string strValue;
+    status = db->Get(leveldb::ReadOptions(), key+"_"+strHeight, &strValue);
+    if(!status.ok()){
+//        std::cout<<"Failed to read leveldb: "<<db_path<<std::endl;
+        value = 0;
+        delete db;
+        return true;
+    }
+
+    std::istringstream ssVal(strValue);
+    ssVal >> value;
+
+    delete db;
+    return true;
+}
+
+bool CBalanceViewDB::GetBalance(std::string address, int nHeight, CAmount& amount)
+{
+    return ReadDB(address, amount, nHeight);
+}
+
+bool CBalanceViewDB::UpdateBalance(const CTransaction& tx, const CCoinsViewCache& inputs, int nHeight)
+{
+    nlastHeight = nHeight;
+
+    if (tx.vout.size() > 0)
+    {
+        CBitcoinAddress addr;
+
+        if (!tx.IsCoinBase() && tx.vin.size() > 0)
+        {
+            for(uint i = 0; i < tx.vin.size(); i++)
+            {
+
+                const CCoins* coins = inputs.AccessCoins(tx.vin[i].prevout.hash);
+                assert(coins);
+
+                std::string address;
+                addr.ScriptPub2Addr(coins->vout[tx.vin[i].prevout.n].scriptPubKey, address);
+
+                CAmount val = 0;
+                if (nHeight > 0)
+                {
+                    if (!GetBalance(address, nHeight - 1, val))
+                        return false;
+                    val -= coins->vout[tx.vin[i].prevout.n].nValue;
+
+                    if (!WriteDB(address, val, nHeight))
+                        return false;
+                }
+            }
+        }
+
+        for(uint o = 0; o < tx.vout.size(); o++)
+        {
+            if (tx.vout[o].nValue <= 0)
+                continue;
+
+            std::string address;
+            addr.ScriptPub2Addr(tx.vout[o].scriptPubKey, address);
+
+            CAmount val = 0;
+            if (nHeight > 0)
+            {
+                if (!GetBalance(address, nHeight - 1, val))
+                    val = 0;
+            }
+            val += tx.vout[o].nValue;
+
+            if (!WriteDB(address, val, nHeight))
+                return false;
+        }
+    }
+
+    return true;
+}

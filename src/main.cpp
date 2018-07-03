@@ -37,6 +37,7 @@
 #include "utilstrencodings.h"
 #include "validationinterface.h"
 #include "versionbits.h"
+#include "base58.h"
 
 #include <atomic>
 #include <sstream>
@@ -2301,6 +2302,18 @@ bool ConnectBlock(const CBlock& block, CValidationState& state, CBlockIndex* pin
 {
     AssertLockHeld(cs_main);
 
+    // Special case for the genesis block
+    if (block.GetHash() == chainparams.GetConsensus().hashGenesisBlock) {
+        if (!fJustCheck)
+            view.SetBestBlock(pindex->GetBlockHash());
+
+        UpdateCoins(block.vtx[0], view, 0);
+        CBalanceViewDB balance;
+        if (!balance.UpdateBalance(block.vtx[0], view, 0))
+            cout<<"Failed to update balance db in genesis block!"<<endl;
+        return true;
+    }
+
     int64_t nTimeStart = GetTimeMicros();
 
     // Check it again in case a previous version let a bad block in
@@ -2310,16 +2323,6 @@ bool ConnectBlock(const CBlock& block, CValidationState& state, CBlockIndex* pin
     // verify that the view's current state corresponds to the previous block
     uint256 hashPrevBlock = pindex->pprev == NULL ? uint256() : pindex->pprev->GetBlockHash();
     assert(hashPrevBlock == view.GetBestBlock());
-
-    // Special case for the genesis block, skipping connection of its transactions
-    // (its coinbase is unspendable)
-    if (block.GetHash() == chainparams.GetConsensus().hashGenesisBlock) {
-        if (!fJustCheck)
-            view.SetBestBlock(pindex->GetBlockHash());
-
-        UpdateCoins(block.vtx[0], view, 0);
-        return true;
-    }
 
     bool fScriptChecks = true;
     if (fCheckpointsEnabled) {
@@ -2476,6 +2479,9 @@ bool ConnectBlock(const CBlock& block, CValidationState& state, CBlockIndex* pin
         if (i > 0) {
             blockundo.vtxundo.push_back(CTxUndo());
         }
+        CBalanceViewDB balance;
+        if (!balance.UpdateBalance(tx, view, pindex->nHeight))
+            cout<<"Failed to update balance db!"<<endl;
         UpdateCoins(tx, view, i == 0 ? undoDummy : blockundo.vtxundo.back(), pindex->nHeight);
 
         vPos.push_back(std::make_pair(tx.GetHash(), pos));
