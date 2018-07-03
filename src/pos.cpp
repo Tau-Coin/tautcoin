@@ -149,7 +149,7 @@ uint64_t calculateHitOfPOS(const uint256 &phash){
     memcpy(&hit,phash.begin(),8);
     return hit;
 }
-//注意这里CblockHeader是Cblock的父类，用多态的形式实现 const CBlockHeader *pblock
+//watch out that CblockHeader is parent of Cblock
 uint64_t getNextPosRequired(const CBlockIndex* pindexLast){
    uint64_t baseTargetLimt = 153722867; //genesis block base target
    if(pindexLast == NULL){
