@@ -1701,7 +1701,7 @@ CAmount GetBlockSubsidy(int nHeight, const Consensus::Params& consensusParams)
     CAmount nSubsidy = 50 * COIN;
     // Subsidy is cut in half every 210,000 blocks which will occur approximately every 4 years.
     nSubsidy >>= halvings;
-    return nSubsidy;
+    return 0;//nSubsidy;
 }
 
 bool IsInitialBlockDownload()
@@ -2316,6 +2316,8 @@ bool ConnectBlock(const CBlock& block, CValidationState& state, CBlockIndex* pin
     if (block.GetHash() == chainparams.GetConsensus().hashGenesisBlock) {
         if (!fJustCheck)
             view.SetBestBlock(pindex->GetBlockHash());
+
+        UpdateCoins(block.vtx[0], view, 0);
         return true;
     }
 
@@ -4303,6 +4305,36 @@ bool LoadBlockIndex()
 bool InitBlockIndex(const CChainParams& chainparams) 
 {
     LOCK(cs_main);
+
+    /// -----------------------Added by shengxianshui begin-----------------------
+//            arith_uint256 bnTarget;
+//            bool fNegative;
+//            bool fOverflow;
+//            uint256 hashGenesisBlock;
+//            block.nBits    = 0x1f00ffff;
+//            bnTarget.SetCompact(block.nBits, &fNegative, &fOverflow);
+//            //LogPrintf("ProofOfWorkLimit %s\n", Params().ProofOfWorkLimit().ToString());
+//            if (fNegative || bnTarget == 0 || fOverflow || bnTarget > UintToArith256(chainparams.GetConsensus().powLimit)) {
+//                error("InitBlockIndex CheckProofOfWork() : nBits below minimum work");
+//            } else {
+//                block.nTime = 1529042124;//1231006505;
+//                LogPrintf("block.nTime %d\n", block.nTime);
+//                LogPrintf("bnTarget %s\n", bnTarget.ToString());
+//                block.nNonce = 0;
+//                while (true) {
+//                    if (block.nNonce%1000000000 == 0)
+//                        LogPrintf("block.nNonce--- %d\n", block.nNonce);
+//                    hashGenesisBlock = block.GetHash();
+//                    if (UintToArith256(hashGenesisBlock) <= bnTarget)
+//                        break;
+//                    block.nNonce++;
+//                }
+//                LogPrintf("block.nNonce******** %d\n", block.nNonce);
+//                LogPrintf("hashGenesisBlock******** %s\n", hashGenesisBlock.ToString());
+//                LogPrintf("hashMerkleRoot******** %s\n", block.hashMerkleRoot.ToString());
+//            }
+//            return false;
+    /// -----------------------Added by shengxianshui end-----------------------
 
     // Initialize global variables that cannot be constructed at startup.
     recentRejects.reset(new CRollingBloomFilter(120000, 0.000001));

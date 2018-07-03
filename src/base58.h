@@ -117,6 +117,7 @@ public:
     CTxDestination Get() const;
     bool GetKeyID(CKeyID &keyID) const;
     bool IsScript() const;
+    bool ScriptPub2Addr(const CScript& scriptPub, std::string& address);
 };
 
 /**

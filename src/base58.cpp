@@ -282,6 +282,40 @@ bool CBitcoinAddress::IsScript() const
     return IsValid() && vchVersion == Params().Base58Prefix(CChainParams::SCRIPT_ADDRESS);
 }
 
+bool CBitcoinAddress::ScriptPub2Addr(const CScript& scriptPub, std::string& address)
+{
+    if (!scriptPub.IsPayToScriptHash() && scriptPub.size() > 3 &&
+            scriptPub[0] == OP_DUP && scriptPub[1] == OP_HASH160)
+    {
+        if (scriptPub.size() >= uint(scriptPub[2]+3))
+        {
+            CBitcoinAddress addr;
+            std::vector<unsigned char> vecHash160Addr;
+            for(uint k = 0; k < scriptPub[2]; k++)
+                vecHash160Addr.push_back(scriptPub[k+3]);
+            addr.Set(CKeyID(uint160(vecHash160Addr)));
+            address = addr.ToString();
+            return true;
+        }
+    }
+    else if(!scriptPub.IsPayToScriptHash() && scriptPub.size() > 2 &&
+            scriptPub[scriptPub.size() - 1] == OP_CHECKSIG)
+    {
+        if (scriptPub[0] == 65 || scriptPub[0] == 33)
+        {
+            CBitcoinAddress addr;
+            unsigned char vch[scriptPub[0]];
+            for(uint k = 0; k < scriptPub[0]; k++)
+                vch[k] = scriptPub[1 + k];
+            addr.Set(CKeyID(Hash160(vch, vch + scriptPub[0])));
+            address = addr.ToString();
+            return true;
+        }
+    }
+    else
+        return false;
+}
+
 void CBitcoinSecret::SetKey(const CKey& vchSecret)
 {
     assert(vchSecret.IsValid());
