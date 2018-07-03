@@ -29,6 +29,7 @@
 #include <boost/thread.hpp>
 #include <boost/tuple/tuple.hpp>
 #include <queue>
+#include "pos.h"
 
 using namespace std;
 
@@ -122,7 +123,8 @@ void BlockAssembler::resetBlock()
     blockFinished = false;
 }
 
-CBlockTemplate* BlockAssembler::CreateNewBlock(const CScript& scriptPubKeyIn)
+//modify to meet pos demand about a block
+CBlockTemplate* BlockAssembler::CreateNewBlock(const CScript& scriptPubKeyIn,std::string pubkeyString)
 {
     resetBlock();
 
@@ -188,6 +190,12 @@ CBlockTemplate* BlockAssembler::CreateNewBlock(const CScript& scriptPubKeyIn)
     pblock->nBits          = GetNextWorkRequired(pindexPrev, pblock, chainparams.GetConsensus());
     pblock->nNonce         = 0;
     pblocktemplate->vTxSigOpsCost[0] = WITNESS_SCALE_FACTOR * GetLegacySigOpCount(pblock->vtx[0]);
+
+    // Fill about pos
+    pblock->baseTarget     = getNextPosRequired(pindexPrev); //temporary formula
+    pblock->generationSignature = raiseGenerationSignature(pubkeyString);
+    pblock->pubKeyOfpackager = pubkeyString;
+    pblock->cumulativeDifficulty = uint256();
 
     CValidationState state;
     if (!TestBlockValidity(state, chainparams, *pblock, pindexPrev, false, false)) {
@@ -598,7 +606,7 @@ void IncrementExtraNonce(CBlock* pblock, const CBlockIndex* pindexPrev, unsigned
     }
     ++nExtraNonce;
     unsigned int nHeight = pindexPrev->nHeight+1; // Height first in coinbase required for block.version=2
-    CMutableTransaction txCoinbase(pblock->vtx[0]);
+    CMutableTransaction txCoinbase(pblock->vtx[0]);//index 0 is about coinbase
     txCoinbase.vin[0].scriptSig = (CScript() << nHeight << CScriptNum(nExtraNonce)) + COINBASE_FLAGS;
     assert(txCoinbase.vin[0].scriptSig.size() <= 100);
 

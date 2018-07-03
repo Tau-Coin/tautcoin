@@ -824,6 +824,9 @@ public:
     }
 
     void GetScriptForMining(boost::shared_ptr<CReserveScript> &script);
+    //implements of solts function in wallet for pos using
+    void GetPubkeyForPackage(boost::shared_ptr<CReserveScript> &pubkeyForPackage);
+
     void ResetRequestCount(const uint256 &hash)
     {
         LOCK(cs_wallet);

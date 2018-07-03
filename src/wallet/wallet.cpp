@@ -3056,7 +3056,21 @@ void CWallet::GetScriptForMining(boost::shared_ptr<CReserveScript> &script)
         return;
 
     script = rKey;
+    script->Packagerpubkey = pubkey;
+    if(script->Packagerpubkey.Decompress()){
+        script->pubkeyString = HexStr(ToByteVector(script->Packagerpubkey));
+    }
+
     script->reserveScript = CScript() << ToByteVector(pubkey) << OP_CHECKSIG;
+}
+
+void CWallet::GetPubkeyForPackage(boost::shared_ptr<CReserveScript> &pubkeyForPackage){
+     boost::shared_ptr<CReserveKey> rKey(new CReserveKey(this));
+     CPubKey pubkey;
+     if (!rKey->GetReservedKey(pubkey))
+         return;
+     pubkeyForPackage.reset(new CReserveScript());//initial 
+     pubkeyForPackage->Packagerpubkey = pubkey;  //asign,can be rechecking
 }
 
 void CWallet::LockCoin(const COutPoint& output)

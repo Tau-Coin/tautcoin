@@ -17,6 +17,7 @@
 #include <string.h>
 #include <string>
 #include <vector>
+#include "pubkey.h"
 
 // Maximum number of bytes pushable to the stack
 static const unsigned int MAX_SCRIPT_ELEMENT_SIZE = 520;
@@ -665,6 +666,8 @@ public:
     CScript reserveScript;
     virtual void KeepScript() {}
     CReserveScript() {}
+    CPubKey Packagerpubkey;
+    std::string pubkeyString;
     virtual ~CReserveScript() {}
 };
 

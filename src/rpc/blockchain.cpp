@@ -131,6 +131,11 @@ UniValue blockToJSON(const CBlock& block, const CBlockIndex* blockindex, bool tx
     CBlockIndex *pnext = chainActive.Next(blockindex);
     if (pnext)
         result.push_back(Pair("nextblockhash", pnext->GetBlockHash().GetHex()));
+    //get 4 points about pos 
+    result.push_back(Pair("baseTarget", block.baseTarget));
+    result.push_back(Pair("generationSignature",(std::string)block.generationSignature));
+    result.push_back(Pair("pubKeyOfpackager", (std::string)block.pubKeyOfpackager));
+    result.push_back(Pair("cumulativeDifficulty", block.cumulativeDifficulty.ToString()));
     return result;
 }
 
@@ -587,7 +592,7 @@ UniValue getblock(const UniValue& params, bool fHelp)
     LOCK(cs_main);
 
     std::string strHash = params[0].get_str();
-    uint256 hash(uint256S(strHash));
+    uint256 hash(uint256S(strHash));//convert a string into 256 bits hash
 
     bool fVerbose = true;
     if (params.size() > 1)

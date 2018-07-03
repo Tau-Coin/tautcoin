@@ -199,6 +199,12 @@ public:
     unsigned int nBits;
     unsigned int nNonce;
 
+    // add some data structure associated pos
+    uint64_t baseTarget;
+    std::string generationSignature;
+    std::string pubKeyOfpackager;
+    uint256 cumulativeDifficulty;
+
     //! (memory only) Sequential id assigned to distinguish order in which blocks are received.
     uint32_t nSequenceId;
 
@@ -222,6 +228,9 @@ public:
         nTime          = 0;
         nBits          = 0;
         nNonce         = 0;
+
+        baseTarget     = 0;
+        cumulativeDifficulty = uint256();
     }
 
     CBlockIndex()
@@ -238,6 +247,11 @@ public:
         nTime          = block.nTime;
         nBits          = block.nBits;
         nNonce         = block.nNonce;
+        //here maybe some conflict when verify a accepted block,but it in header not in cblock
+        baseTarget     = block.baseTarget;
+        generationSignature = block.generationSignature;
+        pubKeyOfpackager = block.pubKeyOfpackager;
+        cumulativeDifficulty = block.cumulativeDifficulty;
     }
 
     CDiskBlockPos GetBlockPos() const {
@@ -275,12 +289,20 @@ public:
     {
         return *phashBlock;
     }
+    //interface about pos
+    std::string GetBlockGenerationSignature() const {
+       return generationSignature;
+    }
 
+    uint64_t GetBlockBaseTarget() const{
+       return baseTarget;
+    }
+    //reference time of block generated
     int64_t GetBlockTime() const
     {
         return (int64_t)nTime;
     }
-
+    
     enum { nMedianTimeSpan=11 };
 
     int64_t GetMedianTimePast() const

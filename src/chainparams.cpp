@@ -41,6 +41,13 @@ static CBlock CreateGenesisBlock(const CScript& genesisInputScript, const std::v
     genesis.nVersion = nVersion;
     genesis.vtx.push_back(txNew);
     genesis.hashPrevBlock.SetNull();
+
+    //add 4 points about pos to genesis block
+    genesis.generationSignature = std::string("442c29a4d18f192164006030640fb54c8b9ffd4f5750d2f6dca192dc653c52ad");
+    genesis.baseTarget = 153722867;
+    genesis.pubKeyOfpackager = std::string("Scientific distribution of wealth to each one");
+    genesis.cumulativeDifficulty = uint256();
+
     genesis.hashMerkleRoot = BlockMerkleRoot(genesis);
     return genesis;
 }

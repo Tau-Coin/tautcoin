@@ -27,6 +27,12 @@ public:
     uint32_t nTime;
     uint32_t nBits;
     uint32_t nNonce;
+    
+    // add some data structure associated pos, wheather this safety?
+    uint64_t baseTarget;
+    std::string generationSignature;
+    std::string pubKeyOfpackager;
+    uint256 cumulativeDifficulty;
 
     CBlockHeader()
     {
@@ -95,6 +101,11 @@ public:
     inline void SerializationOp(Stream& s, Operation ser_action, int nType, int nVersion) {
         READWRITE(*(CBlockHeader*)this);
         READWRITE(vtx);
+        //serialization pos data
+        READWRITE(baseTarget);
+        READWRITE(generationSignature);
+        READWRITE(pubKeyOfpackager);
+        READWRITE(cumulativeDifficulty);
     }
 
     void SetNull()
