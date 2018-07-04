@@ -195,7 +195,7 @@ CBlockTemplate* BlockAssembler::CreateNewBlock(const CScript& scriptPubKeyIn,std
     pblock->baseTarget     = getNextPosRequired(pindexPrev); //temporary formula
     pblock->generationSignature = raiseGenerationSignature(pubkeyString);
     pblock->pubKeyOfpackager = pubkeyString;
-    pblock->cumulativeDifficulty = uint256();
+    pblock->cumulativeDifficulty = getNextCumulativeDifficulty(pindexPrev, chainparams);
 
     CValidationState state;
     if (!TestBlockValidity(state, chainparams, *pblock, pindexPrev, false, false)) {

@@ -6,6 +6,7 @@
 
 #ifndef IMCOIN_POS_H
 #define IMCOIN_POS_H
+#include "chainparams.h"
 #include "consensus/params.h"
 #include <stdint.h>
 #include <univalue.h>
@@ -35,4 +36,7 @@ bool verifyGenerationSignature(std::string generationSignature,std::string pukst
 int64_t getPastTimeFromLastestBlock();
 uint64_t getLatestBlockBaseTarget();
 uint64_t getNextPosRequired(const CBlockIndex* pindexLast);
+
+uint256 getNextCumulativeDifficulty(const CBlockIndex* pindexLast, const CChainParams& chainparams);
+
 #endif // IMCOIN_POS_H

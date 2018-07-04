@@ -2,6 +2,7 @@
 // Distributed under the MIT software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
+#include "arith_uint256.h"
 #include "pos.h"
 #include "amount.h"
 #include "chain.h"
@@ -27,6 +28,9 @@
 #include "script/script.h"
 #include <secp256k1.h>
 #include <secp256k1_recovery.h>
+
+const uint256 DiffAdjustNumerator = uint256S("0x010000000000000000");
+const arith_uint256 Arith256DiffAdjustNumerator = UintToArith256(DiffAdjustNumerator);
 
 #if 0
 UniValue getLatestBlockHash(){
@@ -164,6 +168,27 @@ uint64_t getNextPosRequired(const CBlockIndex* pindexLast){
    uint64_t newBaseTarget = (lastTime - lastBlockParentTime)*pindexLast->baseTarget;
    std::cout<<"NewBaseTarget is "<<newBaseTarget<<" last time is "<<lastTime<<" lastBlockParentTime "<<lastBlockParentTime<<std::endl;
    return newBaseTarget;
+}
+
+uint256 getNextCumulativeDifficulty(const CBlockIndex* pindexLast, const CChainParams& chainparams) {
+    CBlock &block = const_cast<CBlock&>(chainparams.GenesisBlock());
+
+    if (pindexLast == NULL) {
+        // return genesis cumulative difficulty
+        //return block.cumulativeDifficulty;
+        return uint256();
+    }
+
+    assert(pindexLast->baseTarget);
+    const arith_uint256 prevCumDiff = UintToArith256(pindexLast->cumulativeDifficulty);
+    const arith_uint256 denominator(pindexLast->baseTarget);
+    arith_uint256 temp(Arith256DiffAdjustNumerator);
+    arith_uint256 ret(prevCumDiff);
+
+    temp /= denominator;
+    ret  += temp;
+
+    return ArithToUint256(ret);
 }
 
 #endif
