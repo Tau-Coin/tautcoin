@@ -170,13 +170,11 @@ uint64_t getNextPosRequired(const CBlockIndex* pindexLast){
    return newBaseTarget;
 }
 
-uint256 getNextCumulativeDifficulty(const CBlockIndex* pindexLast, const CChainParams& chainparams) {
-    CBlock &block = const_cast<CBlock&>(chainparams.GenesisBlock());
-
+uint256 GetNextCumulativeDifficulty(const CBlockIndex* pindexLast, const Consensus::Params& consensusParams)
+{
     if (pindexLast == NULL) {
         // return genesis cumulative difficulty
-        //return block.cumulativeDifficulty;
-        return uint256();
+        return consensusParams.genesisCumulativeDifficulty;
     }
 
     assert(pindexLast->baseTarget);

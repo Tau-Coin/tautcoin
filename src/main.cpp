@@ -3547,6 +3547,18 @@ std::vector<unsigned char> GenerateCoinbaseCommitment(CBlock& block, const CBloc
 
 bool ContextualCheckBlockHeader(const CBlockHeader& block, CValidationState& state, const Consensus::Params& consensusParams, CBlockIndex * const pindexPrev, int64_t nAdjustedTime)
 {
+    // Check generation signature
+    if (false /*!verifyGenerationSignature(block.generationSignature, block.pubKeyOfpackager)*/) {
+        return state.DoS(90, false, REJECT_INVALID, "mismatch generation signature", false, "proof of stake failed");
+    }
+
+    // Check proof of stake
+    if (false /*block.baseTarget != getNextPosRequired(pindexPrev)*/)
+        return state.DoS(50, false, REJECT_INVALID, "bad-basetargetbits", false, "incorrect proof of stake");
+
+    if (false /*block.cumulativeDifficulty != GetNextCumulativeDifficulty(pindexPrev, consensusParams)*/)
+        return state.DoS(50, false, REJECT_INVALID, "bad-cumuldiffbits", false, "incorrect proof of stake");
+
     // Check proof of work
     if (block.nBits != GetNextWorkRequired(pindexPrev, &block, consensusParams))
         return state.DoS(100, false, REJECT_INVALID, "bad-diffbits", false, "incorrect proof of work");

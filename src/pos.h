@@ -37,7 +37,7 @@ int64_t getPastTimeFromLastestBlock();
 uint64_t getLatestBlockBaseTarget();
 uint64_t getNextPosRequired(const CBlockIndex* pindexLast);
 
-uint256 getNextCumulativeDifficulty(const CBlockIndex* pindexLast, const CChainParams& chainparams);
+uint256 GetNextCumulativeDifficulty(const CBlockIndex* pindexLast, const Consensus::Params& consensusParams);
 
 bool VerifyProofOfStake(const std::string& prevGenerationSignature, const std::string& currPubKey,
         int nHeight, const Consensus::Params& consensusParams);

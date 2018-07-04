@@ -39,6 +39,8 @@ struct BIP9Deployment {
 struct Params {
     uint256 hashGenesisBlock;
     uint256 hashGenesisTx;
+    uint256 genesisCumulativeDifficulty;
+    int64_t genesisBaseTarget;
     int nSubsidyHalvingInterval;
     /** Used to check majorities for block version upgrade */
     int nMajorityEnforceBlockUpgrade;

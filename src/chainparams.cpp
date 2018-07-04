@@ -159,6 +159,8 @@ public:
         genesis = CreateGenesisBlock(1529042124, 81735, 0x1f00ffff, 1, genesisReward);
         consensus.hashGenesisBlock = genesis.GetHash();
         consensus.hashGenesisTx = genesis.hashMerkleRoot;
+        consensus.genesisCumulativeDifficulty = genesis.cumulativeDifficulty;
+        consensus.genesisBaseTarget = genesis.baseTarget;
         assert(consensus.hashGenesisBlock == uint256S("00002d61d7d79f81790c7c7311e567048f7edc9e24df7ba5a381b6e923e2a59e"));
         assert(genesis.hashMerkleRoot == uint256S("550b3e62ee29c7da5ee0779def9a1a80d19f9ad0278922f7281a92bd05142f26"));
 
@@ -240,6 +242,8 @@ public:
         genesis = CreateTestnetGenesisBlock(1529042124, 70242, 0x1f00ffff, 1, genesisReward);
         consensus.hashGenesisBlock = genesis.GetHash();
         consensus.hashGenesisTx = genesis.hashMerkleRoot;
+        consensus.genesisCumulativeDifficulty = genesis.cumulativeDifficulty;
+        consensus.genesisBaseTarget = genesis.baseTarget;
         assert(consensus.hashGenesisBlock == uint256S("00007ac2cf86fb52f10a3ac6c9c1586b0dfbf38e710476fcf23b506e6319f831"));
         assert(genesis.hashMerkleRoot == uint256S("82b10867bff7b43ed801c987f783af7e57885a485c2b6e243cd187796c7e9dfa"));
 
@@ -319,6 +323,8 @@ public:
 
         genesis = CreateTestnetGenesisBlock(1296688602, 2, 0x207fffff, 1, genesisReward);
         consensus.hashGenesisBlock = genesis.GetHash();
+        consensus.genesisCumulativeDifficulty = genesis.cumulativeDifficulty;
+        consensus.genesisBaseTarget = genesis.baseTarget;
         //assert(consensus.hashGenesisBlock == uint256S("0x0f9188f13cb7b2c71f2a335e3a4fc328bf5beb436012afca590b1a11466e2206"));
         //assert(genesis.hashMerkleRoot == uint256S("0x4a5e1e4baab89f3a32518a88c31bc87f618f76673e2cc77ab2127b7afdeda33b"));
 
