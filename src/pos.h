@@ -39,4 +39,7 @@ uint64_t getNextPosRequired(const CBlockIndex* pindexLast);
 
 uint256 getNextCumulativeDifficulty(const CBlockIndex* pindexLast, const CChainParams& chainparams);
 
+bool VerifyProofOfStake(const std::string& prevGenerationSignature, const std::string& currPubKey,
+        int nHeight, const Consensus::Params& consensusParams);
+
 #endif // IMCOIN_POS_H

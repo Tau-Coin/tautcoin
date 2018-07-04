@@ -3359,10 +3359,45 @@ bool FindUndoPos(CValidationState &state, int nFile, CDiskBlockPos &pos, unsigne
     return true;
 }
 
-bool CheckBlockHeader(const CBlockHeader& block, CValidationState& state, const Consensus::Params& consensusParams, bool fCheckPOW)
+bool CheckProofOfStake(const CBlockHeader& block, CValidationState& state,
+        const Consensus::Params& consensusParams, const CBlockIndex* pindexPrev)
 {
+    AssertLockHeld(cs_main);
+
+    // Firstly if pindexLast equals NULL, get it from mapBlockIndex.
+    // If not exist, return error.
+    if (pindexPrev == NULL) {
+        BlockMap::iterator mi = mapBlockIndex.find(block.hashPrevBlock);
+        if (mi == mapBlockIndex.end())
+            return state.DoS(10, error("%s: prev block not found", __func__), 0, "bad-prevblk");
+        pindexPrev = (*mi).second;
+        if (pindexPrev->nStatus & BLOCK_FAILED_MASK)
+            return state.DoS(100, error("%s: prev block invalid", __func__), REJECT_INVALID, "bad-prevblk");
+    }
+
+    assert(pindexPrev);
+    if (!VerifyProofOfStake(pindexPrev->generationSignature, block.pubKeyOfpackager,
+                pindexPrev->nHeight + 1, consensusParams)) {
+        return false;
+    }
+
+    return true;
+}
+
+bool CheckBlockHeader(const CBlockHeader& block, CValidationState& state, const Consensus::Params& consensusParams, bool fCheckPOW,
+        CBlockIndex* pindexPrev)
+{
+    // Check generation signature
+    if (false /*!verifyGenerationSignature(block.generationSignature, block.pubKeyOfpackager)*/) {
+        return state.DoS(90, false, REJECT_INVALID, "mismatch generation signature", false, "proof of stake failed");
+    }
+
     // Check proof of work matches claimed amount
     if (fCheckPOW && !CheckProofOfWork(block.GetHash(), block.nBits, consensusParams))
+        return state.DoS(50, false, REJECT_INVALID, "high-hash", false, "proof of work failed");
+
+    // Check proof of stake matches claimed amount
+    if (false /*fCheckPOW && !CheckProofOfStake(block, state, consensusParams, pindexPrev)*/)
         return state.DoS(50, false, REJECT_INVALID, "high-hash", false, "proof of work failed");
 
     return true;
@@ -3377,7 +3412,7 @@ bool CheckBlock(const CBlock& block, CValidationState& state, const Consensus::P
 
     // Check that the header is valid (particularly PoW).  This is mostly
     // redundant with the call in AcceptBlockHeader.
-    if (!CheckBlockHeader(block, state, consensusParams, fCheckPOW))
+    if (!CheckBlockHeader(block, state, consensusParams, fCheckPOW, NULL))
         return false;
 
     // Check the merkle root.
@@ -3635,9 +3670,6 @@ static bool AcceptBlockHeader(const CBlockHeader& block, CValidationState& state
             return true;
         }
 
-        if (!CheckBlockHeader(block, state, chainparams.GetConsensus()))
-            return error("%s: Consensus::CheckBlockHeader: %s, %s", __func__, hash.ToString(), FormatStateMessage(state));
-
         // Get prev block index
         CBlockIndex* pindexPrev = NULL;
         BlockMap::iterator mi = mapBlockIndex.find(block.hashPrevBlock);
@@ -3650,6 +3682,9 @@ static bool AcceptBlockHeader(const CBlockHeader& block, CValidationState& state
         assert(pindexPrev);
         if (fCheckpointsEnabled && !CheckIndexAgainstCheckpoint(pindexPrev, state, chainparams, hash))
             return error("%s: CheckIndexAgainstCheckpoint(): %s", __func__, state.GetRejectReason().c_str());
+
+        if (!CheckBlockHeader(block, state, chainparams.GetConsensus(), pindexPrev))
+            return error("%s: Consensus::CheckBlockHeader: %s, %s", __func__, hash.ToString(), FormatStateMessage(state));
 
         if (!ContextualCheckBlockHeader(block, state, chainparams.GetConsensus(), pindexPrev, GetAdjustedTime()))
             return error("%s: Consensus::ContextualCheckBlockHeader: %s, %s", __func__, hash.ToString(), FormatStateMessage(state));

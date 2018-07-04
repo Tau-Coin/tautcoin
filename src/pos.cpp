@@ -191,4 +191,19 @@ uint256 getNextCumulativeDifficulty(const CBlockIndex* pindexLast, const CChainP
     return ArithToUint256(ret);
 }
 
+bool VerifyProofOfStake(const std::string& prevGenerationSignature, const std::string& currPubKey,
+        int nHeight, const Consensus::Params& consensusParams)
+{
+    uint256 geneSignatureHash = getPosHash(prevGenerationSignature, currPubKey);
+    uint64_t hit = calculateHitOfPOS(geneSignatureHash);
+
+    // get effective balance with nHeight
+    uint64_t effectiveBalance =  0x0afffffffffffffff;//getEffectiveBalance(nHeight);
+    if (hit < effectiveBalance) {
+        return true;
+    }
+
+    return false;
+}
+
 #endif
