@@ -30,7 +30,7 @@
 
 #include <univalue.h>
 
-#define imtest    //it is a debug function switch,if you does not want please turn off it
+//#define imtest    //it is a debug function switch,if you does not want please turn off it
 using namespace std;
 
 /**
