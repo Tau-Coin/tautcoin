@@ -3556,7 +3556,7 @@ bool ContextualCheckBlockHeader(const CBlockHeader& block, CValidationState& sta
     if (false /*block.baseTarget != getNextPosRequired(pindexPrev)*/)
         return state.DoS(50, false, REJECT_INVALID, "bad-basetargetbits", false, "incorrect proof of stake");
 
-    if (false /*block.cumulativeDifficulty != GetNextCumulativeDifficulty(pindexPrev, consensusParams)*/)
+    if (false /*block.cumulativeDifficulty != GetNextCumulativeDifficulty(pindexPrev, block.baseTarget, consensusParams)*/)
         return state.DoS(50, false, REJECT_INVALID, "bad-cumuldiffbits", false, "incorrect proof of stake");
 
     // Check proof of work
