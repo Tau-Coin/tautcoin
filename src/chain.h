@@ -282,6 +282,10 @@ public:
         block.nTime          = nTime;
         block.nBits          = nBits;
         block.nNonce         = nNonce;
+        block.baseTarget           = baseTarget;
+        block.generationSignature  = generationSignature;
+        block.pubKeyOfpackager     = pubKeyOfpackager;
+        block.cumulativeDifficulty = cumulativeDifficulty;
         return block;
     }
 
@@ -400,6 +404,11 @@ public:
         READWRITE(nTime);
         READWRITE(nBits);
         READWRITE(nNonce);
+
+        READWRITE(baseTarget);
+        READWRITE(generationSignature);
+        READWRITE(pubKeyOfpackager);
+        READWRITE(cumulativeDifficulty);
     }
 
     uint256 GetBlockHash() const
@@ -411,6 +420,11 @@ public:
         block.nTime           = nTime;
         block.nBits           = nBits;
         block.nNonce          = nNonce;
+
+        block.baseTarget           = baseTarget;
+        block.generationSignature  = generationSignature;
+        block.pubKeyOfpackager     = pubKeyOfpackager;
+        block.cumulativeDifficulty = cumulativeDifficulty;
         return block.GetHash();
     }
 

@@ -177,7 +177,7 @@ uint256 GetNextCumulativeDifficulty(const CBlockIndex* pindexLast, const Consens
         return consensusParams.genesisCumulativeDifficulty;
     }
 
-    assert(pindexLast->baseTarget);
+    //assert(pindexLast->baseTarget);
     const arith_uint256 prevCumDiff = UintToArith256(pindexLast->cumulativeDifficulty);
     const arith_uint256 denominator(pindexLast->baseTarget);
     arith_uint256 temp(Arith256DiffAdjustNumerator);

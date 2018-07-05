@@ -49,6 +49,11 @@ public:
         READWRITE(nTime);
         READWRITE(nBits);
         READWRITE(nNonce);
+        //serialization pos data
+        READWRITE(baseTarget);
+        READWRITE(generationSignature);
+        READWRITE(pubKeyOfpackager);
+        READWRITE(cumulativeDifficulty);
     }
 
     void SetNull()
@@ -101,11 +106,6 @@ public:
     inline void SerializationOp(Stream& s, Operation ser_action, int nType, int nVersion) {
         READWRITE(*(CBlockHeader*)this);
         READWRITE(vtx);
-        //serialization pos data
-        READWRITE(baseTarget);
-        READWRITE(generationSignature);
-        READWRITE(pubKeyOfpackager);
-        READWRITE(cumulativeDifficulty);
     }
 
     void SetNull()
@@ -124,6 +124,10 @@ public:
         block.nTime          = nTime;
         block.nBits          = nBits;
         block.nNonce         = nNonce;
+        block.baseTarget     = baseTarget;
+        block.generationSignature  = generationSignature;
+        block.pubKeyOfpackager     = pubKeyOfpackager;
+        block.cumulativeDifficulty = cumulativeDifficulty;
         return block;
     }
 

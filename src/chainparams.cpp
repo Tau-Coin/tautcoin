@@ -156,12 +156,12 @@ public:
         genesisReward.push_back(MAX_MONEY / 10 * 2);
         genesisReward.push_back(MAX_MONEY / 10 * 6);
 
-        genesis = CreateGenesisBlock(1529042124, 81735, 0x1f00ffff, 1, genesisReward);
+        genesis = CreateGenesisBlock(1529042124, 44224, 0x1f00ffff, 1, genesisReward);
         consensus.hashGenesisBlock = genesis.GetHash();
         consensus.hashGenesisTx = genesis.hashMerkleRoot;
         consensus.genesisCumulativeDifficulty = genesis.cumulativeDifficulty;
         consensus.genesisBaseTarget = genesis.baseTarget;
-        assert(consensus.hashGenesisBlock == uint256S("00002d61d7d79f81790c7c7311e567048f7edc9e24df7ba5a381b6e923e2a59e"));
+        assert(consensus.hashGenesisBlock == uint256S("000056da68a4ea9dc688ab0a3a9ee2c2432931f65c801a3a5c6a200ba204edb3"));
         assert(genesis.hashMerkleRoot == uint256S("550b3e62ee29c7da5ee0779def9a1a80d19f9ad0278922f7281a92bd05142f26"));
 
         vSeeds.push_back(CDNSSeedData("imorpheus.io", "dnsseed.imorpheus.io", true));
@@ -182,7 +182,7 @@ public:
 
         checkpointData = (CCheckpointData) {
             boost::assign::map_list_of
-            ( 0, uint256S("00002d61d7d79f81790c7c7311e567048f7edc9e24df7ba5a381b6e923e2a59e")),
+            ( 0, uint256S("000056da68a4ea9dc688ab0a3a9ee2c2432931f65c801a3a5c6a200ba204edb3")),
             1529042124, // * UNIX timestamp of last checkpoint block
             1441814,   // * total number of transactions between genesis and last checkpoint
                         //   (the tx=... number in the SetBestChain debug.log lines)
@@ -244,8 +244,8 @@ public:
         consensus.hashGenesisTx = genesis.hashMerkleRoot;
         consensus.genesisCumulativeDifficulty = genesis.cumulativeDifficulty;
         consensus.genesisBaseTarget = genesis.baseTarget;
-        assert(consensus.hashGenesisBlock == uint256S("00007ac2cf86fb52f10a3ac6c9c1586b0dfbf38e710476fcf23b506e6319f831"));
-        assert(genesis.hashMerkleRoot == uint256S("82b10867bff7b43ed801c987f783af7e57885a485c2b6e243cd187796c7e9dfa"));
+        //assert(consensus.hashGenesisBlock == uint256S("00007ac2cf86fb52f10a3ac6c9c1586b0dfbf38e710476fcf23b506e6319f831"));
+        //assert(genesis.hashMerkleRoot == uint256S("82b10867bff7b43ed801c987f783af7e57885a485c2b6e243cd187796c7e9dfa"));
 
         vFixedSeeds.clear();
         vSeeds.clear();
