@@ -214,7 +214,7 @@ bool CBlockTreeDB::LoadBlockIndexGuts(boost::function<CBlockIndex*(const uint256
     return true;
 }
 
-bool CBalanceViewDB::WriteDB(std::string key, CAmount value, int nHeight)
+bool CBalanceViewDB::WriteDB(std::string key, int nHeight, CAmount value)
 {
     leveldb::DB* db;
     leveldb::Options options;
@@ -223,7 +223,8 @@ bool CBalanceViewDB::WriteDB(std::string key, CAmount value, int nHeight)
 
 
     leveldb::Status status = leveldb::DB::Open(options, db_path, &db);
-    if(!status.ok()){
+    if(!status.ok())
+    {
         std::cout<<"Failed to open leveldb: "<<db_path<<std::endl;
         return false;
     }
@@ -239,7 +240,8 @@ bool CBalanceViewDB::WriteDB(std::string key, CAmount value, int nHeight)
     ssHeight >> strHeight;
 
     status = db->Put(leveldb::WriteOptions(), key+"_"+strHeight, strValue);
-    if(!status.ok()){
+    if(!status.ok())
+    {
         std::cout<<"Failed to write leveldb: "<<db_path<<std::endl;
         return false;
     }
@@ -248,7 +250,7 @@ bool CBalanceViewDB::WriteDB(std::string key, CAmount value, int nHeight)
     return true;
 }
 
-bool CBalanceViewDB::ReadDB(std::string key, CAmount& value, int nHeight)
+bool CBalanceViewDB::ReadDB(std::string key, int nHeight, CAmount& value)
 {
     leveldb::DB* db;
     leveldb::Options options;
@@ -256,7 +258,8 @@ bool CBalanceViewDB::ReadDB(std::string key, CAmount& value, int nHeight)
     std::string db_path = GetDataDir(true).string() + "/balance";
 
     leveldb::Status status = leveldb::DB::Open(options, db_path, &db);
-    if(!status.ok()){
+    if(!status.ok())
+    {
         std::cout<<"Failed to open leveldb: "<<db_path<<std::endl;
         return false;
     }
@@ -268,11 +271,11 @@ bool CBalanceViewDB::ReadDB(std::string key, CAmount& value, int nHeight)
 
     std::string strValue;
     status = db->Get(leveldb::ReadOptions(), key+"_"+strHeight, &strValue);
-    if(!status.ok()){
-//        std::cout<<"Failed to read leveldb: "<<db_path<<std::endl;
+    if(!status.ok())
+    {
         value = 0;
         delete db;
-        return true;
+        return false;
     }
 
     std::istringstream ssVal(strValue);
@@ -282,36 +285,44 @@ bool CBalanceViewDB::ReadDB(std::string key, CAmount& value, int nHeight)
     return true;
 }
 
-bool CBalanceViewDB::GetBalance(std::string address, int nHeight, CAmount& amount)
+CAmount CBalanceViewDB::GetBalance(std::string address, int nHeight)
 {
-    return ReadDB(address, amount, nHeight);
+    for (int h = nHeight; h >= 0; h--)
+    {
+        CAmount amount = 0;
+        if (ReadDB(address, nHeight, amount))
+            return amount;
+    }
+
+    return 0;
 }
 
 bool CBalanceViewDB::UpdateBalance(const CTransaction& tx, const CCoinsViewCache& inputs, int nHeight)
 {
-    nlastHeight = nHeight;
-
     if (tx.vout.size() > 0)
     {
         CBitcoinAddress addr;
+        map<std::string, CAmount> negBalance;
 
         if (!tx.IsCoinBase() && tx.vin.size() > 0)
         {
             for(uint i = 0; i < tx.vin.size(); i++)
             {
-
                 const CCoins* coins = inputs.AccessCoins(tx.vin[i].prevout.hash);
                 assert(coins);
 
                 std::string address;
                 addr.ScriptPub2Addr(coins->vout[tx.vin[i].prevout.n].scriptPubKey, address);
 
-                CAmount val = 0;
                 if (nHeight > 0)
                 {
-                    if (!GetBalance(address, nHeight - 1, val))
-                        return false;
+                    CAmount val = GetBalance(address, nHeight - 1);
                     val -= coins->vout[tx.vin[i].prevout.n].nValue;
+
+                    if (negBalance.find(address) == negBalance.end())
+                        negBalance.insert(pair<std::string, CAmount>(address, coins->vout[tx.vin[i].prevout.n].nValue));
+                    else
+                        negBalance[address] += coins->vout[tx.vin[i].prevout.n].nValue;
 
                     if (!WriteDB(address, val, nHeight))
                         return false;
@@ -327,13 +338,10 @@ bool CBalanceViewDB::UpdateBalance(const CTransaction& tx, const CCoinsViewCache
             std::string address;
             addr.ScriptPub2Addr(tx.vout[o].scriptPubKey, address);
 
-            CAmount val = 0;
-            if (nHeight > 0)
-            {
-                if (!GetBalance(address, nHeight - 1, val))
-                    val = 0;
-            }
+            CAmount val = GetBalance(address, nHeight - 1);
             val += tx.vout[o].nValue;
+            if (negBalance.find(address) != negBalance.end())
+                val -= negBalance[address];
 
             if (!WriteDB(address, val, nHeight))
                 return false;

@@ -718,10 +718,8 @@ UniValue getbalance(const UniValue& params, bool fHelp)
     }
     else if(params[0].get_str().length() > 32 && params[0].get_str().length() < 36)
     {
-        CAmount value;
         CBalanceViewDB balance;
-        balance.GetBalance(params[0].get_str(), value);
-        return value / 1.0 / COIN;
+        return ValueFromAmount(balance.GetBalance(params[0].get_str(), chainActive.Height()));
     }
 
     string strAccount = AccountFromValue(params[0]);

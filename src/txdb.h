@@ -126,60 +126,21 @@ public:
 class CBalanceViewDB
 {
 private:
-    int nlastHeight;
+    bool WriteDB(std::string key, int nHeight, CAmount value);
 
-    bool WriteDB(std::string key, CAmount value, int nHeight);
-
-    bool ReadDB(std::string key, CAmount& value, int nHeight);
+    bool ReadDB(std::string key, int nHeight, CAmount& value);
 
 public:
-    CBalanceViewDB() {nlastHeight = 0;}
+    CBalanceViewDB() { }
 
-    //! Retrieve the CBalance for a given address in specific block height
-    bool GetBalance(std::string address, int nHeight, CAmount& amount);
-
-    bool GetBalance(std::string address, CAmount& amount)
-    {
-        return GetBalance(address, nlastHeight, amount);
-    }
-
-    //! Retrieve the block hash whose state this CCoinsView currently represents
-    int GetLastBlockHeight() const { return nlastHeight; }
+    //! Retrieve the CBalance for a given address
+    CAmount GetBalance(std::string address, int nHeight);
 
     //! Update the Balance dataset represented by view
     bool UpdateBalance(const CTransaction& tx, const CCoinsViewCache& inputs, int nHeight);
 
-//    //! Do a bulk modification (multiple CCoins changes + BestBlock change).
-//    //! The passed mapCoins can be modified.
-//    bool BatchWrite(CCoinsMap &mapCoins, const uint256 &hashBlock);
-
-//    //! Get a cursor to iterate over the whole state
-//    CBalanceViewCursor *Cursor() const;
-
     //! As we use CBalanceViews polymorphically, have a destructor
     ~CBalanceViewDB() {}
 };
-
-///** Specialization of CCoinsViewCursor to iterate over a CCoinsViewDB */
-//class CBalanceViewDBCursor
-//{
-//public:
-//    ~CBalanceViewDBCursor() {}
-
-//    bool GetKey(uint256 &key) const;
-//    bool GetValue(CCoins &coins) const;
-//    unsigned int GetValueSize() const;
-
-//    bool Valid() const;
-//    void Next();
-
-//private:
-////    CBalanceViewDBCursor(CDBIterator* pcursorIn, const uint256 &hashBlockIn):
-////        CBalanceViewCursor(hashBlockIn), pcursor(pcursorIn) {}
-//    boost::scoped_ptr<CDBIterator> pcursor;
-//    std::pair<char, uint256> keyTmp;
-
-//    friend class CBalanceViewDB;
-//};
 
 #endif // BITCOIN_TXDB_H
