@@ -295,7 +295,7 @@ CAmount CBalanceViewDB::GetBalance(std::string address, int nHeight)
     for (int h = nHeight; h >= 0; h--)
     {
         CAmount amount = 0;
-        if (ReadDB(address, nHeight, amount))
+        if (ReadDB(address, h, amount))
             return amount;
     }
 
@@ -322,6 +322,9 @@ bool CBalanceViewDB::UpdateBalance(const CTransaction& tx, const CCoinsViewCache
                 if (nHeight > 0)
                 {
                     CAmount val = GetBalance(address, nHeight - 1);
+
+                    //std::cout<<"====="<<address<<":   "<<val<<" - "<<coins->vout[tx.vin[i].prevout.n].nValue<<std::endl;
+
                     val -= coins->vout[tx.vin[i].prevout.n].nValue;
 
                     if (negBalance.find(address) == negBalance.end())
@@ -329,7 +332,7 @@ bool CBalanceViewDB::UpdateBalance(const CTransaction& tx, const CCoinsViewCache
                     else
                         negBalance[address] += coins->vout[tx.vin[i].prevout.n].nValue;
 
-                    if (!WriteDB(address, val, nHeight))
+                    if (!WriteDB(address, nHeight, val))
                         return false;
                 }
             }
@@ -344,11 +347,18 @@ bool CBalanceViewDB::UpdateBalance(const CTransaction& tx, const CCoinsViewCache
             addr.ScriptPub2Addr(tx.vout[o].scriptPubKey, address);
 
             CAmount val = GetBalance(address, nHeight - 1);
+
+            //std::cout<<"====="<<address<<":   "<<val<<" + "<<tx.vout[o].nValue<<" - "<<negBalance[address];
+
             val += tx.vout[o].nValue;
+
             if (negBalance.find(address) != negBalance.end())
                 val -= negBalance[address];
 
-            if (!WriteDB(address, val, nHeight))
+            //std::cout<<" = "<<val<<std::endl;
+
+
+            if (!WriteDB(address, nHeight, val))
                 return false;
         }
     }
