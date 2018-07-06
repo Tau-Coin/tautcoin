@@ -126,21 +126,28 @@ public:
 class CBalanceViewDB
 {
 private:
+    //! the database itself
+    leveldb::DB* pdb;
+
+    //! database options used
+    leveldb::Options options;
+
     bool WriteDB(std::string key, int nHeight, CAmount value);
 
     bool ReadDB(std::string key, int nHeight, CAmount& value);
 
 public:
-    CBalanceViewDB() { }
+    //! Constructor
+    CBalanceViewDB();
+
+    //! As we use CBalanceViews polymorphically, have a destructor
+    ~CBalanceViewDB();
 
     //! Retrieve the CBalance for a given address
     CAmount GetBalance(std::string address, int nHeight);
 
     //! Update the Balance dataset represented by view
     bool UpdateBalance(const CTransaction& tx, const CCoinsViewCache& inputs, int nHeight);
-
-    //! As we use CBalanceViews polymorphically, have a destructor
-    ~CBalanceViewDB() {}
 };
 
 #endif // BITCOIN_TXDB_H

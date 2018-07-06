@@ -81,6 +81,7 @@ size_t nCoinCacheUsage = 5000 * 300;
 uint64_t nPruneTarget = 0;
 int64_t nMaxTipAge = DEFAULT_MAX_TIP_AGE;
 bool fEnableReplacement = DEFAULT_ENABLE_REPLACEMENT;
+CBalanceViewDB *pbalancedbview = NULL;
 
 
 CFeeRate minRelayTxFee = CFeeRate(DEFAULT_MIN_RELAY_TX_FEE);
@@ -2310,9 +2311,8 @@ bool ConnectBlock(const CBlock& block, CValidationState& state, CBlockIndex* pin
             view.SetBestBlock(pindex->GetBlockHash());
 
         UpdateCoins(block.vtx[0], view, 0);
-        CBalanceViewDB balance;
-        if (!balance.UpdateBalance(block.vtx[0], view, 0))
-            cout<<"Failed to update balance db in genesis block!"<<endl;
+        if (!pbalancedbview->UpdateBalance(block.vtx[0], view, 0))
+            return error("Failed to update balance db in genesis block!");
         return true;
     }
 
@@ -2481,9 +2481,8 @@ bool ConnectBlock(const CBlock& block, CValidationState& state, CBlockIndex* pin
         if (i > 0) {
             blockundo.vtxundo.push_back(CTxUndo());
         }
-        CBalanceViewDB balance;
-        if (!balance.UpdateBalance(tx, view, pindex->nHeight))
-            cout<<"Failed to update balance db!"<<endl;
+        if (!pbalancedbview->UpdateBalance(block.vtx[0], view, 0))
+            return error("Failed to update balance db in genesis block!");
         UpdateCoins(tx, view, i == 0 ? undoDummy : blockundo.vtxundo.back(), pindex->nHeight);
 
         vPos.push_back(std::make_pair(tx.GetHash(), pos));

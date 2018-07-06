@@ -18,6 +18,7 @@
 #include "script/script_error.h"
 #include "sync.h"
 #include "versionbits.h"
+#include "txdb.h"
 
 #include <algorithm>
 #include <exception>
@@ -181,6 +182,8 @@ extern CBlockIndex *pindexBestHeader;
 
 /** Minimum disk space required - used in CheckDiskSpace() */
 static const uint64_t nMinDiskSpace = 52428800;
+
+extern CBalanceViewDB *pbalancedbview;
 
 /** Pruning-related variables and constants */
 /** True if any block files have ever been pruned. */

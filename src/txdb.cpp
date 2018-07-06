@@ -216,21 +216,27 @@ bool CBlockTreeDB::LoadBlockIndexGuts(boost::function<CBlockIndex*(const uint256
     return true;
 }
 
+CBalanceViewDB::CBalanceViewDB()
+{
+    options.create_if_missing = true;
+
+    std::string db_path = GetDataDir(true).string() + std::string("/balance");
+    LogPrintf("Opening LevelDB in %s\n", db_path);
+
+    leveldb::Status status = leveldb::DB::Open(options, db_path, &pdb);
+    dbwrapper_private::HandleError(status);
+    assert(status.ok());
+    LogPrintf("Opened LevelDB successfully\n");
+}
+
+CBalanceViewDB::~CBalanceViewDB()
+{
+    delete pdb;
+    pdb = NULL;
+}
+
 bool CBalanceViewDB::WriteDB(std::string key, int nHeight, CAmount value)
 {
-    leveldb::DB* db;
-    leveldb::Options options;
-    options.create_if_missing = true;
-    std::string db_path = GetDataDir(true).string() + std::string("/balance");
-
-
-    leveldb::Status status = leveldb::DB::Open(options, db_path, &db);
-    if(!status.ok())
-    {
-        std::cout<<"Failed to open leveldb: "<<db_path<<std::endl;
-        return false;
-    }
-
     std::stringstream ssVal;
     ssVal << value;
     std::string strValue;
@@ -241,49 +247,41 @@ bool CBalanceViewDB::WriteDB(std::string key, int nHeight, CAmount value)
     ssHeight << nHeight;
     ssHeight >> strHeight;
 
-    status = db->Put(leveldb::WriteOptions(), key+"_"+strHeight, strValue);
+    leveldb::Status status = pdb->Put(leveldb::WriteOptions(), key+"_"+strHeight, strValue);
     if(!status.ok())
     {
-        std::cout<<"Failed to write leveldb: "<<db_path<<std::endl;
+        LogPrintf("LevelDB write failure in balance module: %s\n", status.ToString());
+        dbwrapper_private::HandleError(status);
         return false;
     }
 
-    delete db;
     return true;
 }
 
 bool CBalanceViewDB::ReadDB(std::string key, int nHeight, CAmount& value)
 {
-    leveldb::DB* db;
-    leveldb::Options options;
-    options.create_if_missing = false;
-    std::string db_path = GetDataDir(true).string() + "/balance";
-
-    leveldb::Status status = leveldb::DB::Open(options, db_path, &db);
-    if(!status.ok())
-    {
-        std::cout<<"Failed to open leveldb: "<<db_path<<std::endl;
-        return false;
-    }
-
     std::stringstream ssHeight;
     std::string strHeight;
     ssHeight << nHeight;
     ssHeight >> strHeight;
 
     std::string strValue;
-    status = db->Get(leveldb::ReadOptions(), key+"_"+strHeight, &strValue);
+    leveldb::Status status = pdb->Get(leveldb::ReadOptions(), key+"_"+strHeight, &strValue);
     if(!status.ok())
     {
-        value = 0;
-        delete db;
+        if (status.IsNotFound())
+            value = 0;
+        else
+        {
+            LogPrintf("LevelDB read failure in balance module: %s\n", status.ToString());
+            dbwrapper_private::HandleError(status);
+        }
         return false;
     }
 
     std::istringstream ssVal(strValue);
     ssVal >> value;
 
-    delete db;
     return true;
 }
 
