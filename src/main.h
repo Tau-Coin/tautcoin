@@ -528,4 +528,7 @@ static const unsigned int REJECT_ALREADY_KNOWN = 0x101;
 /** Transaction conflicts with a transaction already known */
 static const unsigned int REJECT_CONFLICT = 0x102;
 
+bool CheckProofOfDryStake(const CBlockHeader& block, CValidationState& state,
+        const Consensus::Params& consensusParams, const CBlockIndex* pindexPrev);
+
 #endif // BITCOIN_MAIN_H

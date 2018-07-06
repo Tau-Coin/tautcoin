@@ -3,6 +3,7 @@
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
 #include "arith_uint256.h"
+#include "base58.h"
 #include "pos.h"
 #include "amount.h"
 #include "chain.h"
@@ -96,7 +97,7 @@ std::string getLatestBlockGenerationSignature(){
     return pblockindex->GetBlockGenerationSignature();
 }
 int64_t getPastTimeFromLastestBlock(){
-    LOCK(cs_main);
+   //LOCK(cs_main);
     uint32_t nHeight = chainActive.Height();
     CBlockIndex* pblockindex = chainActive[nHeight];
     int64_t timeNow = GetTime();
@@ -172,9 +173,13 @@ uint64_t getNextPosRequired(const CBlockIndex* pindexLast){
 
 uint256 GetNextCumulativeDifficulty(const CBlockIndex* pindexLast, uint64_t baseTarget, const Consensus::Params& consensusParams)
 {
-    if (pindexLast == NULL || baseTarget == 0) {
+    if (pindexLast == NULL) {
         // return genesis cumulative difficulty
         return consensusParams.genesisCumulativeDifficulty;
+    }
+
+    if (baseTarget == 0) {
+        return pindexLast->cumulativeDifficulty;
     }
 
     assert(baseTarget);
@@ -189,15 +194,36 @@ uint256 GetNextCumulativeDifficulty(const CBlockIndex* pindexLast, uint64_t base
     return ArithToUint256(ret);
 }
 
-bool VerifyProofOfStake(const std::string& prevGenerationSignature, const std::string& currPubKey,
-        int nHeight, const Consensus::Params& consensusParams)
+bool CheckProofOfDryStake(const std::string& prevGenerationSignature, const std::string& currPubKey,
+        int nHeight, unsigned int nTime, uint64_t baseTarget, const Consensus::Params& consensusParams)
 {
+    if (prevGenerationSignature.empty() || currPubKey.empty() || nHeight < 0 || nTime == 0) {
+        LogPrintf("CheckProofOfDryStake failed, incorrect args, signatrue:%s, pubkey:%s, height:%d, time:%d\n",
+            prevGenerationSignature, currPubKey, nHeight, nTime);
+        return false;
+    }
+    LogPrintf("CheckProofOfDryStake, signature:%s, pubkey:%s\n", prevGenerationSignature, currPubKey);
+    LogPrintf("CheckProofOfDryStake, height:%d, time:%d, baseTarget:%d\n", nHeight, nTime, baseTarget);
+
     uint256 geneSignatureHash = getPosHash(prevGenerationSignature, currPubKey);
     uint64_t hit = calculateHitOfPOS(geneSignatureHash);
 
+    LogPrintf("CheckProofOfDryStake, hit:%d\n", hit);
+
+    const CScript script = CScript() << ParseHex(currPubKey) << OP_CHECKSIG;
+    CBitcoinAddress addr;
+    std::string strAddr;
+
+    if (!addr.ScriptPub2Addr(script, strAddr) || strAddr.empty()) {
+        LogPrintf("CheckProofOfDryStake failed, get strAddr fail\n");
+        return false;
+    }
+    LogPrintf("CheckProofOfDryStake, strAddr:%s\n", strAddr);
+
     // get effective balance with nHeight
-    uint64_t effectiveBalance =  0x0afffffffffffffff;//getEffectiveBalance(nHeight);
-    if (hit < effectiveBalance) {
+    uint64_t effectiveBalance =  0x0ffff;//getEffectiveBalance(nHeight);
+    LogPrintf("CheckProofOfDryStake, result:%d\n", baseTarget * nTime * effectiveBalance);
+    if (hit < baseTarget * nTime * effectiveBalance) {
         return true;
     }
 

@@ -204,9 +204,6 @@ bool CBlockTreeDB::LoadBlockIndexGuts(boost::function<CBlockIndex*(const uint256
                 pindexNew->pubKeyOfpackager            = diskindex.pubKeyOfpackager;
                 pindexNew->cumulativeDifficulty        = diskindex.cumulativeDifficulty;
 
-                if (!CheckProofOfWork(pindexNew->GetBlockHash(), pindexNew->nBits, Params().GetConsensus()))
-                    return error("LoadBlockIndex(): CheckProofOfWork failed: %s", pindexNew->ToString());
-
                 pcursor->Next();
             } else {
                 return error("LoadBlockIndex() : failed to read value");

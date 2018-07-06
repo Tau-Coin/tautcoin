@@ -613,3 +613,15 @@ void IncrementExtraNonce(CBlock* pblock, const CBlockIndex* pindexPrev, unsigned
     pblock->vtx[0] = txCoinbase;
     pblock->hashMerkleRoot = BlockMerkleRoot(*pblock);
 }
+bool isPreparedtoPackage(std::string pubkeyString)
+{
+   string geneSignature = getLatestBlockGenerationSignature();
+   uint256 geneSignatureHash = getPosHash(geneSignature,pubkeyString);
+   uint64_t hit = calculateHitOfPOS(geneSignatureHash);
+   LOCK(cs_main);
+   CBlockIndex* pindexPrev = chainActive.Tip();
+   uint64_t target = getNextPosRequired(pindexPrev);
+   int64_t S = getPastTimeFromLastestBlock();
+   uint64_t Be = 88888;
+   return hit < target * S * Be;
+}

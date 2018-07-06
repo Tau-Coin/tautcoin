@@ -1086,7 +1086,7 @@ bool CheckTransaction(const CTransaction& tx, CValidationState &state)
 
     if (tx.IsCoinBase())
     {
-        if (tx.vin[0].scriptSig.size() < 2 || tx.vin[0].scriptSig.size() > 100)
+        if (tx.vin[0].scriptSig.size() < 1 || tx.vin[0].scriptSig.size() > 100)
             return state.DoS(100, false, REJECT_INVALID, "bad-cb-length");
     }
     else
@@ -1676,7 +1676,9 @@ bool ReadBlockFromDisk(CBlock& block, const CDiskBlockPos& pos, const Consensus:
     }
 
     // Check the header
-    if (!CheckProofOfWork(block.GetHash(), block.nBits, consensusParams))
+    CValidationState state;
+    if (!CheckProofOfDryStake(block, state, consensusParams, NULL)
+            && state.GetRejectReason().find("bad-prevblk") == std::string::npos)
         return error("ReadBlockFromDisk: Errors in block header at %s", pos.ToString());
 
     return true;
@@ -3359,14 +3361,14 @@ bool FindUndoPos(CValidationState &state, int nFile, CDiskBlockPos &pos, unsigne
     return true;
 }
 
-bool CheckProofOfStake(const CBlockHeader& block, CValidationState& state,
+bool CheckProofOfDryStake(const CBlockHeader& block, CValidationState& state,
         const Consensus::Params& consensusParams, const CBlockIndex* pindexPrev)
 {
-    AssertLockHeld(cs_main);
+    LOCK(cs_main);
 
     // Firstly if pindexLast equals NULL, get it from mapBlockIndex.
     // If not exist, return error.
-    if (pindexPrev == NULL) {
+    if (!pindexPrev) {
         BlockMap::iterator mi = mapBlockIndex.find(block.hashPrevBlock);
         if (mi == mapBlockIndex.end())
             return state.DoS(10, error("%s: prev block not found", __func__), 0, "bad-prevblk");
@@ -3376,9 +3378,9 @@ bool CheckProofOfStake(const CBlockHeader& block, CValidationState& state,
     }
 
     assert(pindexPrev);
-    if (!VerifyProofOfStake(pindexPrev->generationSignature, block.pubKeyOfpackager,
-                pindexPrev->nHeight + 1, consensusParams)) {
-        return false;
+    if (!CheckProofOfDryStake(pindexPrev->generationSignature, block.pubKeyOfpackager,
+                pindexPrev->nHeight + 1, block.nTime - pindexPrev->nTime, block.baseTarget, consensusParams)) {
+        return state.DoS(50, false, REJECT_INVALID, "high-hit", false, "proof of stake failed");
     }
 
     return true;
@@ -3388,17 +3390,17 @@ bool CheckBlockHeader(const CBlockHeader& block, CValidationState& state, const 
         CBlockIndex* pindexPrev)
 {
     // Check generation signature
-    if (false /*!verifyGenerationSignature(block.generationSignature, block.pubKeyOfpackager)*/) {
+    if (!verifyGenerationSignature(block.generationSignature, block.pubKeyOfpackager)) {
         return state.DoS(90, false, REJECT_INVALID, "mismatch generation signature", false, "proof of stake failed");
     }
 
     // Check proof of work matches claimed amount
-    if (fCheckPOW && !CheckProofOfWork(block.GetHash(), block.nBits, consensusParams))
-        return state.DoS(50, false, REJECT_INVALID, "high-hash", false, "proof of work failed");
+    //if (fCheckPOW && !CheckProofOfWork(block.GetHash(), block.nBits, consensusParams))
+        //return state.DoS(50, false, REJECT_INVALID, "high-hash", false, "proof of work failed");
 
     // Check proof of stake matches claimed amount
-    if (false /*fCheckPOW && !CheckProofOfStake(block, state, consensusParams, pindexPrev)*/)
-        return state.DoS(50, false, REJECT_INVALID, "high-hash", false, "proof of work failed");
+    if (fCheckPOW && !CheckProofOfDryStake(block, state, consensusParams, pindexPrev))
+        return state.DoS(50, false, REJECT_INVALID, "high-hit", false, "proof of work failed");
 
     return true;
 }
@@ -3548,20 +3550,20 @@ std::vector<unsigned char> GenerateCoinbaseCommitment(CBlock& block, const CBloc
 bool ContextualCheckBlockHeader(const CBlockHeader& block, CValidationState& state, const Consensus::Params& consensusParams, CBlockIndex * const pindexPrev, int64_t nAdjustedTime)
 {
     // Check generation signature
-    if (false /*!verifyGenerationSignature(block.generationSignature, block.pubKeyOfpackager)*/) {
+    if (!verifyGenerationSignature(block.generationSignature, block.pubKeyOfpackager)) {
         return state.DoS(90, false, REJECT_INVALID, "mismatch generation signature", false, "proof of stake failed");
     }
 
     // Check proof of stake
-    if (false /*block.baseTarget != getNextPosRequired(pindexPrev)*/)
+    if (block.baseTarget != getNextPosRequired(pindexPrev))
         return state.DoS(50, false, REJECT_INVALID, "bad-basetargetbits", false, "incorrect proof of stake");
 
-    if (false /*block.cumulativeDifficulty != GetNextCumulativeDifficulty(pindexPrev, block.baseTarget, consensusParams)*/)
+    if (block.cumulativeDifficulty != GetNextCumulativeDifficulty(pindexPrev, block.baseTarget, consensusParams))
         return state.DoS(50, false, REJECT_INVALID, "bad-cumuldiffbits", false, "incorrect proof of stake");
 
     // Check proof of work
-    if (block.nBits != GetNextWorkRequired(pindexPrev, &block, consensusParams))
-        return state.DoS(100, false, REJECT_INVALID, "bad-diffbits", false, "incorrect proof of work");
+    //if (block.nBits != GetNextWorkRequired(pindexPrev, &block, consensusParams))
+        //return state.DoS(100, false, REJECT_INVALID, "bad-diffbits", false, "incorrect proof of work");
 
     // Check timestamp against prev
     if (block.GetBlockTime() <= pindexPrev->GetMedianTimePast())
@@ -4019,6 +4021,8 @@ CBlockIndex * InsertBlockIndex(uint256 hash)
 bool static LoadBlockIndexDB()
 {
     const CChainParams& chainparams = Params();
+    CValidationState dummy;
+
     if (!pblocktree->LoadBlockIndexGuts(InsertBlockIndex))
         return false;
 
@@ -4036,6 +4040,17 @@ bool static LoadBlockIndexDB()
     BOOST_FOREACH(const PAIRTYPE(int, CBlockIndex*)& item, vSortedByHeight)
     {
         CBlockIndex* pindex = item.second;
+
+        // Here, we have to check proof of dry stake.
+        // For bitcoin, pow verification is implemented in "LoadBlockIndexGuts".
+        // But for pods, we have to do this work after all BlockIndexed are loaded.
+        if (pindex->pprev) {
+            if (!CheckProofOfDryStake(pindex->GetBlockHeader(), dummy, chainparams.GetConsensus(),
+                    pindex->pprev)) {
+                return error("LoadBlockIndex(): CheckProofOfDryStake failed: %s", pindex->ToString());
+            }
+        }
+
         pindex->nChainWork = (pindex->pprev ? pindex->pprev->nChainWork : 0) + GetBlockProof(*pindex);
         // We can link the chain of blocks for which we've received transactions at some point.
         // Pruned nodes may have deleted the block.

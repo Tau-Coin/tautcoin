@@ -13,6 +13,7 @@
 #include "core_io.h"
 #include "init.h"
 #include "main.h"
+#include "consensus/merkle.h"
 #include "miner.h"
 #include "net.h"
 #include "pow.h"
@@ -161,11 +162,9 @@ UniValue generateBlocks(boost::shared_ptr<CReserveScript> coinbaseScript, int nG
     }
     return blockHashes;
 }
-#if 0
 //pos packaging a block althought it is not completed
 UniValue generateBlocksWithPos(boost::shared_ptr<CReserveScript> coinbaseScript, int nGenerate, uint64_t nMaxTries, bool keepScript)
 {
-     static const int nInnerLoopCount = 0x10000;
      int nHeightStart = 0;
      int nHeightEnd = 0;
      int nHeight = 0;
@@ -176,59 +175,55 @@ UniValue generateBlocksWithPos(boost::shared_ptr<CReserveScript> coinbaseScript,
          nHeight = nHeightStart;
          nHeightEnd = nHeightStart+nGenerate;
      }
-     unsigned int nExtraNonce = 0;
      UniValue blockHashes(UniValue::VARR);
-while (nHeight < nHeightEnd)
+
+     while (nHeight < nHeightEnd)
      {
-         #ifdef imtest
-         string geneSignature = getLatestBlockGenerationSignature();
-         LogPrintf( "===========previous generationsignature is ===========%s\n",geneSignature);
-         string pubkey = GetPubKeyForPackage();
-         LogPrintf( "===========packager pubkey is ===========%s\n",pubkey);
-         uint256 geneSignatureHash = getPosHash(geneSignature,pubkey);
-         uint64_t hit = calculateHitOfPOS(geneSignatureHash);
-         LogPrintf( "===========hit is ===========%d\n",hit);
-         string pub1key = "Scientific distribution of wealth to each one";
-         bool pass = verifyGenerationSignature(geneSignature,pub1key);
-         LogPrintf( "===========is pass===========%d\n",pass);
-         int64_t tt = getPastTimeFromLastestBlock();
-         LogPrintf( "===========time pass===========%d\n",tt);
-         #endif
-         std::unique_ptr<CBlockTemplate> pblocktemplate(BlockAssembler(Params()).CreateNewBlock(coinbaseScript->reserveScript,coinbaseScript->pubkeyString));
-         if (!pblocktemplate.get())
-             throw JSONRPCError(RPC_INTERNAL_ERROR, "Couldn't create new block");
-         CBlock *pblock = &pblocktemplate->block;
+         CBlockIndex *prevIndex = NULL;
          {
              LOCK(cs_main);
-             IncrementExtraNonce(pblock, chainActive.Tip(), nExtraNonce);//modidy nonce value in current block coinbase
+             prevIndex = chainActive.Tip();
          }
-         CAuxPow::initAuxPow(*pblock);
-         CPureBlockHeader& miningHeader = pblock->auxpow->parentBlock;
-         while (nMaxTries > 0 && miningHeader.nNonce < nInnerLoopCount && !CheckProofOfWork(miningHeader.GetHash(), pblock->nBits, Params().GetConsensus())) {
-             ++miningHeader.nNonce;
-             --nMaxTries;
-         }
-         if (nMaxTries == 0) {
-             break;
-         }
-         if (miningHeader.nNonce == nInnerLoopCount) {
-             continue;
-         }
-         CValidationState state;
-         if (!ProcessNewBlock(state, Params(), NULL, pblock, true, NULL))
-             throw JSONRPCError(RPC_INTERNAL_ERROR, "ProcessNewBlock, block not accepted");
-         ++nHeight;
-         blockHashes.push_back(pblock->GetHash().GetHex());
- 
-         //mark script as important because it was used at least for one coinbase output if the script came from the wallet
-         if (keepScript)
+         int64_t now = GetTime();
+         uint64_t baseTarget = getNextPosRequired(prevIndex);
+
+         if (CheckProofOfDryStake(prevIndex->generationSignature, coinbaseScript->pubkeyString,
+                 prevIndex->nHeight + 1, now - prevIndex->nTime, baseTarget, Params().GetConsensus()))
          {
-             coinbaseScript->KeepScript();
+              std::unique_ptr<CBlockTemplate> pblocktemplate(BlockAssembler(Params()).CreateNewBlock(coinbaseScript->reserveScript,coinbaseScript->pubkeyString));
+              if (!pblocktemplate.get())
+                  throw JSONRPCError(RPC_INTERNAL_ERROR, "Couldn't create new block");
+
+              CBlock *pblock = &pblocktemplate->block;
+              CMutableTransaction txCoinbase(pblock->vtx[0]);//index 0 is about coinbase
+              txCoinbase.vin[0].scriptSig = (CScript() << prevIndex->nHeight + 1) + COINBASE_FLAGS;
+              assert(txCoinbase.vin[0].scriptSig.size() <= 100);
+
+              pblock->vtx[0] = txCoinbase;
+              pblock->hashMerkleRoot = BlockMerkleRoot(*pblock);
+
+              CValidationState state;
+              if (!ProcessNewBlock(state, Params(), NULL, pblock, true, NULL))
+                  throw JSONRPCError(RPC_INTERNAL_ERROR, "ProcessNewBlock, block not accepted");
+              LogPrintf( "success create new block with pos\n");
+              ++nHeight;
+              blockHashes.push_back(pblock->GetHash().GetHex());
+             //mark script as important because it was used at least for one coinbase output if the script came from the wallet
+             if (keepScript)
+             {
+                 coinbaseScript->KeepScript();
+             }
+         }else {
+             if(nMaxTries > 0){
+                 sleep(1);
+                 --nMaxTries;
+             }
          }
+         if (nMaxTries <= 0)
+            break;
      }
      return blockHashes;
 }
-#endif
 
 UniValue generate(const UniValue& params, bool fHelp)
 {
@@ -263,7 +258,7 @@ UniValue generate(const UniValue& params, bool fHelp)
     if (coinbaseScript->reserveScript.empty())
         throw JSONRPCError(RPC_INTERNAL_ERROR, "No coinbase script available (mining requires a wallet)");
 
-    return generateBlocks(coinbaseScript, nGenerate, nMaxTries, true);
+    return generateBlocksWithPos(coinbaseScript, nGenerate, nMaxTries, true);
 }
 
 UniValue generatetoaddress(const UniValue& params, bool fHelp)
