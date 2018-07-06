@@ -32,6 +32,7 @@
 
 const uint256 DiffAdjustNumerator = uint256S("0x010000000000000000");
 const arith_uint256 Arith256DiffAdjustNumerator = UintToArith256(DiffAdjustNumerator);
+const static bool fDebugPODS = false;
 
 #if 0
 UniValue getLatestBlockHash(){
@@ -202,14 +203,14 @@ bool CheckProofOfDryStake(const std::string& prevGenerationSignature, const std:
             prevGenerationSignature, currPubKey, nHeight, nTime);
         return false;
     }
-    LogPrintf("CheckProofOfDryStake, signature:%s, pubkey:%s\n", prevGenerationSignature, currPubKey);
-    LogPrintf("CheckProofOfDryStake, height:%d, time:%d, baseTarget:%d\n", nHeight, nTime, baseTarget);
+
+    if (fDebugPODS) {
+        LogPrintf("CheckProofOfDryStake, signature:%s, pubkey:%s\n", prevGenerationSignature, currPubKey);
+        LogPrintf("CheckProofOfDryStake, height:%d, time:%d, baseTarget:%d\n", nHeight, nTime, baseTarget);
+    }
 
     uint256 geneSignatureHash = getPosHash(prevGenerationSignature, currPubKey);
     uint64_t hit = calculateHitOfPOS(geneSignatureHash);
-
-    LogPrintf("CheckProofOfDryStake, hit:%d\n", hit);
-
     const CScript script = CScript() << ParseHex(currPubKey) << OP_CHECKSIG;
     CBitcoinAddress addr;
     std::string strAddr;
@@ -218,12 +219,18 @@ bool CheckProofOfDryStake(const std::string& prevGenerationSignature, const std:
         LogPrintf("CheckProofOfDryStake failed, get strAddr fail\n");
         return false;
     }
-    LogPrintf("CheckProofOfDryStake, strAddr:%s\n", strAddr);
+    if (fDebugPODS)
+        LogPrintf("CheckProofOfDryStake, strAddr:%s\n", strAddr);
 
     // get effective balance with nHeight
-    uint64_t effectiveBalance =  0x0ffff;//getEffectiveBalance(nHeight);
-    LogPrintf("CheckProofOfDryStake, result:%d\n", baseTarget * nTime * effectiveBalance);
-    if (hit < baseTarget * nTime * effectiveBalance) {
+    uint64_t effectiveBalance =  0x0afff;//getEffectiveBalance(nHeight);
+    arith_uint256 thresold(baseTarget);
+    thresold *= arith_uint256((uint64_t)nTime);
+    thresold *= arith_uint256((uint64_t)effectiveBalance);
+
+    LogPrintf("CheckProofOfDryStake, hit:%s\n", arith_uint256(hit).ToString());
+    LogPrintf("CheckProofOfDryStake, thresold:%s\n", thresold.ToString());
+    if (thresold.CompareTo(arith_uint256(hit)) > 0) {
         return true;
     }
 
