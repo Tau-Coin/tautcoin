@@ -2481,8 +2481,8 @@ bool ConnectBlock(const CBlock& block, CValidationState& state, CBlockIndex* pin
         if (i > 0) {
             blockundo.vtxundo.push_back(CTxUndo());
         }
-        if (!pbalancedbview->UpdateBalance(block.vtx[0], view, 0))
-            return error("Failed to update balance db in genesis block!");
+        if (!pbalancedbview->UpdateBalance(tx, view, pindex->nHeight))
+            return error("Failed to update balance db!");
         UpdateCoins(tx, view, i == 0 ? undoDummy : blockundo.vtxundo.back(), pindex->nHeight);
 
         vPos.push_back(std::make_pair(tx.GetHash(), pos));
