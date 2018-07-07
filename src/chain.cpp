@@ -4,6 +4,7 @@
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
 #include "chain.h"
+#include "pos.h"
 
 using namespace std;
 
@@ -114,30 +115,36 @@ void CBlockIndex::BuildSkip()
 
 arith_uint256 GetBlockProof(const CBlockIndex& block)
 {
-    arith_uint256 bnTarget;
-    bool fNegative;
-    bool fOverflow;
-    bnTarget.SetCompact(block.nBits, &fNegative, &fOverflow);
-    if (fNegative || fOverflow || bnTarget == 0)
-        return 0;
+    //arith_uint256 bnTarget;
+    //bool fNegative;
+    //bool fOverflow;
+    //bnTarget.SetCompact(block.nBits, &fNegative, &fOverflow);
+    //if (fNegative || fOverflow || bnTarget == 0)
+    //    return 0;
     // We need to compute 2**256 / (bnTarget+1), but we can't represent 2**256
     // as it's too large for a arith_uint256. However, as 2**256 is at least as large
     // as bnTarget+1, it is equal to ((2**256 - bnTarget - 1) / (bnTarget+1)) + 1,
     // or ~bnTarget / (nTarget+1) + 1.
-    return (~bnTarget / (bnTarget + 1)) + 1;
+    //return (~bnTarget / (bnTarget + 1)) + 1;
+
+    assert(block.baseTarget);
+    arith_uint256 ret = Arith256DiffAdjustNumerator / arith_uint256(block.baseTarget);
+
+    return ret;
 }
 
 int64_t GetBlockProofEquivalentTime(const CBlockIndex& to, const CBlockIndex& from, const CBlockIndex& tip, const Consensus::Params& params)
 {
     arith_uint256 r;
     int sign = 1;
-    if (to.nChainWork > from.nChainWork) {
-        r = to.nChainWork - from.nChainWork;
+
+    if (to.nChainDiff > from.nChainDiff) {
+        r = to.nChainDiff - from.nChainDiff;
     } else {
-        r = from.nChainWork - to.nChainWork;
+        r = from.nChainDiff - to.nChainDiff;
         sign = -1;
     }
-    r = r * arith_uint256(params.nPowTargetSpacing) / GetBlockProof(tip);
+    r = r * arith_uint256(params.nPodsTargetSpacing) / GetBlockProof(tip);
     if (r.bits() > 63) {
         return sign * std::numeric_limits<int64_t>::max();
     }

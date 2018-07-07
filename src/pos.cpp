@@ -244,7 +244,7 @@ bool CheckProofOfDryStake(const std::string& prevGenerationSignature, const std:
         LogPrintf("CheckProofOfDryStake, strAddr:%s\n", strAddr);
 
     // get effective balance with nHeight
-    uint64_t effectiveBalance =  200000000;//0x0afff;//getEffectiveBalance(nHeight);
+    uint64_t effectiveBalance =  2000000000;//0x0afff;//getEffectiveBalance(nHeight);
     arith_uint256 thresold(baseTarget);
     thresold *= arith_uint256((uint64_t)nTime);
     thresold *= arith_uint256((uint64_t)effectiveBalance);

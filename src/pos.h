@@ -22,6 +22,9 @@ class uint256;
 //S is the time when you get your right
 //Be is your UTXO before
 //h is signature using your pubkey to sig last block
+
+extern const arith_uint256 Arith256DiffAdjustNumerator;
+
 UniValue getLatestBlockHash();
 //CPubKey GetPubKeyForPackage();
 uint256 getPosHash( UniValue value);

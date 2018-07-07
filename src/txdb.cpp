@@ -5,6 +5,7 @@
 
 #include "txdb.h"
 
+#include "arith_uint256.h"
 #include "chainparams.h"
 #include "hash.h"
 #include "pow.h"
@@ -203,6 +204,7 @@ bool CBlockTreeDB::LoadBlockIndexGuts(boost::function<CBlockIndex*(const uint256
                 pindexNew->generationSignature         = diskindex.generationSignature;
                 pindexNew->pubKeyOfpackager            = diskindex.pubKeyOfpackager;
                 pindexNew->cumulativeDifficulty        = diskindex.cumulativeDifficulty;
+                pindexNew->nChainDiff        = UintToArith256(diskindex.cumulativeDifficulty);
 
                 pcursor->Next();
             } else {

@@ -177,8 +177,8 @@ public:
     //! Byte offset within rev?????.dat where this block's undo data is stored
     unsigned int nUndoPos;
 
-    //! (memory only) Total amount of work (expected number of hashes) in the chain up to and including this block
-    arith_uint256 nChainWork;
+    //! (memory only) equal to cumulativeDifficulty, because uint256 not support arithmetic calculation
+    arith_uint256 nChainDiff;
 
     //! Number of transactions in this block.
     //! Note: in a potential headers-first mode, this number cannot be relied upon
@@ -217,7 +217,7 @@ public:
         nFile = 0;
         nDataPos = 0;
         nUndoPos = 0;
-        nChainWork = arith_uint256();
+        nChainDiff = arith_uint256();
         nTx = 0;
         nChainTx = 0;
         nStatus = 0;
