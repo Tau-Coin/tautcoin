@@ -7,6 +7,7 @@
 
 #include "addrman.h"
 #include "arith_uint256.h"
+#include "base58.h"
 #include "blockencodings.h"
 #include "chainparams.h"
 #include "checkpoints.h"
@@ -83,6 +84,11 @@ int64_t nMaxTipAge = DEFAULT_MAX_TIP_AGE;
 bool fEnableReplacement = DEFAULT_ENABLE_REPLACEMENT;
 CBalanceViewDB *pbalancedbview = NULL;
 
+struct MinerClub
+{
+    std::multimap<std::string, std::string> mapMinerClubs;
+    int nHeight;
+} minerClub;
 
 CFeeRate minRelayTxFee = CFeeRate(DEFAULT_MIN_RELAY_TX_FEE);
 CAmount maxTxFee = DEFAULT_TRANSACTION_MAXFEE;
@@ -2207,6 +2213,30 @@ bool DisconnectBlock(const CBlock& block, CValidationState& state, const CBlockI
     // move best block pointer to prevout block
     view.SetBestBlock(pindex->pprev->GetBlockHash());
 
+    //undo minerclub info
+    {
+        minerClub.nHeight--;
+        minerClub.mapMinerClubs.clear();
+
+        std::ifstream ifile;
+        char fileName[16];
+        std::string toAddress, fromAddress;
+        snprintf(fileName, sizeof(fileName), "%09d.txt", minerClub.nHeight);
+        boost::filesystem::path path = GetDataDir() / "minerclub" / fileName;
+        //std::cout << path.string() << std::endl;
+        ifile.open(path.string());
+        if(ifile.is_open()){
+            while(ifile.good()){
+                ifile >> toAddress >> fromAddress;
+                minerClub.mapMinerClubs.insert(std::pair<std::string, std::string>(toAddress, fromAddress));
+            }
+        }
+        else {
+            std::cout << "Error opening file!" << std::endl;
+        }
+        ifile.close();
+    }
+
     if (pfClean) {
         *pfClean = fClean;
         return true;
@@ -2299,6 +2329,53 @@ static int64_t nTimeConnect = 0;
 static int64_t nTimeIndex = 0;
 static int64_t nTimeCallbacks = 0;
 static int64_t nTimeTotal = 0;
+
+/*
+bool CheckIfMiner(std::string address, int nHeight)
+{
+    for(std::multimap<std::string, std::string>::iterator iter =  minerClub.mapMinerClubs.begin(); iter != minerClub.mapMinerClubs.end(); ++iter){
+        if(address.compare((*iter).second))
+            return false;
+    }
+    return true;
+}
+*/
+
+std::vector<std::string> GetMinerMembers(std::string address, int nHeight)
+{
+    std::vector<std::string> minerMembers;
+    if (nHeight > minerClub.nHeight){
+        return minerMembers;
+    }else if(nHeight == minerClub.nHeight){
+        for(std::multimap<std::string, std::string>::iterator iter =  minerClub.mapMinerClubs.begin(); iter != minerClub.mapMinerClubs.end(); ++iter){
+            if(!address.compare((*iter).first)){
+                minerMembers.push_back((*iter).second);
+            }
+        }
+        return minerMembers;
+    }else{
+        std::ifstream ifile;
+        char fileName[16];
+        std::string toAddress, fromAddress;
+        snprintf(fileName, sizeof(fileName), "%09d.txt", nHeight);
+        boost::filesystem::path path = GetDataDir() / "minerclub" / fileName;
+        //std::cout << path.string() << std::endl;
+        ifile.open(path.string());
+        if(ifile.is_open()){
+            while(ifile.good()){
+                ifile >> toAddress >> fromAddress;
+                if(!address.compare(toAddress)){
+                    minerMembers.push_back(fromAddress);
+                }
+            }
+        }
+        else {
+            std::cout << "Error opening file!" << std::endl;
+        }
+        ifile.close();
+        return minerMembers;
+    }
+}
 
 bool ConnectBlock(const CBlock& block, CValidationState& state, CBlockIndex* pindex,
                   CCoinsViewCache& view, const CChainParams& chainparams, bool fJustCheck)
@@ -2478,16 +2555,84 @@ bool ConnectBlock(const CBlock& block, CValidationState& state, CBlockIndex* pin
         }
 
         CTxUndo undoDummy;
+        uint256 temp;
         if (i > 0) {
             blockundo.vtxundo.push_back(CTxUndo());
+
+            //--------------------------------------------------------minerclub--------------------------------------------------------------------
+            BOOST_FOREACH(const CTxOut &txout, tx.vout) {
+                if (txout.nValue == 1){
+                    CTxDestination fromAddress;
+                    CTxDestination toAddress;
+                    CCoins coins;
+                    if (ExtractDestinationFromP2PKAndP2PKH(txout.scriptPubKey, toAddress)){
+                        if(view.GetCoins(tx.vin[0].prevout.hash, coins)){
+                            if (tx.vin[0].prevout.n >= coins.vout.size() || coins.vout[tx.vin[0].prevout.n].IsNull())
+                                assert(false);
+                            if (ExtractDestinationFromP2PKAndP2PKH(coins.vout[tx.vin[0].prevout.n].scriptPubKey, fromAddress)){
+                                std::cout << CBitcoinAddress(fromAddress).ToString() << "--------->" << txout.nValue << "-------->" << CBitcoinAddress(toAddress).ToString() << std::endl;;
+                                //TODO::
+                                //erase yourself from son position
+                                for(std::multimap<std::string, std::string>::iterator iter =  minerClub.mapMinerClubs.begin(); iter != minerClub.mapMinerClubs.end(); ++iter){
+                                    if(!CBitcoinAddress(fromAddress).ToString().compare((*iter).second)){
+                                        minerClub.mapMinerClubs.erase(iter);
+                                        break;
+                                    }
+                                }
+                                if(toAddress == fromAddress){
+                                    //Do not insert into the map!
+                                }
+                                else{
+                                    //add yourself to son position
+                                    minerClub.mapMinerClubs.insert(std::pair<std::string, std::string>(CBitcoinAddress(toAddress).ToString(), CBitcoinAddress(fromAddress).ToString()));
+                                }
+                            }
+                            //temp = tx.vin[0].prevout.hash;
+                            //std::cout << "-----------" << temp.ToString() << std::endl;
+                        }
+                    }
+                }
+            }
         }
         if (!pbalancedbview->UpdateBalance(tx, view, pindex->nHeight))
             return error("Failed to update balance db!");
         UpdateCoins(tx, view, i == 0 ? undoDummy : blockundo.vtxundo.back(), pindex->nHeight);
 
+        /*
+        CTxDestination address;
+        CCoins coins;
+        if(view.GetCoins(temp, coins)){
+            std::cout << "----------------------------------To find more" << std::endl;
+            if (!(tx.vin[0].prevout.n >= coins.vout.size() || coins.vout[tx.vin[0].prevout.n].IsNull())){
+                std::cout << temp.ToString() << std::endl;
+                if (ExtractDestination(coins.vout[tx.vin[0].prevout.n].scriptPubKey, address)){
+                    std::cout << CBitcoinAddress(address).ToString() << std::endl;
+                }
+            }
+        }
+        else
+        {
+            std::cout << "oooooooop!" << std::endl;
+        }
+        */
+
         vPos.push_back(std::make_pair(tx.GetHash(), pos));
         pos.nTxOffset += ::GetSerializeSize(tx, SER_DISK, CLIENT_VERSION);
     }
+
+    minerClub.nHeight = pindex->nHeight;
+    std::ofstream ofile;
+    char fileName[16];
+    snprintf(fileName, sizeof(fileName), "%09d.txt", minerClub.nHeight);
+    boost::filesystem::path path = GetDataDir() / "minerclub" / fileName;
+    //TryCreateDirectory(path);
+    //std::cout << path.string() << std::endl;
+    ofile.open(path.string());
+    for(std::multimap<std::string, std::string>::iterator iter =  minerClub.mapMinerClubs.begin(); iter != minerClub.mapMinerClubs.end(); ++iter){
+        ofile << (*iter).first << "    " << (*iter).second << std::endl;
+    }
+    ofile.close();
+
     int64_t nTime3 = GetTimeMicros(); nTimeConnect += nTime3 - nTime2;
     LogPrint("bench", "      - Connect %u transactions: %.2fms (%.3fms/tx, %.3fms/txin) [%.2fs]\n", (unsigned)block.vtx.size(), 0.001 * (nTime3 - nTime2), 0.001 * (nTime3 - nTime2) / block.vtx.size(), nInputs <= 1 ? 0 : 0.001 * (nTime3 - nTime2) / (nInputs-1), nTimeConnect * 0.000001);
 

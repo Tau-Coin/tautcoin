@@ -1231,6 +1231,9 @@ bool AppInit2(boost::thread_group& threadGroup, CScheduler& scheduler)
     LogPrintf("* Using %.1fMiB for chain state database\n", nCoinDBCache * (1.0 / 1024 / 1024));
     LogPrintf("* Using %.1fMiB for in-memory UTXO set\n", nCoinCacheUsage * (1.0 / 1024 / 1024));
 
+    boost::filesystem::path path = GetDataDir() / "minerclub";
+    TryCreateDirectory(path);
+
     bool fLoaded = false;
     while (!fLoaded) {
         bool fReset = fReindex;
