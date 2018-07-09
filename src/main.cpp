@@ -2889,7 +2889,7 @@ bool static DisconnectTip(CValidationState& state, const CChainParams& chainpara
     CBlockIndex *pindexDelete = chainActive.Tip();
     assert(pindexDelete);
 
-    LogPrint("bench", "-Disconnect block, hash:%s, culDiff:%s\n",
+    LogPrintf("-Disconnect block, hash:%s, culDiff:%s\n",
             pindexDelete->phashBlock->ToString(), pindexDelete->nChainDiff.ToString());
     // Read block from disk.
     CBlock block;
@@ -2953,7 +2953,7 @@ bool static ConnectTip(CValidationState& state, const CChainParams& chainparams,
 {
     assert(pindexNew->pprev == chainActive.Tip());
 
-    LogPrint("bench", "-Connect Tip, hash:%s, culDiff:%s\n",
+    LogPrintf("-Connect Tip, hash:%s, culDiff:%s\n",
             pindexNew->phashBlock->ToString(), pindexNew->nChainDiff.ToString());
 
     // Read block from disk.
@@ -3090,7 +3090,7 @@ static bool ActivateBestChainStep(CValidationState& state, const CChainParams& c
     const CBlockIndex *pindexOldTip = chainActive.Tip();
     const CBlockIndex *pindexFork = chainActive.FindFork(pindexMostWork);
 
-    LogPrint("bench", "-ActivateBestChainStep, hash:%s, culDiff:%s\n",
+    LogPrintf("-ActivateBestChainStep, hash:%s, culDiff:%s\n",
             pindexFork->phashBlock->ToString(), pindexFork->nChainDiff.ToString());
 
     // Disconnect active blocks which are no longer in the best chain.
