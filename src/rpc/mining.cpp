@@ -17,7 +17,7 @@
 #include "miner.h"
 #include "net.h"
 #include "pow.h"
-#include "pos.h"
+#include "pods.h"
 #include "rpc/server.h"
 #include "txmempool.h"
 #include "util.h"

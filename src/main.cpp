@@ -28,6 +28,7 @@
 #include "script/script.h"
 #include "script/sigcache.h"
 #include "script/standard.h"
+#include "stake.h"
 #include "tinyformat.h"
 #include "txdb.h"
 #include "txmempool.h"

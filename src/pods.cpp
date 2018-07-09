@@ -4,7 +4,7 @@
 
 #include "arith_uint256.h"
 #include "base58.h"
-#include "pos.h"
+#include "pods.h"
 #include "amount.h"
 #include "chain.h"
 #include "chainparams.h"
@@ -22,6 +22,7 @@
 #include "util.h"
 #include "utilstrencodings.h"
 #include "hash.h"
+#include "stake.h"
 #include <stdint.h>
 #include <univalue.h>
 #include <boost/thread/thread.hpp> // boost::thread::interrupt
@@ -232,11 +233,9 @@ bool CheckProofOfDryStake(const std::string& prevGenerationSignature, const std:
 
     uint256 geneSignatureHash = getPosHash(prevGenerationSignature, currPubKey);
     uint64_t hit = calculateHitOfPOS(geneSignatureHash);
-    const CScript script = CScript() << ParseHex(currPubKey) << OP_CHECKSIG;
-    CBitcoinAddress addr;
     std::string strAddr;
 
-    if (!addr.ScriptPub2Addr(script, strAddr) || strAddr.empty()) {
+    if (!ConvertPubkeyToAddress(currPubKey, strAddr) || strAddr.empty()) {
         LogPrintf("CheckProofOfDryStake failed, get strAddr fail\n");
         return false;
     }
@@ -244,11 +243,13 @@ bool CheckProofOfDryStake(const std::string& prevGenerationSignature, const std:
         LogPrintf("CheckProofOfDryStake, strAddr:%s\n", strAddr);
 
     // get effective balance with nHeight
-    uint64_t effectiveBalance =  2000000000;//0x0afff;//getEffectiveBalance(nHeight);
+    // uint64_t effectiveBalance =  2000000000;//0x0afff;//getEffectiveBalance(nHeight);
+    uint64_t effectiveBalance =  (uint64_t)GetEffectiveBalance(strAddr, nHeight);
     arith_uint256 thresold(baseTarget);
     thresold *= arith_uint256((uint64_t)nTime);
     thresold *= arith_uint256((uint64_t)effectiveBalance);
 
+    LogPrintf("CheckProofOfDryStake, effective balance:%d\n", effectiveBalance);
     LogPrintf("CheckProofOfDryStake, hit:%s\n", arith_uint256(hit).ToString());
     LogPrintf("CheckProofOfDryStake, thresold:%s\n", thresold.ToString());
     if (thresold.CompareTo(arith_uint256(hit)) > 0) {

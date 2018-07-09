@@ -14,7 +14,7 @@
 #include "chain.h"
 #include "coins.h"
 #include "net.h"
-#include "pos.h"
+#include "pods.h"
 #include "script/script_error.h"
 #include "sync.h"
 #include "versionbits.h"
