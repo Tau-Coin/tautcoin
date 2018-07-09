@@ -2343,14 +2343,23 @@ bool CheckIfMiner(std::string address, int nHeight)
 
 std::vector<std::string> GetMinerMembers(std::string address, int nHeight)
 {
+    bool bEntrust = false;
     std::vector<std::string> minerMembers;
     if (nHeight > minerClub.nHeight){
         return minerMembers;
     }else if(nHeight == minerClub.nHeight){
         for(std::multimap<std::string, std::string>::iterator iter =  minerClub.mapMinerClubs.begin(); iter != minerClub.mapMinerClubs.end(); ++iter){
+            if(!address.compare((*iter).second)){
+                bEntrust = true;
+                minerMembers.clear();
+                break;
+            }
             if(!address.compare((*iter).first)){
                 minerMembers.push_back((*iter).second);
             }
+        }
+        if (!bEntrust) {
+            minerMembers.push_back(address);
         }
         return minerMembers;
     }else{
@@ -2364,6 +2373,11 @@ std::vector<std::string> GetMinerMembers(std::string address, int nHeight)
         if(ifile.is_open()){
             while(ifile.good()){
                 ifile >> toAddress >> fromAddress;
+                if(!address.compare(fromAddress)){
+                    bEntrust = true;
+                    minerMembers.clear();
+                    break;
+                }
                 if(!address.compare(toAddress)){
                     minerMembers.push_back(fromAddress);
                 }
@@ -2373,6 +2387,9 @@ std::vector<std::string> GetMinerMembers(std::string address, int nHeight)
             std::cout << "Error opening file!" << std::endl;
         }
         ifile.close();
+        if (!bEntrust) {
+            minerMembers.push_back(address);
+        }
         return minerMembers;
     }
 }
@@ -2561,7 +2578,7 @@ bool ConnectBlock(const CBlock& block, CValidationState& state, CBlockIndex* pin
 
             //--------------------------------------------------------minerclub--------------------------------------------------------------------
             BOOST_FOREACH(const CTxOut &txout, tx.vout) {
-                if (txout.nValue == 1){
+                if (txout.nValue == 0){
                     CTxDestination fromAddress;
                     CTxDestination toAddress;
                     CCoins coins;
