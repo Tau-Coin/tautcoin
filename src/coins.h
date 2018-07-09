@@ -89,7 +89,21 @@ public:
 
     void FromTx(const CTransaction &tx, int nHeightIn) {
         fCoinBase = tx.IsCoinBase();
-        vout = tx.vout;
+
+        if (!fCoinBase)
+        {
+            std::vector<CTxOut> noZeroVout;
+            for(uint i = 0; i < tx.vout.size(); i++)
+            {
+                CTxOut coin = tx.vout[i];
+                if (coin.nValue > 0)
+                    noZeroVout.push_back(coin);
+            }
+            vout = noZeroVout;
+        }
+        else
+            vout = tx.vout;
+
         nHeight = nHeightIn;
         nVersion = tx.nVersion;
         ClearUnspendable();
