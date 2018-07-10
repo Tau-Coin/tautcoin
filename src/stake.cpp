@@ -50,19 +50,23 @@ bool IsAllowForge(const std::string pubKey, int height)
 
 CAmount GetEffectiveBalance(const std::string address, int nHeight)
 {
+    CAmount total = 0;
     CAmount balance = 0;
 
     std::vector<std::string> principals = GetMinerMembers(address, nHeight);
     if (principals.empty())
     {
+        LogPrintf("GetEffectiveBalance, warning: not allow to forge\n");
         return CAmount(0);
     }
 
     for (std::vector<std::string>::iterator it = principals.begin();
         it != principals.end(); it++)
     {
-        balance += pbalancedbview->GetBalance(*it, nHeight);
+        balance = pbalancedbview->GetBalance(*it, nHeight);
+        LogPrintf("GetEffectiveBalance, addr:%s, balance:%d\n", *it, balance);
+        total += balance;
     }
 
-    return balance;
+    return total;
 }

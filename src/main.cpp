@@ -3554,6 +3554,7 @@ bool CheckProofOfDryStake(const CBlockHeader& block, CValidationState& state,
     }
 
     assert(pindexPrev);
+
     if (!CheckProofOfDryStake(pindexPrev->generationSignature, block.pubKeyOfpackager,
                 pindexPrev->nHeight + 1, block.nTime - pindexPrev->nTime, block.baseTarget, consensusParams)) {
         return state.DoS(50, false, REJECT_INVALID, "high-hit", false, "proof of stake failed");
@@ -3573,6 +3574,28 @@ bool CheckBlockHeader(const CBlockHeader& block, CValidationState& state, const 
     // Check proof of work matches claimed amount
     //if (fCheckPOW && !CheckProofOfWork(block.GetHash(), block.nBits, consensusParams))
         //return state.DoS(50, false, REJECT_INVALID, "high-hash", false, "proof of work failed");
+
+    // Firstly if pindexLast equals NULL, get it from mapBlockIndex.
+    // If not exist, return error.
+    if (!pindexPrev) {
+        BlockMap::iterator mi;
+        {
+            LOCK(cs_main);
+            mi = mapBlockIndex.find(block.hashPrevBlock);
+            if (mi == mapBlockIndex.end())
+                return state.DoS(10, error("%s: prev block not found", __func__), 0, "bad-prevblk");
+        }
+        pindexPrev = (*mi).second;
+        if (pindexPrev->nStatus & BLOCK_FAILED_MASK)
+            return state.DoS(100, error("%s: prev block invalid", __func__), REJECT_INVALID, "bad-prevblk");
+    }
+
+    assert(pindexPrev);
+
+    if (!IsAllowForge(pindexPrev->pubKeyOfpackager, pindexPrev->nHeight + 1))
+    {
+        return state.DoS(90, false, REJECT_INVALID, "not allow to forge", false, "proof of stake failed");
+    }
 
     // Check proof of stake matches claimed amount
     if (fCheckPOW && !CheckProofOfDryStake(block, state, consensusParams, pindexPrev))
