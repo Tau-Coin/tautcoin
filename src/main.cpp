@@ -2417,6 +2417,7 @@ bool ConnectBlock(const CBlock& block, CValidationState& state, CBlockIndex* pin
         UpdateCoins(block.vtx[0], view, 0);
         if (!pbalancedbview->UpdateBalance(block.vtx[0], view, 0))
             return error("Failed to update balance db in genesis block!");
+        pbalancedbview->ClearCache();
         return true;
     }
 
@@ -2646,6 +2647,7 @@ bool ConnectBlock(const CBlock& block, CValidationState& state, CBlockIndex* pin
         vPos.push_back(std::make_pair(tx.GetHash(), pos));
         pos.nTxOffset += ::GetSerializeSize(tx, SER_DISK, CLIENT_VERSION);
     }
+    pbalancedbview->ClearCache();
 
     minerClub.nHeight = pindex->nHeight;
     std::ofstream ofile;

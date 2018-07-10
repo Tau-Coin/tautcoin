@@ -132,6 +132,9 @@ private:
     //! database options used
     leveldb::Options options;
 
+    //! cache for multi-transaction balance updating
+    std::map<std::string, CAmount> cacheBalance;
+
     bool WriteDB(std::string key, int nHeight, CAmount value);
 
     bool ReadDB(std::string key, int nHeight, CAmount& value);
@@ -142,6 +145,9 @@ public:
 
     //! As we use CBalanceViews polymorphically, have a destructor
     ~CBalanceViewDB();
+
+    //! Clear the balance cache
+    void ClearCache();
 
     //! Retrieve the CBalance for a given address
     CAmount GetBalance(std::string address, int nHeight);
