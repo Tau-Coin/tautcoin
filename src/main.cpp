@@ -2639,7 +2639,7 @@ bool ConnectBlock(const CBlock& block, CValidationState& state, CBlockIndex* pin
         pos.nTxOffset += ::GetSerializeSize(tx, SER_DISK, CLIENT_VERSION);
     }
 
-    minerClub.nHeight = pindex->nHeight;
+    minerClub.nHeight = pindex->nHeight + 1;
     std::ofstream ofile;
     char fileName[16];
     snprintf(fileName, sizeof(fileName), "%09d.txt", minerClub.nHeight);
