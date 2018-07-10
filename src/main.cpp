@@ -2343,12 +2343,12 @@ bool CheckIfMiner(std::string address, int nHeight)
 
 std::vector<std::string> GetMinerMembers(std::string address, int nHeight)
 {
-    std::cout << "-------------nHeight" << nHeight << "----------" << minerClub.nHeight << std::endl;
+    std::cout << "-------------nHeight:" << nHeight << "----------" << minerClub.nHeight << std::endl;
     bool bEntrust = false;
     std::vector<std::string> minerMembers;
-    if (nHeight > minerClub.nHeight){
+    /*if (nHeight > minerClub.nHeight){
         return minerMembers;
-    }else if(nHeight == minerClub.nHeight){
+    }else */if(nHeight == minerClub.nHeight){
         for(std::multimap<std::string, std::string>::iterator iter =  minerClub.mapMinerClubs.begin(); iter != minerClub.mapMinerClubs.end(); ++iter){
             if(!address.compare((*iter).second)){
                 bEntrust = true;
@@ -2364,6 +2364,8 @@ std::vector<std::string> GetMinerMembers(std::string address, int nHeight)
         }
         return minerMembers;
     }else{
+        minerClub.nHeight = nHeight;
+
         std::ifstream ifile;
         char fileName[16];
         std::string toAddress, fromAddress;
