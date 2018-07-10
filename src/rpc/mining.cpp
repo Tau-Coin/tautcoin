@@ -23,6 +23,7 @@
 #include "util.h"
 #include "utilstrencodings.h"
 #include "validationinterface.h"
+#include "wallet/wallet.h"
 
 #include <stdint.h>
 
@@ -237,7 +238,23 @@ UniValue generatetoaddress(const UniValue& params, bool fHelp)
     boost::shared_ptr<CReserveScript> coinbaseScript(new CReserveScript());
     coinbaseScript->reserveScript = GetScriptForDestination(address.Get());
 
-    return generateBlocks(coinbaseScript, nGenerate, nMaxTries, false);
+    CKeyID keyID;
+    if (!address.GetKeyID(keyID))
+        throw JSONRPCError(RPC_TYPE_ERROR, "Address does not refer to a key");
+
+    CPubKey pubkey;
+    {
+        LOCK2(cs_main, pwalletMain->cs_wallet);
+        if (!pwalletMain->GetPubKey(keyID, pubkey))
+            throw JSONRPCError(RPC_WALLET_ERROR, "Pub key for address " + address.ToString() + " is not known");
+    }
+
+    coinbaseScript->Packagerpubkey = pubkey;
+    if(coinbaseScript->Packagerpubkey.Decompress()){
+        coinbaseScript->pubkeyString = HexStr(ToByteVector(coinbaseScript->Packagerpubkey));
+    }
+
+    return generateBlocksWithPos(coinbaseScript, nGenerate, nMaxTries, false);
 }
 
 UniValue getmininginfo(const UniValue& params, bool fHelp)

@@ -37,7 +37,7 @@
 
 const uint256 DiffAdjustNumerator = uint256S("0x010000000000000000");
 const arith_uint256 Arith256DiffAdjustNumerator = UintToArith256(DiffAdjustNumerator);
-const static bool fDebugPODS = false;
+const static bool fDebugPODS = true;
 
 #if 0
 UniValue getLatestBlockHash(){
@@ -243,7 +243,7 @@ bool CheckProofOfDryStake(const std::string& prevGenerationSignature, const std:
         LogPrintf("CheckProofOfDryStake, strAddr:%s\n", strAddr);
 
     // get effective balance with nHeight
-    // uint64_t effectiveBalance =  2000000000;//0x0afff;//getEffectiveBalance(nHeight);
+    //uint64_t effectiveBalance =  2000000000;//0x0afff;//getEffectiveBalance(nHeight);
     uint64_t effectiveBalance =  (uint64_t)GetEffectiveBalance(strAddr, nHeight);
     arith_uint256 thresold(baseTarget);
     thresold *= arith_uint256((uint64_t)nTime);
