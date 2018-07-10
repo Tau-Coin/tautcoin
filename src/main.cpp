@@ -2226,9 +2226,10 @@ bool DisconnectBlock(const CBlock& block, CValidationState& state, const CBlockI
         //std::cout << path.string() << std::endl;
         ifile.open(path.string());
         if(ifile.is_open()){
+            ifile >> toAddress >> fromAddress;
             while(ifile.good()){
-                ifile >> toAddress >> fromAddress;
                 minerClub.mapMinerClubs.insert(std::pair<std::string, std::string>(toAddress, fromAddress));
+                ifile >> toAddress >> fromAddress;
             }
         }
         else {
@@ -2365,6 +2366,7 @@ std::vector<std::string> GetMinerMembers(std::string address, int nHeight)
         return minerMembers;
     }else{
         minerClub.nHeight = nHeight;
+        minerClub.mapMinerClubs.clear();
 
         std::ifstream ifile;
         char fileName[16];
@@ -2374,8 +2376,9 @@ std::vector<std::string> GetMinerMembers(std::string address, int nHeight)
         //std::cout << path.string() << std::endl;
         ifile.open(path.string());
         if(ifile.is_open()){
+            ifile >> toAddress >> fromAddress;
             while(ifile.good()){
-                ifile >> toAddress >> fromAddress;
+                minerClub.mapMinerClubs.insert(std::pair<std::string, std::string>(toAddress, fromAddress));
                 if(!address.compare(fromAddress)){
                     bEntrust = true;
                     minerMembers.clear();
@@ -2384,6 +2387,7 @@ std::vector<std::string> GetMinerMembers(std::string address, int nHeight)
                 if(!address.compare(toAddress)){
                     minerMembers.push_back(fromAddress);
                 }
+                ifile >> toAddress >> fromAddress;
             }
         }
         else {
