@@ -28,7 +28,6 @@
 #include "script/script.h"
 #include "script/sigcache.h"
 #include "script/standard.h"
-#include "stake.h"
 #include "tinyformat.h"
 #include "txdb.h"
 #include "txmempool.h"
@@ -2404,6 +2403,8 @@ bool ConnectBlock(const CBlock& block, CValidationState& state, CBlockIndex* pin
     if (block.GetHash() == chainparams.GetConsensus().hashGenesisBlock) {
         if (!fJustCheck)
             view.SetBestBlock(pindex->GetBlockHash());
+
+        minerClub.nHeight = 0;
 
         UpdateCoins(block.vtx[0], view, 0);
         if (!pbalancedbview->UpdateBalance(block.vtx[0], view, 0))
