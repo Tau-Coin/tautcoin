@@ -60,6 +60,7 @@ struct Params {
 
     /** Proof of dry stake parameters */
     int64_t nPodsTargetSpacing;
+    uint32_t nPodsAheadTargetDistance;
 
     /** Proof of work parameters */
     uint256 powLimit;
@@ -68,6 +69,13 @@ struct Params {
     int64_t nPowTargetSpacing;
     int64_t nPowTargetTimespan;
     int64_t DifficultyAdjustmentInterval() const { return nPowTargetTimespan / nPowTargetSpacing; }
+
+    int PodsAheadTargetHeight(int nHeight) const {
+        int ret = nHeight - nPodsAheadTargetDistance;
+
+        if (ret < 0 ) ret = 0;
+        return ret;
+    }
 };
 } // namespace Consensus
 

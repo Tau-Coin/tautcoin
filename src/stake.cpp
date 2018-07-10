@@ -7,6 +7,7 @@
 #include "stake.h"
 
 #include "base58.h"
+#include "chainparams.h"
 #include "main.h"
 #include "script/script.h"
 #include "txdb.h"
@@ -52,6 +53,9 @@ CAmount GetEffectiveBalance(const std::string address, int nHeight)
 {
     CAmount total = 0;
     CAmount balance = 0;
+
+    nHeight = Params().GetConsensus().PodsAheadTargetHeight(nHeight);
+    LogPrintf("GetEffectiveBalance, target height:%d\n", nHeight);
 
     std::vector<std::string> principals = GetMinerMembers(address, nHeight);
     if (principals.empty())
