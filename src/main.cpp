@@ -2343,6 +2343,7 @@ bool CheckIfMiner(std::string address, int nHeight)
 
 std::vector<std::string> GetMinerMembers(std::string address, int nHeight)
 {
+    std::cout << "-------------nHeight" << nHeight << "----------" << minerClub.nHeight << std::endl;
     bool bEntrust = false;
     std::vector<std::string> minerMembers;
     if (nHeight > minerClub.nHeight){
@@ -2404,7 +2405,8 @@ bool ConnectBlock(const CBlock& block, CValidationState& state, CBlockIndex* pin
         if (!fJustCheck)
             view.SetBestBlock(pindex->GetBlockHash());
 
-        minerClub.nHeight = 1;
+        minerClub.nHeight = pindex->nHeight;
+        std::cout << "------------------------Now connect the genesis block:----------------------" << minerClub.nHeight << std::endl;
 
         UpdateCoins(block.vtx[0], view, 0);
         if (!pbalancedbview->UpdateBalance(block.vtx[0], view, 0))
@@ -2639,7 +2641,7 @@ bool ConnectBlock(const CBlock& block, CValidationState& state, CBlockIndex* pin
         pos.nTxOffset += ::GetSerializeSize(tx, SER_DISK, CLIENT_VERSION);
     }
 
-    minerClub.nHeight = pindex->nHeight + 1;
+    minerClub.nHeight = pindex->nHeight;
     std::ofstream ofile;
     char fileName[16];
     snprintf(fileName, sizeof(fileName), "%09d.txt", minerClub.nHeight);
