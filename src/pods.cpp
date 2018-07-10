@@ -219,11 +219,14 @@ uint256 GetNextCumulativeDifficulty(const CBlockIndex* pindexLast, uint64_t base
 }
 
 bool CheckProofOfDryStake(const std::string& prevGenerationSignature, const std::string& currPubKey,
-        int nHeight, unsigned int nTime, uint64_t baseTarget, const Consensus::Params& consensusParams)
+        int nHeight, unsigned int nTime, uint64_t baseTarget, const Consensus::Params& consensusParams, PodsErr& checkErr)
 {
+    checkErr = PODS_NO_ERR;
+
     if (prevGenerationSignature.empty() || currPubKey.empty() || nHeight < 0 || nTime == 0) {
         LogPrintf("CheckProofOfDryStake failed, incorrect args, signatrue:%s, pubkey:%s, height:%d, time:%d\n",
             prevGenerationSignature, currPubKey, nHeight, nTime);
+        checkErr = PODS_ARGS_ERR;
         return false;
     }
 
@@ -248,14 +251,21 @@ bool CheckProofOfDryStake(const std::string& prevGenerationSignature, const std:
 
     if (!ConvertPubkeyToAddress(currPubKey, strAddr) || strAddr.empty()) {
         LogPrintf("CheckProofOfDryStake failed, get strAddr fail\n");
+        checkErr = PODS_ADDR_ERR;
         return false;
     }
     if (fDebugPODS)
         LogPrintf("CheckProofOfDryStake, strAddr:%s\n", strAddr);
 
     // get effective balance with nHeight
-    //uint64_t effectiveBalance =  2000000000;//0x0afff;//getEffectiveBalance(nHeight);
     uint64_t effectiveBalance =  (uint64_t)GetEffectiveBalance(strAddr, nHeight);
+    // If effective balance is zero, return false directly.
+    if (effectiveBalance == 0) {
+        LogPrintf("CheckProofOfDryStake failed, zero balance\n");
+        checkErr = PODS_BALANCE_ERR;
+        return false;
+    }
+
     arith_uint256 thresold(baseTarget);
     thresold *= arith_uint256((uint64_t)nTime);
     thresold *= arith_uint256((uint64_t)effectiveBalance);

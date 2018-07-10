@@ -124,9 +124,10 @@ UniValue generateBlocksWithPos(boost::shared_ptr<CReserveScript> coinbaseScript,
          }
          int64_t now = GetTime();
          uint64_t baseTarget = getNextPosRequired(prevIndex);
+         PodsErr error;
 
          if (CheckProofOfDryStake(prevIndex->generationSignature, coinbaseScript->pubkeyString,
-                 prevIndex->nHeight + 1, now - prevIndex->nTime, baseTarget, Params().GetConsensus()))
+                 prevIndex->nHeight + 1, now - prevIndex->nTime, baseTarget, Params().GetConsensus(), error))
          {
               std::unique_ptr<CBlockTemplate> pblocktemplate(BlockAssembler(Params()).CreateNewBlock(coinbaseScript->reserveScript,coinbaseScript->pubkeyString));
               if (!pblocktemplate.get())
@@ -162,6 +163,10 @@ UniValue generateBlocksWithPos(boost::shared_ptr<CReserveScript> coinbaseScript,
                  coinbaseScript->KeepScript();
              }
          }else {
+             if (error == PODS_BALANCE_ERR) {
+                throw JSONRPCError(RPC_MISC_ERROR , "address balance is zero");
+             }
+
              if(nMaxTries > 0){
                  sleep(1);
                  --nMaxTries;

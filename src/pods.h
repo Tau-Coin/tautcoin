@@ -25,6 +25,14 @@ class uint256;
 
 extern const arith_uint256 Arith256DiffAdjustNumerator;
 
+typedef enum {
+    PODS_NO_ERR,
+    PODS_ARGS_ERR,
+    PODS_ADDR_ERR,
+    PODS_BALANCE_ERR,
+    PODS_ERR_NUMBER
+} PodsErr;
+
 UniValue getLatestBlockHash();
 //CPubKey GetPubKeyForPackage();
 uint256 getPosHash( UniValue value);
@@ -43,6 +51,6 @@ uint64_t getNextPosRequired(const CBlockIndex* pindexLast);
 uint256 GetNextCumulativeDifficulty(const CBlockIndex* pindexLast, uint64_t baseTarget, const Consensus::Params& consensusParams);
 
 bool CheckProofOfDryStake(const std::string& prevGenerationSignature, const std::string& currPubKey,
-        int nHeight, unsigned int nTime, uint64_t baseTarget, const Consensus::Params& consensusParams);
+        int nHeight, unsigned int nTime, uint64_t baseTarget, const Consensus::Params& consensusParams, PodsErr& checkErr);
 
 #endif // IMCOIN_POS_H

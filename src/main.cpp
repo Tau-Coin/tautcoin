@@ -3562,8 +3562,10 @@ bool CheckProofOfDryStake(const CBlockHeader& block, CValidationState& state,
     }
 
     assert(pindexPrev);
+
+    PodsErr error;
     if (!CheckProofOfDryStake(pindexPrev->generationSignature, block.pubKeyOfpackager,
-                pindexPrev->nHeight + 1, block.nTime - pindexPrev->nTime, block.baseTarget, consensusParams)) {
+                pindexPrev->nHeight + 1, block.nTime - pindexPrev->nTime, block.baseTarget, consensusParams, error)) {
         return state.DoS(50, false, REJECT_INVALID, "high-hit", false, "proof of stake failed");
     }
 
@@ -3881,7 +3883,7 @@ static bool AcceptBlockHeader(const CBlockHeader& block, CValidationState& state
         if (fCheckpointsEnabled && !CheckIndexAgainstCheckpoint(pindexPrev, state, chainparams, hash))
             return error("%s: CheckIndexAgainstCheckpoint(): %s", __func__, state.GetRejectReason().c_str());
 
-        if (!CheckBlockHeader(block, state, chainparams.GetConsensus(), pindexPrev))
+        if (!CheckBlockHeader(block, state, chainparams.GetConsensus(), false, pindexPrev))
             return error("%s: Consensus::CheckBlockHeader: %s, %s", __func__, hash.ToString(), FormatStateMessage(state));
 
         if (!ContextualCheckBlockHeader(block, state, chainparams.GetConsensus(), pindexPrev, GetAdjustedTime()))
