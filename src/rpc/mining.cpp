@@ -24,6 +24,7 @@
 #include "utilstrencodings.h"
 #include "validationinterface.h"
 #include "wallet/wallet.h"
+#include "stake.h"
 
 #include <stdint.h>
 
@@ -232,6 +233,8 @@ UniValue generatetoaddress(const UniValue& params, bool fHelp)
     }
 
     CBitcoinAddress address(params[1].get_str());
+    LogPrintf("generatetoaddress, strAddr:%s\n", params[1].get_str());
+
     if (!address.IsValid())
         throw JSONRPCError(RPC_INVALID_ADDRESS_OR_KEY, "Error: Invalid address");
     
@@ -242,6 +245,8 @@ UniValue generatetoaddress(const UniValue& params, bool fHelp)
     if (!address.GetKeyID(keyID))
         throw JSONRPCError(RPC_TYPE_ERROR, "Address does not refer to a key");
 
+    LogPrintf("generatetoaddress, Key id:%s\n", keyID.ToString());
+
     CPubKey pubkey;
     {
         LOCK2(cs_main, pwalletMain->cs_wallet);
@@ -250,9 +255,7 @@ UniValue generatetoaddress(const UniValue& params, bool fHelp)
     }
 
     coinbaseScript->Packagerpubkey = pubkey;
-    if(coinbaseScript->Packagerpubkey.Decompress()){
-        coinbaseScript->pubkeyString = HexStr(ToByteVector(coinbaseScript->Packagerpubkey));
-    }
+    coinbaseScript->pubkeyString = HexStr(ToByteVector(pubkey));
 
     return generateBlocksWithPos(coinbaseScript, nGenerate, nMaxTries, false);
 }

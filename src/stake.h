@@ -9,7 +9,7 @@
 
 #include "amount.h"
 
-bool ConvertPubkeyToAddress(const std::string pubKey, std::string& addrStr);
+bool ConvertPubkeyToAddress(const std::string& pubKey, std::string& addrStr);
 
 bool IsAllowForge(const std::string pubKey, int height);
 

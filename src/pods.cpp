@@ -13,6 +13,7 @@
 #include "consensus/validation.h"
 #include "core_io.h"
 #include "main.h"
+#include "pubkey.h"
 #include "policy/policy.h"
 #include "primitives/transaction.h"
 #include "rpc/server.h"
@@ -231,7 +232,17 @@ bool CheckProofOfDryStake(const std::string& prevGenerationSignature, const std:
         LogPrintf("CheckProofOfDryStake, height:%d, time:%d, baseTarget:%d\n", nHeight, nTime, baseTarget);
     }
 
-    uint256 geneSignatureHash = getPosHash(prevGenerationSignature, currPubKey);
+    // Note: in block header public key is compressed, but get hit value with uncompressed
+    // public key. So here firstly, we decompress publickey.
+    CPubKey pubkey(currPubKey.begin(), currPubKey.end());
+    std::string strPubKey;
+    if (pubkey.IsCompressed() && pubkey.Decompress()) {
+        strPubKey = HexStr(ToByteVector(pubkey));
+    } else if (!pubkey.IsCompressed()) {
+        strPubKey = currPubKey;
+    }
+
+    uint256 geneSignatureHash = getPosHash(prevGenerationSignature, strPubKey);
     uint64_t hit = calculateHitOfPOS(geneSignatureHash);
     std::string strAddr;
 

@@ -15,7 +15,7 @@
 
 extern CBalanceViewDB *pbalancedbview;
 
-bool ConvertPubkeyToAddress(const std::string pubKey, std::string& addrStr)
+bool ConvertPubkeyToAddress(const std::string& pubKey, std::string& addrStr)
 {
     if (pubKey.empty())
         return false;
