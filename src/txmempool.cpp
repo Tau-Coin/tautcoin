@@ -557,7 +557,10 @@ void CTxMemPool::removeForReorg(const CCoinsViewCache *pcoins, unsigned int nMem
                     continue;
                 const CCoins *coins = pcoins->AccessCoins(txin.prevout.hash);
 		if (nCheckFrequency != 0) assert(coins);
-                if (!coins || (coins->IsCoinBase() && ((signed long)nMemPoolHeight) - coins->nHeight < COINBASE_MATURITY)) {
+        const CChainParams& chainparams = Params();
+                if (!coins || (coins->IsCoinBase() && ((signed long)nMemPoolHeight) - coins->nHeight < COINBASE_MATURITY) ||
+                    (txin.prevout.hash == chainparams.GetConsensus().hashGenesisTx &&
+                     txin.prevout.n > GENESISCOIN_CNT - GENESISLOCK_ADDRCNT - 1)) {
                     transactionsToRemove.push_back(tx);
                     break;
                 }

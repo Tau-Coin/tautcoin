@@ -329,9 +329,11 @@ bool CBalanceViewDB::UpdateBalance(const CTransaction& tx, const CCoinsViewCache
                 {
                     CAmount val = GetBalance(address, nHeight - 1);
 
-                    std::cout<<"====="<<address<<":   "<<val<<" - "<<coins->vout[tx.vin[i].prevout.n].nValue<<std::endl;
+                    std::cout<<"====="<<address<<":   "<<val<<" - "<<coins->vout[tx.vin[i].prevout.n].nValue;
 
                     val -= coins->vout[tx.vin[i].prevout.n].nValue;
+
+                    std::cout<<" = "<<val<<std::endl;
 
                     if (cacheBalance.find(address) == cacheBalance.end())
                         cacheBalance.insert(pair<std::string, CAmount>(address, val));

@@ -10,6 +10,10 @@
 #include <map>
 #include <string>
 
+#define GENESISLOCK_ADDRCNT 18
+#define GENESISLOCK_MATURITY 30//60 * 24 * 365
+#define GENESISCOIN_CNT 100
+
 namespace Consensus {
 
 enum DeploymentPos
@@ -41,6 +45,8 @@ struct Params {
     uint256 hashGenesisTx;
     uint256 genesisCumulativeDifficulty;
     int64_t genesisBaseTarget;
+    std::string genesislockCoinAddr[GENESISLOCK_ADDRCNT];
+    int genesislockCoinHeight;
     int nSubsidyHalvingInterval;
     /** Used to check majorities for block version upgrade */
     int nMajorityEnforceBlockUpgrade;

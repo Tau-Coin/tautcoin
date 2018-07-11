@@ -1962,6 +1962,16 @@ bool CheckTxInputs(const CTransaction& tx, CValidationState& state, const CCoins
                         strprintf("tried to spend coinbase at depth %d", nSpendHeight - coins->nHeight));
             }
 
+            // If prev is genesis locked coinbase, check that it's matured
+            CChainParams chainparams = ::Params();
+            if (prevout.hash == chainparams.GetConsensus().hashGenesisTx &&
+                prevout.n > GENESISCOIN_CNT - GENESISLOCK_ADDRCNT - 1) {
+                if (nSpendHeight - coins->nHeight < GENESISLOCK_MATURITY)
+                    return state.Invalid(false,
+                        REJECT_INVALID, "bad-txns-premature-spend-of-genesis-locked-coinbase",
+                        strprintf("tried to spend genesis locked coinbase at depth %d", nSpendHeight - coins->nHeight));
+            }
+
             // Check for negative or overflow input values
             nValueIn += coins->vout[prevout.n].nValue;
             if (!MoneyRange(coins->vout[prevout.n].nValue) || !MoneyRange(nValueIn))
