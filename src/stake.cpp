@@ -6,6 +6,7 @@
 
 #include "stake.h"
 
+#include "amount.h"
 #include "base58.h"
 #include "chainparams.h"
 #include "main.h"
@@ -72,5 +73,5 @@ CAmount GetEffectiveBalance(const std::string address, int nHeight)
         total += balance;
     }
 
-    return total;
+    return total / COIN;
 }
