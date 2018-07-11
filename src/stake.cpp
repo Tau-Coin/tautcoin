@@ -69,7 +69,7 @@ CAmount GetEffectiveBalance(const std::string address, int nHeight)
         it != principals.end(); it++)
     {
         balance = pbalancedbview->GetBalance(*it, nHeight);
-        LogPrintf("GetEffectiveBalance, addr:%s, balance:%d\n", *it, balance);
+        LogPrintf("GetEffectiveBalance, addr:%s, balance:%d\n", *it, balance / COIN);
         total += balance;
     }
 
