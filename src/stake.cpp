@@ -7,10 +7,8 @@
 #include "stake.h"
 
 #include "amount.h"
-#include "base58.h"
 #include "chainparams.h"
 #include "main.h"
-#include "script/script.h"
 #include "txdb.h"
 #include "utilstrencodings.h"
 
@@ -74,4 +72,42 @@ CAmount GetEffectiveBalance(const std::string address, int nHeight)
     }
 
     return total / COIN;
+}
+
+bool isForgeScript(const CScript& script, CBitcoinAddress& addr, int& memCount) {
+    int nHeight = 0;
+    {
+        LOCK(cs_main);
+        nHeight = chainActive.Height();
+    }
+    nHeight = Params().GetConsensus().PodsAheadTargetHeight(nHeight);
+
+    std::string strAddr;
+    if (!addr.ScriptPub2Addr(script, strAddr)) {
+        LogPrintf("isForgeScript, ScriptPub2Addr fail\n");
+        return false;
+    }
+
+    std::vector<std::string> principals = GetMinerMembers(strAddr, nHeight);
+    LogPrintf("isForgeScript, Addr:%s, miner members:%d\n", strAddr, principals.size());
+    if (principals.empty())
+    {
+        return false;
+    }
+
+    memCount = principals.size();
+    addr.SetString(strAddr);
+
+    return true;
+}
+
+bool ConvertPubKeyIntoBitAdress(const CScript& script, CBitcoinAddress& addr) {
+    std::string strAddr;
+    if (!addr.ScriptPub2Addr(script, strAddr)) {
+        LogPrintf("ConvertPubKeyIntoBitAdress, ScriptPub2Addr fail\n");
+        return false;
+    }
+
+    addr.SetString(strAddr);
+    return true;
 }

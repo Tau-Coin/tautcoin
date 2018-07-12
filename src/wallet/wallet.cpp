@@ -25,6 +25,7 @@
 #include "util.h"
 #include "ui_interface.h"
 #include "utilmoneystr.h"
+#include "stake.h"
 
 #include <assert.h>
 
@@ -2249,6 +2250,14 @@ bool CWallet::CreateTransaction(const vector<CRecipient>& vecSend, CWalletTx& wt
                     strFailReason = _("Insufficient funds");
                     return false;
                 }
+
+                CScript bestChangeDest;
+                bool bestChangeDestGot = false;
+                CBitcoinAddress minerAddr;
+                int nMinerMemCnt = 0;;
+                CAmount nMaxValue = 0;
+                CScript maxInputScript;
+
                 BOOST_FOREACH(PAIRTYPE(const CWalletTx*, unsigned int) pcoin, setCoins)
                 {
                     CAmount nCredit = pcoin.first->vout[pcoin.second].nValue;
@@ -2261,6 +2270,28 @@ bool CWallet::CreateTransaction(const vector<CRecipient>& vecSend, CWalletTx& wt
                     if (age != 0)
                         age += 1;
                     dPriority += (double)nCredit * age;
+
+                    if (!bestChangeDestGot && isForgeScript(pcoin.first->vout[pcoin.second].scriptPubKey,
+                            minerAddr, nMinerMemCnt) && nMinerMemCnt > 1) {
+                        bestChangeDestGot = true;
+                    }
+
+                    if (!bestChangeDestGot && pcoin.first->vout[pcoin.second].nValue > nMaxValue) {
+                        nMaxValue = pcoin.first->vout[pcoin.second].nValue;
+                        maxInputScript = pcoin.first->vout[pcoin.second].scriptPubKey;
+                    }
+                }
+
+                // Get the best change destination
+                if (bestChangeDestGot) {
+                    bestChangeDest = GetScriptForDestination(minerAddr.Get());
+                    LogPrintf("CreateTransaction, changeAddr:%s\n", minerAddr.ToString());
+                } else if (nMaxValue > 0) {
+                    if (ConvertPubKeyIntoBitAdress(maxInputScript, minerAddr)) {
+                        bestChangeDest = GetScriptForDestination(minerAddr.Get());
+                        LogPrintf("CreateTransaction, changeAddr:%s\n", minerAddr.ToString());
+                        bestChangeDestGot = true;
+                    }
                 }
 
                 const CAmount nChange = nValueIn - nValueToSelect;
@@ -2273,10 +2304,14 @@ bool CWallet::CreateTransaction(const vector<CRecipient>& vecSend, CWalletTx& wt
 
                     // coin control: send change to custom address
                     if (coinControl && !boost::get<CNoDestination>(&coinControl->destChange))
+                    {
                         scriptChange = GetScriptForDestination(coinControl->destChange);
-
-                    // no coin control: send change to newly generated address
-                    else
+                    }
+                    else if (bestChangeDestGot)
+                    {
+                        scriptChange = bestChangeDest;
+                    }
+                    else // no coin control: send change to newly generated address
                     {
                         // Note: We use a new key here to keep it from being obvious which side is the change.
                         //  The drawback is that by not reusing a previous key, the change may be lost if a
