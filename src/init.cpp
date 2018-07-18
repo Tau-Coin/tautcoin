@@ -222,6 +222,9 @@ void Shutdown()
         pcoinscatcher = NULL;
         delete pcoinsdbview;
         pcoinsdbview = NULL;
+		delete pcoinsByScript;
+        pcoinsByScript = NULL;
+		
         delete pblocktree;
         pblocktree = NULL;
         delete pbalancedbview;
@@ -341,7 +344,8 @@ std::string HelpMessage(HelpMessageMode mode)
     strUsage += HelpMessageOpt("-sysperms", _("Create new files with system default permissions, instead of umask 077 (only effective with disabled wallet functionality)"));
 #endif
     strUsage += HelpMessageOpt("-txindex", strprintf(_("Maintain a full transaction index, used by the getrawtransaction rpc call (default: %u)"), DEFAULT_TXINDEX));
-
+    strUsage += HelpMessageOpt("-txoutsbyaddressindex", strprintf(_("Maintain an address to unspent outputs index (rpc: gettxoutsbyaddress). The index is built on first use. (default: %u)"), 0));
+	
     strUsage += HelpMessageGroup(_("Connection options:"));
     strUsage += HelpMessageOpt("-addnode=<ip>", _("Add a node to connect to and attempt to keep the connection open"));
     strUsage += HelpMessageOpt("-banscore=<n>", strprintf(_("Threshold for disconnecting misbehaving peers (default: %u)"), DEFAULT_BANSCORE_THRESHOLD));
@@ -1292,7 +1296,62 @@ bool AppInit2(boost::thread_group& threadGroup, CScheduler& scheduler)
                     strLoadError = _("You need to rebuild the database using -reindex to go back to unpruned mode.  This will redownload the entire blockchain");
                     break;
                 }
+				
+                // Check -txoutsbyaddressindex
+               pblocktree->ReadFlag("txoutsbyaddressindex", fTxOutsByAddressIndex);
+               if (mapArgs.count("-txoutsbyaddressindex"))
+                {
+                    if (GetBoolArg("-txoutsbyaddressindex", false))
+                    {
+                        // build index
+                        if (!fTxOutsByAddressIndex)
+                        {
+                            if (!pcoinsdbview->DeleteAllCoinsByScript())
+                            {
+                                strLoadError = _("Error deleting txoutsbyaddressindex");
+                                break;
+                            }
+                            if (!pcoinsdbview->GenerateAllCoinsByScript())
+                            {
+                                strLoadError = _("Error building txoutsbyaddressindex");
+                                break;
+                            }
+                            CCoinsStats stats;
+                            if (!pcoinsdbview->GetStats(stats))
+                            {
+                               strLoadError = _("Error GetStats for txoutsbyaddressindex");
+                                break;
+                            }
+                            if (stats.nTransactionOutputs != stats.nAddressesOutputs)
+                            {
+                                strLoadError = _("Error compare stats for txoutsbyaddressindex");
+                                break;
+                            }
+                            pblocktree->WriteFlag("txoutsbyaddressindex", true);
+                            fTxOutsByAddressIndex = true;
+                        }
+                    }
+                    else
+                   {
+                       if (fTxOutsByAddressIndex)
+                        {
+                            // remove index
+                            pcoinsdbview->DeleteAllCoinsByScript();
+                            pblocktree->WriteFlag("txoutsbyaddressindex", false);
+                            fTxOutsByAddressIndex = false;
+                        }
+                    }
+                }
+                else if (fTxOutsByAddressIndex)
+                    return InitError(_("You need to provide -txoutsbyaddressindex. Do -txoutsbyaddressindex=0 to delete the index."));
 
+                // Init -txoutsbyaddressindex
+               if (fTxOutsByAddressIndex)
+               {
+                   pcoinsByScript = new CCoinsViewByScript(pcoinsdbview);
+                   pcoinsdbview->SetCoinsViewByScript(pcoinsByScript);
+               }
+				
                 if (!fReindex) {
                     uiInterface.InitMessage(_("Rewinding blocks..."));
                     if (!RewindBlockIndex(chainparams)) {
@@ -1473,3 +1532,4 @@ bool AppInit2(boost::thread_group& threadGroup, CScheduler& scheduler)
 
     return !fRequestShutdown;
 }
+

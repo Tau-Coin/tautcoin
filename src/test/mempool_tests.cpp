@@ -54,7 +54,8 @@ BOOST_AUTO_TEST_CASE(MempoolRemoveTest)
     }
 
 
-    CTxMemPool testPool(CFeeRate(0));
+    bool fTxOutsByAddressIndex = false;
+    CTxMemPool testPool(CFeeRate(0), fTxOutsByAddressIndex);
     std::list<CTransaction> removed;
 
     // Nothing in pool, remove should do nothing:
@@ -116,7 +117,7 @@ void CheckSort(CTxMemPool &pool, std::vector<std::string> &sortedOrder)
 
 BOOST_AUTO_TEST_CASE(MempoolIndexingTest)
 {
-    CTxMemPool pool(CFeeRate(0));
+    CTxMemPool pool(CFeeRate(0), false);
     TestMemPoolEntryHelper entry;
     entry.hadNoDependencies = true;
 
@@ -320,7 +321,7 @@ BOOST_AUTO_TEST_CASE(MempoolIndexingTest)
 
 BOOST_AUTO_TEST_CASE(MempoolAncestorIndexingTest)
 {
-    CTxMemPool pool(CFeeRate(0));
+    CTxMemPool pool(CFeeRate(0), false);
     TestMemPoolEntryHelper entry;
     entry.hadNoDependencies = true;
 
@@ -425,7 +426,7 @@ BOOST_AUTO_TEST_CASE(MempoolAncestorIndexingTest)
 
 BOOST_AUTO_TEST_CASE(MempoolSizeLimitTest)
 {
-    CTxMemPool pool(CFeeRate(1000));
+    CTxMemPool pool(CFeeRate(1000), false);
     TestMemPoolEntryHelper entry;
     entry.dPriority = 10.0;
 
