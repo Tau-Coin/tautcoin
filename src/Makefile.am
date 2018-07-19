@@ -116,6 +116,7 @@ BITCOIN_CORE_H = \
   random.h \
   reverselock.h \
   rpc/client.h \
+  rpc/txutils.h \
   rpc/protocol.h \
   rpc/server.h \
   rpc/register.h \
@@ -186,6 +187,7 @@ libbitcoin_server_a_SOURCES = \
   stake.cpp \
   rest.cpp \
   rpc/blockchain.cpp \
+  rpc/txutils.cpp \
   rpc/mining.cpp \
   rpc/misc.cpp \
   rpc/net.cpp \
