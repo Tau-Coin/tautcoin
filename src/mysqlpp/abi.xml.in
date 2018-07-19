@@ -1,0 +1,9 @@
+<version>
+    @MYSQLPP_VERSION_MAJOR@.@MYSQLPP_VERSION_MINOR@.@MYSQLPP_VERSION_BUGFIX@
+</version>
+<headers>
+    lib
+</headers>
+<libs>
+    .
+</libs>

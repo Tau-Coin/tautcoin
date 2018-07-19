@@ -1,0 +1,16 @@
+The installation procedure depends on the compiler you use to build
+MySQL++ and the OS you build it on.  There are platform-specific
+instructions for all popular platforms:
+
+	README-Cygwin.txt     - for Cygwin
+	README-Linux.txt      - for Linux
+	README-Mac-OS-X.txt   - for Mac OS X
+	README-MinGW.txt      - for MinGW
+	README-Solaris.txt    - for Solaris
+	README-Visual-C++.txt - for Visual C++
+
+If you're on some Unix variant (Linux, OS X, *BSD, Solaris, Cygwin...)
+there are additional general instructions in README-Unix.txt.
+
+See the main README.txt file for high-level instructions that apply
+to all platforms MySQL++ works on.

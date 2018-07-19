@@ -1,0 +1,10 @@
+The MySQL++ library proper and the reference manual derived from
+comments in the library source code are licensed under the GNU Lesser
+General Public License. A copy is provided in this directory, in the
+file LICENSE.txt.
+
+The MySQL++ User Manual is licensed under a unique license derived from
+the Linux Documentation Project License. (The only changes are due to
+the fact that the User Manual isn't actually part of the LDP, so a lot
+of the language in the LDPL doesn't make sense when applied to the user
+manual.)  This license is provided in the file doc/userman/LICENSE.txt.

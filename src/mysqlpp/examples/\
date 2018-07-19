@@ -1,0 +1,98 @@
+#include "interface.h"
+
+#include <iostream>
+#include <vector>
+
+using namespace std;
+ISNDB::ISNDB()
+{
+	try{
+		con= mysqlpp::Connection("imreward", "localhost", "immysql", "im123456");
+	}
+	catch (const mysqlpp::Exception& er) {
+		// Catch-all for any other MySQL++ exceptions
+		cerr << "Error: " << er.what() << endl;
+	}
+}
+
+// select from ISNDB with condition
+vector<string> ISNDB::ISNSqlSelect(int tablename, vector<string> field, vector<map<key, value>> condition)
+{
+	// form the query sentence
+	fieldSize= field.size();
+	string queryTotal= "select ";
+	for(int i= 0; i< field.size(); i++)
+	{
+		queryTotal+= field[i];
+	}
+	cout << "the sql sentence is: " << queryTotal << endl;
+
+	try{
+		mysql::Query query= con.query(queryTotal);
+
+		//according tablename in different way
+		if(tablename==1)
+		{
+			vector<clubinfo> dataTmp;
+			query.storein(dataTmp);
+
+			vector<clubinfo>::iterator it;
+			for (it = dataTmp.begin(); it != dataTmp.end(); ++it) {
+				cout << '\t' << it->club_id;
+				cout << " (" << it->adddataTmps << ")";
+				cout << endl;
+			}
+		}
+		else
+		{
+			vector<memberinfo> dataTmp;
+			query.storein(dataTmp);
+
+			vector<memberinfo>::iterator it;
+			for (it = dataTmp.begin(); it != dataTmp.end(); ++it) {
+				cout << '\t' << it->adddataTmps_id;
+				cout << " (" << it->adddataTmps << ")";
+				cout << endl;
+			}
+		}
+	}
+	catch (const mysqlpp::BadQuery& er) {
+		// Handle any query errors
+		cerr << "Query error: " << er.what() << endl;
+		return -1;
+	}
+	catch (const mysqlpp::BadConversion& er) {
+		// Handle bad conversions; e.g. type mismatch populating 'stock'
+		cerr << "Conversion error: " << er.what() << endl <<
+				"\tretrieved data size: " << er.retrieved <<
+				", actual size: " << er.actual_size << endl;
+		return -1;
+	}
+
+}
+
+// update ISNDB with condition
+bool ISNDB::ISNSqlUpdate(string tablename, vector<string> field, vector<string> values, vector<map<key, value>> condition)
+{
+	return true;
+}
+// for ttc+= 1
+bool ISNDB::ISNSqlAdd(string tablename, vector<string> field, vector<string> values, vector<map<key, value>> condition)
+{
+	return true;
+}
+
+// insert ISNDB with condition
+int ISNDB::ISNSqlInsert(string tablename, vector<string> field, vector<string> values)
+{
+	return 0;
+}
+
+	catch (const mysqlpp::Exception& er) {
+		// Catch-all for any other MySQL++ exceptions
+		cerr << "Error: " << er.what() << endl;
+		return -1;
+	}
+
+	return 0;
+}

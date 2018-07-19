@@ -1,0 +1,19 @@
+#include <mysql++.h>
+#include <ssqls.h>
+
+//clubinfo
+sql_create_3(clubinfo,
+	1, 3,
+	mysqlpp::sql_int_unsigned_null, club_id,
+	mysqlpp::sql_varchar, address,
+	mysqlpp::sql_int_unsigned, ttc)
+
+//memberinfo
+sql_create_6(memberinfo,
+	1, 6,
+	mysqlpp::sql_int_unsigned_null, address_id,
+	mysqlpp::sql_varchar, address,
+	mysqlpp::sql_int_unsigned, club_id,
+	mysqlpp::sql_int_unsigned, father,
+	mysqlpp::sql_int_unsigned, tc,
+	mysqlpp::sql_float, balance)

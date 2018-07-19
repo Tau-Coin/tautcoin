@@ -1,0 +1,66 @@
+#!/bin/sh
+if [ -z "$1" ]
+then
+	echo "usage: $0 [TOOL] <example> [args...]"
+	echo
+	echo "   Runs the given example, using the library in the current directory"
+	echo "   instead of using the system library search mechanism.  Accepts an "
+	echo "   arbitrary number of arguments."
+	echo
+	echo "   TOOL can be 'valgrind', 'gdb', or 'ldd', which causes exrun to"
+	echo "   run the example program under the given tool."
+	echo
+	exit 1
+fi
+
+TOOL=
+PROG=$1
+if [ "$PROG" = 'valgrind' ]
+then
+	TOOL='valgrind'
+	shift
+	PROG=$1
+elif [ "$PROG" = 'gdb' ]
+then
+	TOOL='gdb --args'
+	shift
+	PROG=$1
+elif [ "$PROG" = 'ldd' ]
+then
+	TOOL='ldd'
+	shift
+	PROG=$1
+fi
+
+shift
+if [ -e "$PROG" ]
+then
+	if [ `uname -s` = 'Darwin' ]
+	then
+		DYLD_LIBRARY_PATH=. $TOOL ./$PROG $*
+	elif [ `uname -o` = 'Cygwin' ]
+	then
+		# Cygwin build case; see below for bash-as-DOS-shell case
+		PATH=. $TOOL ./$PROG $*
+	elif [ -e /usr/bin/ldd ]
+	then
+		if [ `uname -s` = 'SunOS' ]
+		then
+			LD_LIBRARY_PATH=.:/usr/mysql/lib/mysql $TOOL ./$PROG $*
+		else
+			LD_LIBRARY_PATH=. $TOOL ./$PROG $*
+		fi
+	else
+		echo "ERROR: I don't grok this system's dynamic linkage system."
+	fi
+elif [ `uname -o` = 'Cygwin' ]
+then
+	# VC++ build, but using Cygwin's bash as shell to run programs
+	cmd.exe /c exrun.bat $PROG $*
+else
+	echo "usage: $0 [TOOL] <example> [args...]"
+	echo
+	echo "   Run $0 without arguments for more detailed usage info."
+	echo
+	exit 1
+fi

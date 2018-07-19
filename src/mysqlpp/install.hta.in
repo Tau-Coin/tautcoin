@@ -1,0 +1,372 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN"
+		"http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<!--
+ install.hta - GUI installer for Windows systems, using Microsoft's
+		HTML Application technology.  Tested on XP with IE7.  May
+		work on systems as old as Win9x with IE4.
+
+ For all other platforms, use "make install".
+
+ Copyright (c) 2008 by Educational Technology Resources, Inc. and
+ Warren Young.  Others may also hold copyrights on code in this file.
+ See the CREDITS file in the top folder of the distribution for details.
+
+ This file is part of MySQL++.
+
+ MySQL++ is free software; you can redistribute it and/or modify it
+ under the terms of the GNU Lesser General Public License as published
+ by the Free Software Foundation; either version 2.1 of the License, or
+ (at your option) any later version.
+
+ MySQL++ is distributed in the hope that it will be useful, but WITHOUT
+ ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+ FITNESS FOR A PARTICULAR PURPOSE.  See the GNU Lesser General Public
+ License for more details.
+
+ You should have received a copy of the GNU Lesser General Public
+ License along with MySQL++; if not, write to the Free Software
+ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301
+ USA
+-->
+<html xmlns="http://www.w3.org/1999/xhtml">
+	<head>
+		<title>Install MySQL++ Development Files</title>
+
+		<hta:application
+			applicationname="mysqlppInstaller"
+			borderstyle="raised"
+			innerborder="no"
+			scroll="no"
+			singleinstance="yes"
+			sysmenu="no"/>
+
+		<style type="text/css">
+			body {
+				background-color: buttonface;
+				margin: 10px;
+			}
+
+			body, button, input, select, td {
+				font-family: Trebuchet MS, Helvetica;
+				font-size: 10pt;
+			}
+
+			input.status {
+				background-color: buttonface;
+				border: none;
+			}
+		</style>
+
+		<script type="text/javascript">
+			function $(id) { return document.getElementById(id); }
+		</script>
+
+		<script type="text/javascript">
+			var c = '';
+			var fso = new ActiveXObject('Scripting.FileSystemObject');
+			var folderList, driveList, installTargetField, segregateManagedBox,
+				segregatePlatformBox, versionedFolderBox;
+			var managedBuild = false;
+
+			// Copies a file under a given prefix folder to another folder
+			// given as a subfolder under some fixed prefix folder,
+			// creating the whole folder path if needed, if it doesn't exist.
+			// Skips prefix prepending if prefix is null.  Skips folder
+			// creation if source file doesn't exist.
+			function copyFile(filePrefix, file, dirPrefix, destSubDir)
+			{
+				var src = filePrefix ? fso.BuildPath(filePrefix, file) : file;
+				if ((!filePrefix || fso.FolderExists(filePrefix)) && 
+						((src.indexOf('*') != -1) || fso.FileExists(src))) {
+					var dst = createFolderRecursive(
+							dirPrefix ? fso.BuildPath(dirPrefix, destSubDir) : destSubDir);
+					try {
+						fso.CopyFile(src, dst);
+					}
+					catch (e) {
+						alert('Failed to copy ' + file + ' to ' + baseInstallFolder + ': ' +
+								e.message + '\n\nInstallation aborted!');
+						window.close();
+					}
+				}
+			}
+
+			// Creates a folder if it doesn't already exist.  If creation
+			// attempt fails, puts up alert dialog explaining the problem and
+			// quits program.
+			function createFolder(d)
+			{
+				if (!fso.FolderExists(d)) {
+					try {
+						fso.CreateFolder(d);
+					}
+					catch (e) {
+						alert('Failed to create ' + d + ' folder: ' +
+								e.message + '\n\nInstallation aborted!');
+						window.close();
+					}
+				}
+			}
+
+			// Like createFolder(), but will create parent directories as
+			// needed.  Returns d, normalized.
+			function createFolderRecursive(d)
+			{
+				var i, dir = '', dirElements = d.split('\\');
+				for (i = 0; i < dirElements.length; ++i) {
+					dir += dirElements[i] + '\\';
+					createFolder(dir);
+				}
+				return dir;
+			}
+
+			// Called when app is fully loaded, so initialize ourselves.
+			function init()
+			{
+				// Set initial window size
+				window.resizeTo(600, 390);
+
+				// Get references to main UI elements
+				folderList = $('folder');
+				driveList = $('drive');
+				installTargetField = $('installTarget');
+				segregateManagedBox = $('segregateManaged');
+				segregatePlatformBox = $('segregatePlatform');
+				versionedFolderBox = $('versionedFolder');
+
+				// Populate drop-down list of available drives
+				populateDriveList();
+
+				// Populate list of directories on the current drive
+				populateFolderList();
+
+				// Now that we have drive and folder lists, set initial value
+				// for installation folder from default list selections.
+				updateInstallFolder();
+
+				// Set up UI event handlers.  We put it off to this point so
+				// UI is populated before first handler gets called.
+				driveList.onchange = function() {
+					populateFolderList();
+					updateInstallFolder();
+				}
+				folderList.onchange = segregateManagedBox.onclick =
+						versionedFolderBox.onclick = updateInstallFolder;
+			}
+
+			// Do the actual installation
+			function install()
+			{
+				var i, destSubDir, srcDir;
+				var usePlatform = segregatePlatformBox.checked;
+				var versions = [ '3', '5', '8' ], version;
+				
+				// Install header files
+				copyFile('lib', '*.h', baseInstallFolder, 'include');
+
+				// Install MinGW library build, if it exists
+				destSubDir = 'lib' + (usePlatform ? '\\MinGW' : '');
+				copyFile(null, 'libmysqlpp.a', baseInstallFolder, destSubDir);
+				copyFile(null, 'mysqlpp.dll', baseInstallFolder, destSubDir);
+
+				// Install any and all existing VC++ library builds
+				for (i = 0; i < versions.length; ++i) {
+					version = 'vc200' + versions[i];
+					destSubDir = 'lib' + 
+							(usePlatform ? '\\VC++ 200' + versions[i] : '');
+					if (segregateManagedBox.checked) {
+						destSubDir += '\\' + (isManagedBuild(version) ?
+								'CLR' : 'Native');
+					}
+					
+					srcDir = version + '\\Debug';
+					copyFile(srcDir, 'mysqlpp_d.dll', baseInstallFolder, destSubDir);
+					copyFile(srcDir, 'mysqlpp_d.lib', baseInstallFolder, destSubDir);
+					
+					srcDir = version + '\\Release';
+					copyFile(srcDir, 'mysqlpp.dll', baseInstallFolder, destSubDir);
+					copyFile(srcDir, 'mysqlpp.lib', baseInstallFolder, destSubDir);
+				}
+
+				window.close();
+			}
+			
+			// Returns true if the MySQL++ library for the given VC++
+			// version was built for use with the CLR.
+			function isManagedBuild(version)
+			{
+				var stream = fso.OpenTextFile(
+						version + '\\mysql++_mysqlpp.vcproj');
+				if (stream) {
+					var mloc = stream.ReadAll().indexOf('ManagedExtensions="1"');
+					stream.Close();
+					return mloc > 0;
+				}
+				else {
+					return false;
+				}
+			}
+
+			// Populates a drop-down list with the set of fixed disks and
+			// removable drives with media in them.
+			function populateDriveList()
+			{
+				var defLetter = 'C';
+				var e, i, letter, name;
+
+				for (e = new Enumerator(fso.Drives); !e.atEnd(); e.moveNext()) {
+					i = e.item();
+					if (i.IsReady) {
+						letter = i.DriveLetter;
+						name = letter + ': - ';
+
+						if ((i.DriveType == 3) && 
+								i.ShareName.length) {
+							name += i.ShareName;
+						}
+						else if ((i.DriveType != 3) &&
+								i.VolumeName.length) {
+							name += i.VolumeName;
+						}
+						else {
+							name += '(no name)';
+						}
+
+						driveList.add(new Option(name, letter,
+								letter == defLetter, letter == defLetter));
+					}
+				}
+			}
+
+			// Populates a list box with the top-level directories on the
+			// currently-selected disk drive.
+			function populateFolderList()
+			{
+				var driveRoot =
+						driveList.options[driveList.selectedIndex].value + ':\\';
+				var e, f = fso.GetFolder(driveRoot);
+				if (f) {
+					folderList.options.length = 0;
+					folderList.add(new Option(driveRoot, driveRoot, true, true));
+					for (e = new Enumerator(f.SubFolders); !e.atEnd(); e.moveNext()) {
+						folderList.add(new Option(e.item() + '\\'));
+					}
+				}
+				else {
+					alert('Failed to get folder list for ' + driveRoot);
+				}
+			}
+
+			// On clicking the text label associated with "versioned install
+			// folder" checkbox, toggle checkbox and update UI.
+			function toggleVersioning()
+			{
+				if (versionedFolderBox) {
+					versionedFolderBox.checked = !versionedFolderBox.checked;
+					updateInstallFolder();
+				}
+			}
+
+			// On clicking the text label associated with a checkbox, toggle
+			// checkbox state and update UI.
+			function toggleCheckbox(boxID)
+			{
+				var box = $(boxID);
+				if (box) {
+					box.checked = !box.checked;
+					updateInstallFolder();
+				}
+			}
+
+			// Called any time something changes that affects how we calculate
+			// the installation folder name.  Rebuilds it.
+			function updateInstallFolder()
+			{
+				baseInstallFolder =
+						folderList.options[folderList.selectedIndex].text +
+						'MySQL++' +
+						(versionedFolderBox.checked ? '\\@PACKAGE_VERSION@' : '');
+				installTargetField.value =
+						baseInstallFolder +
+						'\\{include,lib' +
+						(segregatePlatformBox.checked ? '\\PLATFORM' : '') +
+						(segregateManagedBox.checked ? '\\{CLR,Native}' : '') +
+						'}';
+			}
+		</script>
+	</head>
+	
+	<body onload="init()">
+		<p>
+			Where would you like to install the MySQL++ development
+			files?<br/>
+
+			<table cellspacing="10" cellpadding="0" border="0" width="100%"
+					summary="">
+				<tr>
+					<td align="right" valign="middle">Drives:</td>
+					<td width="99%">
+						<select id="drive">
+						</select>
+					</td>
+				</tr>
+
+				<tr>
+					<td align="right" valign="top">Folders:</td>
+					<td width="99%">
+						<select id="folder" size="6">
+						</select>
+					</td>
+				</tr>
+
+				<tr>
+					<td>&nbsp;</td>
+					<td>
+						<input type="checkbox" id="versionedFolder"/> 
+						<span style="cursor: default"
+								onclick="toggleCheckbox('versionedFolder')">Install
+								in versioned folder?</span>
+					</td>
+				</tr>
+
+				<tr>
+					<td>&nbsp;</td>
+					<td>
+						<input type="checkbox" id="segregateManaged"/> 
+						<span style="cursor: default"
+							onclick="toggleCheckbox('segregateManaged')">Segregate
+							native C++ library builds from C++/CLI (CLR)
+							builds?</span>
+					</td>
+				</tr>
+
+				<tr>
+					<td>&nbsp;</td>
+					<td>
+						<input type="checkbox" id="segregatePlatform"/> 
+						<span style="cursor: default"
+							onclick="toggleCheckbox('segregatePlatform')">Segregate
+							libraries by platform?</span>
+					</td>
+				</tr>
+
+				<tr>
+					<td align="right" valign="middle">Target:</td>
+					<td valign="middle" width="99%">
+						<input type="text" readonly="readonly" class="status"
+								id="installTarget" size="80"/>
+					</td>
+				</tr>
+
+				<tr>
+					<td colspan="2" align="center">
+						<button onclick="install()"> Install Now </button>
+						&nbsp;
+						<button onclick="window.close()"> Never Mind </button>
+					</td>
+				</tr>
+			</table>
+		<p>
+	</body>
+</html>

@@ -1,0 +1,105 @@
+#!/bin/bash
+
+TMP=`mktemp bmXXXXXX`
+
+# Run simple unit tests first.
+typeset -i count=0
+echo -n 'Running unit tests:'
+for t in test_*
+do
+	if [ -x "$t" ]
+	then
+		errmsg=`./exrun "$t" 2>&1`
+		errno=$?
+		if [ "$errno" = 0 ]
+		then
+			count=count+1
+		else
+			rm -f $TMP
+			echo " $t FAILED ($errno)"
+			echo
+			echo "$errmsg"
+			exit $?
+		fi
+	fi
+done
+echo " $count tests succeeded"
+echo 'All unit tests passed' >> $TMP
+
+# Assume AUTO_INCREMENT id column in images table will get 1 in
+# load_jpeg call below, since we reset the DB before doing it.
+export QUERY_STRING=id=1
+
+# Now run examples to test high-level behavior.  The repeated use of
+# resetdb is intentional!  It's run after each example that changes
+# the database in a way that will cause a subsequent example to fail
+# because data it expects isn't present.
+echo -n 'Running examples:'
+for t in \
+	resetdb simple[0-9] store_if for_each multiquery tquery1 \
+	resetdb tquery[2-9] \
+	resetdb ssqls[0-9] \
+	load_jpeg cgi_jpeg
+do
+	if [ -x $t ]
+	then
+		if [ "$t" = "resetdb" ]
+		then
+			echo
+			echo -n "   "
+		fi
+	
+		echo -n "$t "
+		echo "---------------- BEGIN $t OUTPUT ----------------" >> $TMP
+		if ! ./exrun $t -D $* >> $TMP
+		then
+			echo
+			echo 'TESTING ABORTED.'
+			rm -f $TMP
+			exit $?
+		fi
+		echo "================ END $t OUTPUT ================" >> $TMP
+		echo >> $TMP
+	fi
+done
+echo
+
+# Test ssqlsxlat -o.  Note that it suppresses stdout but keeps stderr
+# so warnings about directives and line elements it doesn't understand
+# aren't suppressed.  We run the first pass's output back through
+# ssqlsxlat to deal with comments, whitespace differences, line element
+# ordering, boolean value and type canonicalization, and other niggly
+# differences we really don't care about.  diff -w isn't enough.
+for f in {examples,test}/*.ssqls
+do
+	echo -n "Testing ssqlsxlat -i $f -o..."
+	echo "--- BEGIN ssqlsxlat -i $f -o ERROR OUTPUT ---" >> $TMP
+	pass1=/tmp/dtest-ssxgv2-pass1-$bnf
+	pass2=/tmp/dtest-ssxgv2-pass2-$bnf
+	echo -n "pass 1"
+	./exrun ssqlsxlat -i $f -o $pass1 > /dev/null 2>> $TMP
+	echo -n ", pass 2"
+	./exrun ssqlsxlat -i $pass1 -o $pass2 > /dev/null 2>> $TMP
+	echo -n ", diff"
+	diff $pass1 $pass2 > /dev/null >> $TMP
+	echo "==== END ssqlsxlat -i $f -o ERROR OUTPUT ====" >> $TMP
+	echo
+done
+
+# Check for any changes
+BFILE=bmark.txt
+if [ -f $BFILE ]
+then
+	if diff -u -w $BFILE $TMP
+	then
+		echo
+		echo 'All tests passed.'
+	fi
+	rm -f $TMP
+else
+	mv $TMP $BFILE
+	chmod -w $BFILE
+	echo
+	echo 'BENCHMARK FILE REGENERATED.'
+	echo
+fi

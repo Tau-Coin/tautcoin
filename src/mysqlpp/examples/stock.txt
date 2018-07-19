@@ -1,0 +1,26 @@
+Tiny Screws	1000	0.01	0.05	2008-11-11	All those tiny, indistinguishable, but slighly different screws like the ones it the bottom of your computer desk drawer.
+Needle-nose Pliers	50	0.5	5.95	2008-11-12	Drop-forged steel, rubberized grip
+Small Soldering Iron	40	0.5	15.95	2008-09-01	20-watt model, assorted tips, UL approved
+Large Soldering Iron	35	0.75	24.95	2008-08-01	40-watt model, assorted tips, UL approved, stand included
+Solder Wick	100	0.1	2.95	2008-04-01	25 feet, braided copper
+Mini Screwdrivers, 3 pc.	30	0.4	8.95	2008-03-25	3-piece mini-screwdriver set in plastic case, 2 Phillips, 1 standard slot
+Mini Screwdrivers, 6 pc.	40	0.6	12.95	2008-04-01	6-piece mini-screwdriver set in plastic case, 3 Phillips, 3 standard slot
+Wire-wrapping Tool	25	0.2	4.95	2008-04-23	wire-wrapping tool with rubberied grip
+Red LED, 5mm, 3000mcd	300	0.01	0.29	2008-10-02	Max forward current 20mA continuous. Max Forward Drop: 2.1V. Max reverse Voltage:5VDC.
+Orange LED, 5mm, 2500mcd	250	0.01	0.29	2008-07-31	Max forward current 20mA continuous, 5VDC Max reverse Voltage. 2VDC (typ) Forward voltage drop. 30 Deg. view angle. 1" leads.
+Yellow LED, 5mm, 3000mcd	400	0.01	0.25	2008-09-30	Max forward current 20mA continuous, 5VDC Max reverse Voltage. 2.2VDC (typ) Forward voltage drop. 30 Deg. view angle. 1" leads.
+Green LED, 5mm, 1000mcd	350	0.01	0.45	2008-09-27	Max forward current 20mA continuous, 5VDC Max reverse Voltage. 2VDC (typ) Forward voltage drop. 30 Deg. view angle. 1" leads.
+Blue LED, 5mm, 3900mcd	500	0.01	0.34	2007-12-01	Max forward current 20mA continuous, 5VDC Max reverse Voltage. 2.2VDC (typ) Forward voltage drop. 30 Deg. view angle. 1" leads.
+White LED, 5mm, 15000mcd	750	0.01	0.43	2008-02-01	Max forward current 30mA continuous, 20mA recommended. 5VDC Max reverse Voltage. 3.8VDC typ. 4.5V max. Forward voltage drop. 15deg. View angle. 1" leads.
+AA Battery, single	220	0.05	0.50	2007-09-19	1.5 v, alkaline
+AA Battery, 4-pack	60	0.20	1.79	2007-08-03	1.5 v, alkaline
+AA Battery, 24-pack	8	1.2	9.99	2007-04-25	1.5 v, alkaline, includes tester
+C Battery, single	100	0.075	0.65	2007-11-14	1.5 v, alkaline
+C Battery, 4-pack	25	0.3	2.29	2007-06-05	1.5 v, alkaline
+C Battery, 24-pack	5	1.8	10.99	2007-06-13	1.5 v, alkaline, includes tester
+D Battery, single	180	0.08	0.70	2007-12-03	1.5 v, alkaline
+D Battery, 4-pack	45	0.3	2.59	2007-04-01	1.5 v, alkaline
+D Battery, 24-pack	12	1.9	11.99	2007-05-15	1.5 v, alkaline, includes tester
+9-volt Battery, single	90	0.06	0.75	2008-01-02	alkaline
+9-volt Battery, 3-pack	17	0.2	1.99	2008-02-28	alkaline
+9-volt Batter, 20-pack	12	1.2	12.99	2007-12-28	alkaline, no tester needed (just use your tongue)

@@ -1,0 +1,24 @@
+<?xml version="1.0" ?>
+<bakefile-gen xmlns="http://www.bakefile.org/schema/bakefile-gen">
+    <input>
+        ./mysql++.bkl
+    </input>
+
+    <!-- List of output formats to generate: -->
+    <add-formats>
+        autoconf,mingw,msvs2003prj,msvs2005prj,msvs2008prj,xcode2
+    </add-formats>
+
+    <add-flags formats="mingw">
+        -o$(INPUT_FILE_DIR)/Makefile.mingw
+    </add-flags>
+	<add-flags formats="msvs2003prj">
+		-ovc2003/mysql++.sln
+	</add-flags>
+	<add-flags formats="msvs2005prj">
+		-ovc2005/mysql++.sln
+	</add-flags>
+	<add-flags formats="msvs2008prj">
+		-ovc2008/mysql++.sln -DMSVS_PLATFORMS=win64
+	</add-flags>
+</bakefile-gen>
