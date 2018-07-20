@@ -125,6 +125,29 @@ public:
     std::string ToString() const;
 };
 
+/** An input of a transaction.
+ * It contains the reward by mining reward.
+ */
+class CTxReward
+{
+public:
+	std::string senderPubkey;	
+    CAmount senderBalance;
+    uint32_t transTime;
+    CScript scriptSig;
+
+	//Serialize
+    ADD_SERIALIZE_METHODS;
+
+    template <typename Stream, typename Operation>
+    inline void SerializationOp(Stream& s, Operation ser_action, int nType, int nVersion) {
+        READWRITE(senderPubkey);
+        READWRITE(senderBalance);
+        READWRITE(transTime);
+        READWRITE(*(CScriptBase*)(&scriptSig));
+    }
+
+};
 /** An output of a transaction.  It contains the public key that the next input
  * must be able to sign with to claim it.
  */
@@ -294,15 +317,18 @@ inline void SerializeTransaction(TxType& tx, Stream& s, Operation ser_action, in
     unsigned char flags = 0;
     if (ser_action.ForRead()) {
         const_cast<std::vector<CTxIn>*>(&tx.vin)->clear();
+        const_cast<std::vector<CTxReward>*>(&tx.vbalance)->clear();
         const_cast<std::vector<CTxOut>*>(&tx.vout)->clear();
         const_cast<CTxWitness*>(&tx.wit)->SetNull();
         /* Try to read the vin. In case the dummy is there, this will be read as an empty vector. */
         READWRITE(*const_cast<std::vector<CTxIn>*>(&tx.vin));
-        if (tx.vin.size() == 0 && !(nVersion & SERIALIZE_TRANSACTION_NO_WITNESS)) {
+        READWRITE(*const_cast<std::vector<CTxReward>*>(&tx.vbalance));
+        if (tx.vin.size() == 0 && tx.vbalance.size() == 0 && !(nVersion & SERIALIZE_TRANSACTION_NO_WITNESS)) {
             /* We read a dummy or an empty vin. */
             READWRITE(flags);
             if (flags != 0) {
                 READWRITE(*const_cast<std::vector<CTxIn>*>(&tx.vin));
+                READWRITE(*const_cast<std::vector<CTxReward>*>(&tx.vbalance));
                 READWRITE(*const_cast<std::vector<CTxOut>*>(&tx.vout));
             }
         } else {
@@ -330,11 +356,14 @@ inline void SerializeTransaction(TxType& tx, Stream& s, Operation ser_action, in
         }
         if (flags) {
             /* Use extended format in case witnesses are to be serialized. */
-            std::vector<CTxIn> vinDummy;
-            READWRITE(vinDummy);
+            std::vector<CTxIn> vinDummyUTXO;
+            std::vector<CTxReward> vinDummyReward;
+            READWRITE(vinDummyUTXO);
+            READWRITE(vinDummyReward);
             READWRITE(flags);
         }
         READWRITE(*const_cast<std::vector<CTxIn>*>(&tx.vin));
+        READWRITE(*const_cast<std::vector<CTxReward>*>(&tx.vbalance));
         READWRITE(*const_cast<std::vector<CTxOut>*>(&tx.vout));
         if (flags & 1) {
             const_cast<CTxWitness*>(&tx.wit)->vtxinwit.resize(tx.vin.size());
@@ -370,6 +399,7 @@ public:
     // structure, including the hash.
     const int32_t nVersion;
     const std::vector<CTxIn> vin;
+    const std::vector<CTxReward> vbalance;
     const std::vector<CTxOut> vout;
     CTxWitness wit; // Not const: can change without invalidating the txid cache
     const uint32_t nLockTime;
@@ -439,6 +469,7 @@ struct CMutableTransaction
 {
     int32_t nVersion;
     std::vector<CTxIn> vin;
+    std::vector<CTxReward> vbalance;
     std::vector<CTxOut> vout;
     CTxWitness wit;
     uint32_t nLockTime;
