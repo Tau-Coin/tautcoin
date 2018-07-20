@@ -96,9 +96,9 @@ uint64_t signatureCompactWithPubkey(const uint256 &phash, std::vector<unsigned c
 
 #if 1
 std::string getLatestBlockGenerationSignature(){
-    LOCK(cs_main);
+    //LOCK(cs_main);
     uint32_t nHeight = chainActive.Height();
-    std::cout<<"current main chain height is "<<nHeight<<std::endl;
+    //std::cout<<"current main chain height is "<<nHeight<<std::endl;
     CBlockIndex* pblockindex = chainActive[nHeight];
     std::cout <<"hex is as follows "<<std::hex <<pblockindex->GetBlockGenerationSignature()<<std::endl;
     return pblockindex->GetBlockGenerationSignature();
@@ -126,12 +126,13 @@ uint256 getPosHash(std::string generationSignature,std::string pubKey){
 }
 
 std::string raiseGenerationSignature(std::string pukstr){
-    uint256 ret = Hash(pukstr.begin(),pukstr.end());
+    std::string pSignature = getLatestBlockGenerationSignature();
+    uint256 ret = Hash(pSignature.begin(),pSignature.end(),pukstr.begin(),pukstr.end());
     return HexStr(ret);
 }
 
-bool verifyGenerationSignature(std::string generationSignature,std::string pukstr){
-    uint256 ret = Hash(pukstr.begin(),pukstr.end());
+bool verifyGenerationSignature(std::string pGS,std::string generationSignature,std::string pukstr){
+    uint256 ret = Hash(pGS.begin(),pGS.end(),pukstr.begin(),pukstr.end());
     //std::cout<<" genesis verify "<<HexStr(ret)<<std::endl;
     return generationSignature == HexStr(ret);
 }
@@ -150,7 +151,7 @@ std::string GetPubKeyForPackage(){
     if(pubkey.Decompress()){
        std::vector<unsigned char> ret = ToByteVector(pubkey);
        pukstr = HexStr(ret);
-       std::cout<<"publick key string is like " << pukstr<<std::endl;
+       std::cout<<"public key string is like " << pukstr<<std::endl;
     }
     return pukstr;
 }

@@ -3648,10 +3648,26 @@ bool CheckProofOfDryStake(const CBlockHeader& block, CValidationState& state,
 bool CheckBlockHeader(const CBlockHeader& block, CValidationState& state, const Consensus::Params& consensusParams, bool fCheckPOW,
         CBlockIndex* pindexPrev)
 {
+
+    {
+     LOCK(cs_main);
+    // Firstly if pindexLast equals NULL, get it from mapBlockIndex.
+    // If not exist, return error.
+    if (!pindexPrev) {
+            BlockMap::iterator mi = mapBlockIndex.find(block.hashPrevBlock);
+            if (mi == mapBlockIndex.end())
+                return state.DoS(10, error("%s: prev block not found", __func__), 0, "bad-prevblk");
+            pindexPrev = (*mi).second;
+            if (pindexPrev->nStatus & BLOCK_FAILED_MASK)
+                return state.DoS(100, error("%s: prev block invalid", __func__), REJECT_INVALID, "bad-prevblk");
+     }
+     assert(pindexPrev);
+     }
     // Check generation signature
-    if (!verifyGenerationSignature(block.generationSignature, block.pubKeyOfpackager)) {
+    if (!verifyGenerationSignature(pindexPrev->generationSignature,block.generationSignature, block.pubKeyOfpackager)) {
         return state.DoS(90, false, REJECT_INVALID, "mismatch generation signature", false, "proof of stake failed");
     }
+
 
     // Check proof of work matches claimed amount
     //if (fCheckPOW && !CheckProofOfWork(block.GetHash(), block.nBits, consensusParams))
@@ -3809,7 +3825,7 @@ std::vector<unsigned char> GenerateCoinbaseCommitment(CBlock& block, const CBloc
 bool ContextualCheckBlockHeader(const CBlockHeader& block, CValidationState& state, const Consensus::Params& consensusParams, CBlockIndex * const pindexPrev, int64_t nAdjustedTime)
 {
     // Check generation signature
-    if (!verifyGenerationSignature(block.generationSignature, block.pubKeyOfpackager)) {
+    if (!verifyGenerationSignature(pindexPrev->generationSignature,block.generationSignature, block.pubKeyOfpackager)) {
         return state.DoS(90, false, REJECT_INVALID, "mismatch generation signature", false, "proof of stake failed");
     }
 
@@ -4091,7 +4107,6 @@ bool TestBlockValidity(CValidationState& state, const CChainParams& chainparams,
     CBlockIndex indexDummy(block);
     indexDummy.pprev = pindexPrev;
     indexDummy.nHeight = pindexPrev->nHeight + 1;
-
     // NOTE: CheckBlockHeader is called by CheckBlock
     if (!ContextualCheckBlockHeader(block, state, chainparams.GetConsensus(), pindexPrev, GetAdjustedTime()))
         return error("%s: Consensus::ContextualCheckBlockHeader: %s", __func__, FormatStateMessage(state));
