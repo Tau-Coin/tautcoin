@@ -3,6 +3,7 @@
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
 #include "coins.h"
+#include "isndb.h"
 
 #include "memusage.h"
 #include "random.h"
@@ -243,8 +244,13 @@ CAmount CCoinsViewCache::GetValueIn(const CTransaction& tx) const
         return 0;
 
     CAmount nResult = 0;
+	// vin
     for (unsigned int i = 0; i < tx.vin.size(); i++)
         nResult += GetOutputFor(tx.vin[i]).nValue;
+
+	// vbalance - CowTC
+    for (unsigned int i = 0; i < tx.vbalance.size(); i++)
+        nResult += tx.vbalance[i].senderBalance;
 
     return nResult;
 }
@@ -252,6 +258,7 @@ CAmount CCoinsViewCache::GetValueIn(const CTransaction& tx) const
 bool CCoinsViewCache::HaveInputs(const CTransaction& tx) const
 {
     if (!tx.IsCoinBase()) {
+		// vin
         for (unsigned int i = 0; i < tx.vin.size(); i++) {
             const COutPoint &prevout = tx.vin[i].prevout;
             const CCoins* coins = AccessCoins(prevout.hash);
@@ -259,6 +266,22 @@ bool CCoinsViewCache::HaveInputs(const CTransaction& tx) const
                 return false;
             }
         }
+		// vbalance - CowTC
+		CAmount bIn = 0;
+        for (unsigned int i = 0; i < tx.vbalance.size(); i++) {
+        	bIn += tx.vbalance[i].senderBalance;
+        }
+		ISNDB dbLocal;
+		vector<string> fields;
+		fields.push_back(memFieldBalance);
+		/*
+		string value= tx.vbalance[0].senderPubkey;
+		mysqlpp::StoreQueryResult bLocal = dbLocal.ISNSqlSelectAA(tableMember, fields, memFieldAddress, value);
+		*/
+        //if (bLocal[0]["balance"]< bIn) {
+        //	return false;
+		//}
+
     }
     return true;
 }
