@@ -274,13 +274,13 @@ bool CCoinsViewCache::HaveInputs(const CTransaction& tx) const
 		ISNDB dbLocal;
 		vector<string> fields;
 		fields.push_back(memFieldBalance);
-		/*
 		string value= tx.vbalance[0].senderPubkey;
 		mysqlpp::StoreQueryResult bLocal = dbLocal.ISNSqlSelectAA(tableMember, fields, memFieldAddress, value);
+		/*
+        if (bLocal[0]["balance"]< bIn) {
+        	return false;
+		}
 		*/
-        //if (bLocal[0]["balance"]< bIn) {
-        //	return false;
-		//}
 
     }
     return true;
