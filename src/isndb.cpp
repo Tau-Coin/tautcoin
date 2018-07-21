@@ -1,9 +1,13 @@
+// Copyright (c) 2018- The isncoin Core developers
+// Distributed under the MIT software license, see the accompanying
+// file COPYING or http://www.opensource.org/licenses/mit-license.php.
+
 #include "isndb.h"
 
 ISNDB::ISNDB()
 {
 	try{
-		con= mysqlpp::Connection("imreward", "localhost", "immysql", "im123456");
+		con= mysqlpp::Connection(DBName, hostName, userName, passWord);
 	}
 	catch (const mysqlpp::Exception& er) {
 		// Catch-all for any other MySQL++ exceptions
