@@ -15,7 +15,7 @@ LIBUNIVALUE = $(UNIVALUE_LIBS)
 endif
 
 BITCOIN_CONFIG_INCLUDES=-I$(builddir)/config
-BITCOIN_INCLUDES=-I$(builddir) -I$(builddir)/obj $(BDB_CPPFLAGS) $(BOOST_CPPFLAGS) $(LEVELDB_CPPFLAGS) $(CRYPTO_CFLAGS) $(SSL_CFLAGS)
+BITCOIN_INCLUDES=-I$(builddir) -I$(builddir)/obj $(BDB_CPPFLAGS) $(BOOST_CPPFLAGS) $(LEVELDB_CPPFLAGS) $(CRYPTO_CFLAGS) $(SSL_CFLAGS) -I/usr/local/include/mysql++ -I/usr/include/mysql
 
 BITCOIN_INCLUDES += -I$(srcdir)/secp256k1/include
 BITCOIN_INCLUDES += $(UNIVALUE_CFLAGS)
@@ -28,6 +28,7 @@ LIBBITCOIN_UTIL=libbitcoin_util.a
 LIBBITCOIN_CRYPTO=crypto/libbitcoin_crypto.a
 LIBBITCOINQT=qt/libbitcoinqt.a
 LIBSECP256K1=secp256k1/libsecp256k1.la
+MYSQLPP_LIBS=-L/usr/local/lib -lmysqlpp -L/usr/lib/x86_64-linux-gnu/ -lmysqlclient
 
 if ENABLE_ZMQ
 LIBBITCOIN_ZMQ=libbitcoin_zmq.a
@@ -83,6 +84,7 @@ BITCOIN_CORE_H = \
   checkqueue.h \
   clientversion.h \
   coincontrol.h \
+  isndb.h \
   coins.h \
   coinsbyscript.h \
   compat.h \
@@ -290,6 +292,7 @@ libbitcoin_common_a_SOURCES = \
   amount.cpp \
   base58.cpp \
   chainparams.cpp \
+  isndb.cpp \
   coins.cpp \
   coinsbyscript.cpp \
   compressor.cpp \
@@ -352,6 +355,7 @@ endif
 
 bitcoind_LDADD = \
   $(LIBBITCOIN_SERVER) \
+  $(MYSQLPP_LIBS) \
   $(LIBBITCOIN_COMMON) \
   $(LIBUNIVALUE) \
   $(LIBBITCOIN_UTIL) \
@@ -396,6 +400,7 @@ endif
 
 bitcoin_tx_LDADD = \
   $(LIBUNIVALUE) \
+  $(MYSQLPP_LIBS) \
   $(LIBBITCOIN_COMMON) \
   $(LIBBITCOIN_UTIL) \
   $(LIBBITCOIN_CONSENSUS) \
