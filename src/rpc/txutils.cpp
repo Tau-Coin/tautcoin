@@ -22,6 +22,7 @@
 #include "script/script_error.h"
 #include "script/sign.h"
 #include "script/standard.h"
+#include "stake.h"
 #include "txmempool.h"
 #include "uint256.h"
 #include "utilstrencodings.h"
@@ -91,9 +92,23 @@ static void ApproximateBestSubset(std::vector<std::pair<CAmount, COutPoint> >vVa
     }
 }
 
+static void DumpUTXOs(std::set<COutPoint>& setCoins)
+{
+    LogPrintf("begin dumping utxos\n");
+
+    for (std::set<COutPoint>::iterator i = setCoins.begin(); i != setCoins.end(); i++)
+    {
+        LogPrintf("%s\t\%d\n", (*i).hash.ToString(), (*i).n);
+    }
+
+    LogPrintf("end dumping utxos\n");
+}
+
 bool CTransactionUtils::SelectCoinsMinConf(const CAmount& nTargetValue, int nConf, std::vector<COutPoint>& vCoins,
         std::set<COutPoint>& setCoinsRet, CAmount& nValueRet)
 {
+    LogPrintf("%s entry\n", __func__);
+
     setCoinsRet.clear();
     nValueRet = 0;
 
@@ -112,11 +127,14 @@ bool CTransactionUtils::SelectCoinsMinConf(const CAmount& nTargetValue, int nCon
 
     random_shuffle(vCoins.begin(), vCoins.end(), GetRandInt);
 
-    BOOST_FOREACH(const COutPoint &output, vCoins)
+    BOOST_FOREACH(const COutPoint& output, vCoins)
     {
         CCoins coins;
         if (!pcoinsTip->GetCoins(output.hash, coins))
-            continue;
+        {
+            LogPrintf("%s get coins fail:%s\n", __func__, output.hash.ToString());
+            return false;
+        }
 
         int nDepth = tipHeight - coins.nHeight + 1;
         if ( nDepth < nConf)
@@ -129,8 +147,8 @@ bool CTransactionUtils::SelectCoinsMinConf(const CAmount& nTargetValue, int nCon
 
         if (v == nTargetValue)
         {
-            setCoinsRet.insert(coin.second);
-            nValueRet += coin.first;
+            setCoinsRet.insert(output);
+            nValueRet += v;
             return true;
         }
         else if (v < nTargetValue + MIN_CHANGE)
@@ -142,6 +160,13 @@ bool CTransactionUtils::SelectCoinsMinConf(const CAmount& nTargetValue, int nCon
         {
             coinLowestLarger = coin;
         }
+    }
+
+    LogPrintf("total lower:%d, target:%d\n", nTotalLower, nTargetValue);
+    if (nTotalLower <= 0)
+    {
+        LogPrintf("no required coins\n");
+        return false;
     }
 
     if (nTotalLower == nTargetValue)
@@ -156,6 +181,8 @@ bool CTransactionUtils::SelectCoinsMinConf(const CAmount& nTargetValue, int nCon
 
     if (nTotalLower < nTargetValue)
     {
+        if (coinLowestLarger.second.IsNull())
+            return false;
         setCoinsRet.insert(coinLowestLarger.second);
         nValueRet += coinLowestLarger.first;
         return true;
@@ -207,17 +234,26 @@ bool CTransactionUtils::SelectCoins(std::vector<COutPoint>& vAvailableCoins, con
 bool CTransactionUtils::AvailableCoins(const std::string& pubKey, std::vector<COutPoint>& vCoins)
 {
     vCoins.clear();
+    std::string addrStr;
+    if (ConvertPubkeyToAddress(pubKey, addrStr))
+    {
+        LogPrintf("%s addr:%s\n", __func__, addrStr);
+    }
 
     CScript script;
-
-    if (IsHex(pubKey))
+    CBitcoinAddress address(addrStr);
+    if (address.IsValid())
+    {
+        script = GetScriptForDestination(address.Get());
+    }
+    else if (IsHex(pubKey))
     {
         std::vector<unsigned char> data(ParseHex(pubKey));
         script = CScript(data.begin(), data.end());
     }
     else
     {
-        LogPrintf("Invalid Bitcoin address or script: %s", pubKey);
+        LogPrintf("Invalid Bitcoin address or script: %s\n", pubKey);
         return false;
     }
 
@@ -228,7 +264,10 @@ bool CTransactionUtils::AvailableCoins(const std::string& pubKey, std::vector<CO
     {
         CCoins coins;
         if (!pcoinsTip->GetCoins(outpoint.hash, coins))
+        {
+            LogPrintf("get coins failed: %s\n", outpoint.hash.ToString());
             continue;
+        }
 
         if (outpoint.n < coins.vout.size() && !coins.vout[outpoint.n].IsNull() && !coins.vout[outpoint.n].scriptPubKey.IsUnspendable())
         {
@@ -239,15 +278,18 @@ bool CTransactionUtils::AvailableCoins(const std::string& pubKey, std::vector<CO
     return true;
 }
 
-bool CTransactionUtils::CreateTransaction(std::map<std::string, CAmount> receipts, const std::string& pubKey,
+bool CTransactionUtils::CreateTransaction(std::map<std::string, CAmount>& receipts, const std::string& pubKey,
         const std::string& prvKey, CFeeRate& userFee, CMutableTransaction& tx, CAmount& nFeeRet, std::string& strFailReason)
 {
+    LogPrintf("%s entry\n", __func__);
+
     // Firstly, construct recipinets
     std::vector<CRecipient> vecSend;
     CAmount nTotal = 0;
     for (std::map<std::string, CAmount> ::iterator i = receipts.begin();
             i != receipts.end(); i++)
     {
+        LogPrintf("receipt address: %s\n", i->first);
         CBitcoinAddress addr(i->first);
         if (!addr.IsValid())
         {
@@ -297,8 +339,22 @@ bool CTransactionUtils::CreateTransaction(std::map<std::string, CAmount> receipt
         return false;
     }
 
+    if (coins.size() == 0)
+    {
+        strFailReason = _("no UTXOs");
+        return false;
+    }
+
+    LogPrintf("available coins:[\n");
+    BOOST_FOREACH(const COutPoint& c, coins)
+    {
+        LogPrintf("\t%s,\t%d\n", c.hash.ToString(), c.n);
+    }
+    LogPrintf("]\n");
+
     CAmount nValue = nTotal;
     unsigned int nSubtractFeeFromAmount = 0;
+    nFeeRet = 0;
 
     // Start with no fee and loop until there is enough fee
     while (true)
@@ -347,25 +403,47 @@ bool CTransactionUtils::CreateTransaction(std::map<std::string, CAmount> receipt
         // Choose coins to use
         std::set<COutPoint> setCoins;
         CAmount nValueIn = 0;
+        LogPrintf("selected value:%d\n", nValueToSelect);
         if (!SelectCoins(coins, nValueToSelect, setCoins, nValueIn))
         {
             strFailReason = _("Insufficient funds");
             return false;
         }
 
+        LogPrintf("selected coins value:%d  [\n", nValueIn);
+        BOOST_FOREACH(const COutPoint& c, setCoins)
+        {
+            LogPrintf("\t%s,\t%d\n", c.hash.ToString(), c.n);
+        }
+        LogPrintf("]\n");
+
         const CAmount nChange = nValueIn - nValueToSelect;
         if (nChange > 0)
         {
             // Fill a vout to ourself
             CScript scriptChange;
+            std::string addrStr;
+            if (!ConvertPubkeyToAddress(pubKey, addrStr))
+            {
+                strFailReason = _("Convert change pubkey error");
+                return false;
+            }
 
-            if (!IsHex(pubKey))
+            CBitcoinAddress address(addrStr);
+            if (address.IsValid())
+            {
+                scriptChange = GetScriptForDestination(address.Get());
+            }
+            else if (IsHex(pubKey))
+            {
+                std::vector<unsigned char> data(ParseHex(pubKey));
+                scriptChange = CScript(data.begin(), data.end());
+            }
+            else
             {
                 strFailReason = _("public key is incorrect");
                 return false;
             }
-            std::vector<unsigned char> data(ParseHex(pubKey));
-            scriptChange = CScript(data.begin(), data.end());
 
             CTxOut newTxOut(nChange, scriptChange);
 
@@ -420,17 +498,17 @@ bool CTransactionUtils::CreateTransaction(std::map<std::string, CAmount> receipt
         CTransaction txNewConst(tx);
         BOOST_FOREACH(const COutPoint& outpoint, setCoins)
         {
-            CCoins coins;
-            if (!pcoinsTip->GetCoins(outpoint.hash, coins))
+            CCoins coin;
+            if (!pcoinsTip->GetCoins(outpoint.hash, coin))
             {
                 strFailReason = _("fail to get UTXOs");
                 return false;
             }
 
             bool signSuccess;
-            const CScript& scriptPubKey = coins.vout[outpoint.n].scriptPubKey;
+            const CScript& scriptPubKey = coin.vout[outpoint.n].scriptPubKey;
             SignatureData sigdata;
-            signSuccess = ProduceSignature(TransactionSignatureCreator(&keystore, &txNewConst, nIn, coins.vout[outpoint.n].nValue, SIGHASH_ALL),
+            signSuccess = ProduceSignature(TransactionSignatureCreator(&keystore, &txNewConst, nIn, coin.vout[outpoint.n].nValue, SIGHASH_ALL),
                     scriptPubKey, sigdata);
 
             if (!signSuccess)
@@ -478,7 +556,7 @@ bool CTransactionUtils::CreateTransaction(std::map<std::string, CAmount> receipt
         continue;
     }
 
-    LogPrintf("create transaction successfully");
+    LogPrintf("create transaction successfully\n");
     return true;
 }
 
@@ -505,7 +583,8 @@ bool CTransactionUtils::SendTransaction(const CMutableTransaction& mutx, const C
             if (!AcceptToMemoryPool(mempool, state, tx, false, &fMissingInputs, false, fee))
             {
                 if (state.IsInvalid()) {
-                    failReason = _("fail to validate transanction");
+                    failReason = state.GetRejectReason();
+                    LogPrintf("%s fail: %d %s\n", __func__, state.GetRejectCode(), failReason);
                     return false;
                 } else {
                     if (fMissingInputs) {
