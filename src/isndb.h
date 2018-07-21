@@ -9,16 +9,18 @@
 #include <vector>
 #include <cstdlib>
 
-#include "cmdline.h"
-#include "isnreward.h"
+#include <cmdline.h>
+#include <mysql++.h>
+#include <ssqls.h>
+//#include "isnreward.h"
 
 using namespace std;
 
 //Database info
-const string DBName= "imreward";
-const string hostName= "localhost";
-const string userName= "immysql";
-const string passWord= "im123456";
+const char DBName[32]= "imreward";
+const char hostName[32]= "localhost";
+const char userName[32]= "immysql";
+const char passWord[32]= "im123456";
 
 //Table info
 const string tableClub= "clubInfo";

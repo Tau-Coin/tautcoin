@@ -2,6 +2,9 @@
 // Distributed under the MIT software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
+#ifndef ISNCOIN_DATABASE_CREATE_H
+#define ISNCOIN_DATABASE_CREATE_H
+
 #include <mysql++.h>
 #include <ssqls.h>
 
@@ -21,3 +24,5 @@ sql_create_6(memberinfo,
 	mysqlpp::sql_int_unsigned, father,
 	mysqlpp::sql_int_unsigned, tc,
 	mysqlpp::sql_float, balance)
+
+#endif // ISNCOIN_DATABASE_CREATE_H
