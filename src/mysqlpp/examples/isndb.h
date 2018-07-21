@@ -17,14 +17,14 @@ public:
 	ISNDB();
 
 	// select from ISNDB according to address
-	mysqlpp::StoreQueryResult ISNSqlSelectAA(string tablename, vector<string> field, string condition, string cvalue);
+	mysqlpp::StoreQueryResult ISNSqlSelectAA(const string &tablename, const vector<string> &field, const string &condition, const string &cvalue);
 
 	// update ISNDB with condition
-	mysqlpp::SimpleResult ISNSqlUpdate(string tablename, vector<string> field, vector<string> values, string condition);
-	mysqlpp::SimpleResult ISNSqlAddOne(string tablename, vector<string> field, string condition);
+	mysqlpp::SimpleResult ISNSqlUpdate(const string &tablename, const vector<string> &field, const vector<string> &values, const string &condition);
+	mysqlpp::SimpleResult ISNSqlAddOne(const string &tablename, const vector<string> &field, const string &condition);
 
 	// insert ISNDB with condition
-	int ISNSqlInsert(string tablename, vector<string> values);
+	int ISNSqlInsert(const string &tablename, const vector<string> &values);
 
 private:
 	mysqlpp::Connection con;

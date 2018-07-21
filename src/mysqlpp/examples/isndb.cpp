@@ -13,7 +13,7 @@ ISNDB::ISNDB()
 }
 
 // select from ISNDB according to address
-mysqlpp::StoreQueryResult ISNDB::ISNSqlSelectAA(string tablename, vector<string> field, string condition, string cvalue)
+mysqlpp::StoreQueryResult ISNDB::ISNSqlSelectAA(const string &tablename, const vector<string> &field, const string &condition, const string &cvalue)
 {
 	// form the query sentence
 	int fieldSize= field.size();
@@ -60,7 +60,7 @@ mysqlpp::StoreQueryResult ISNDB::ISNSqlSelectAA(string tablename, vector<string>
 }
 
 // update ISNDB with condition
-mysqlpp::SimpleResult ISNDB::ISNSqlUpdate(string tablename, vector<string> field, vector<string> values, string condition)
+mysqlpp::SimpleResult ISNDB::ISNSqlUpdate(const string &tablename, const vector<string> &field, const vector<string> &values, const string &condition)
 {
 	// form the query sentence
 	if(field.size()!=values.size())
@@ -113,7 +113,7 @@ mysqlpp::SimpleResult ISNDB::ISNSqlUpdate(string tablename, vector<string> field
 	}
 }
 // for ttc+= 1
-mysqlpp::SimpleResult ISNDB::ISNSqlAddOne(string tablename, vector<string> field, string condition)
+mysqlpp::SimpleResult ISNDB::ISNSqlAddOne(const string &tablename, const vector<string> &field, const string &condition)
 {
 	try{
 
@@ -138,7 +138,7 @@ mysqlpp::SimpleResult ISNDB::ISNSqlAddOne(string tablename, vector<string> field
 	}
 }
 // insert ISNDB with condition
-int ISNDB::ISNSqlInsert(string tablename, vector<string> values)
+int ISNDB::ISNSqlInsert(const string &tablename, const vector<string> &values)
 {
 	try{
 		if(tablename=="clubinfo")
