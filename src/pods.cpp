@@ -32,8 +32,8 @@
 #include <secp256k1.h>
 #include <secp256k1_recovery.h>
 
-#define MAXRATIO 67
-#define MINRATIO 53
+#define MAXRATIO 670
+#define MINRATIO 530
 #define GAMMA 0.64
 
 const uint256 DiffAdjustNumerator = uint256S("0x010000000000000000");
@@ -120,20 +120,32 @@ uint64_t getLatestBlockBaseTarget(){
 }
 
 uint256 getPosHash(std::string generationSignature,std::string pubKey){
-    uint256 ret1 = Hash(generationSignature.begin(),generationSignature.end(),pubKey.begin(),pubKey.end());
-    std::cout<<"ret1 is "<<ret1.ToString()<<" ret2 "<<HexStr(ret1)<<std::endl;
-    return ret1;
+    uint256 ret = Hash(generationSignature.begin(),generationSignature.end(),pubKey.begin(),pubKey.end());
+    return ret;
 }
 
 std::string raiseGenerationSignature(std::string pukstr){
     std::string pSignature = getLatestBlockGenerationSignature();
-    uint256 ret = Hash(pSignature.begin(),pSignature.end(),pukstr.begin(),pukstr.end());
+    CPubKey pubkey(pukstr.begin(), pukstr.end());
+    std::string strPubKey;
+    if (pubkey.IsCompressed() && pubkey.Decompress()) {
+        strPubKey = HexStr(ToByteVector(pubkey));
+    } else if (!pubkey.IsCompressed()) {
+        strPubKey = pukstr;
+    }
+    uint256 ret = Hash(pSignature.begin(),pSignature.end(),strPubKey.begin(),strPubKey.end());
     return HexStr(ret);
 }
 
 bool verifyGenerationSignature(std::string pGS,std::string generationSignature,std::string pukstr){
-    uint256 ret = Hash(pGS.begin(),pGS.end(),pukstr.begin(),pukstr.end());
-    //std::cout<<" genesis verify "<<HexStr(ret)<<std::endl;
+    CPubKey pubkey(pukstr.begin(), pukstr.end());
+    std::string strPubKey;
+    if (pubkey.IsCompressed() && pubkey.Decompress()) {
+        strPubKey = HexStr(ToByteVector(pubkey));
+    } else if (!pubkey.IsCompressed()) {
+        strPubKey = pukstr;
+    }
+    uint256 ret = Hash(pGS.begin(),pGS.end(),strPubKey.begin(),strPubKey.end());
     return generationSignature == HexStr(ret);
 }
 
@@ -156,7 +168,7 @@ std::string GetPubKeyForPackage(){
     return pukstr;
 }
 uint64_t calculateHitOfPOS(const uint256 &phash){
-    std::cout <<" generation signature hash is "<<HexStr(phash)<<std::endl;
+    LogPrintf("Generation Signature Hash is %s\n",HexStr(phash));
     //EncodeBase64(phash.begin(), phash.size())<<std::endl;
     uint64_t hit=0;
     memcpy(&hit,phash.begin(),8);
@@ -175,14 +187,14 @@ uint64_t getNextPosRequired(const CBlockIndex* pindexLast){
    uint64_t lastBlockParentTime = ancestor->GetBlockTime();
    uint64_t Sa = (lastTime - lastBlockParentTime)/3 ;
    uint64_t newBaseTarget = 0;
-   if (Sa > 60){
+   if (Sa > 600){
        uint64_t min = 0;
        if(Sa < MAXRATIO){
            min = Sa;
        }else{
            min = MAXRATIO;
        }
-       newBaseTarget = (min * pindexLast->baseTarget)/60;
+       newBaseTarget = (min * pindexLast->baseTarget)/600;
    }else{
        uint64_t max = 0;
        if(Sa > MINRATIO){
@@ -190,9 +202,9 @@ uint64_t getNextPosRequired(const CBlockIndex* pindexLast){
        }else{
            max = MINRATIO;
        }
-       newBaseTarget = pindexLast->baseTarget - ((60 - max) * GAMMA * pindexLast->baseTarget)/60;
+       newBaseTarget = pindexLast->baseTarget - ((600 - max) * GAMMA * pindexLast->baseTarget)/600;
    }
-   std::cout<<"NewBaseTarget is "<<newBaseTarget<<" last time is "<<lastTime<<" lastBlockParentTime "<<lastBlockParentTime<<std::endl;
+   LogPrintf("NewBaseTarget is %s last time is %s lastBlockParentTime %s\n",newBaseTarget,lastTime,lastBlockParentTime);
    return newBaseTarget;
 }
 
