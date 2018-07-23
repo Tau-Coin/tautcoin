@@ -18,7 +18,7 @@ using namespace std;
 
 //Database info
 const char DBName[32]= "imreward";
-const char hostName[32]= "localhost";
+const char hostName[32]= "192.168.2.215";
 const char userName[32]= "immysql";
 const char passWord[32]= "im123456";
 
