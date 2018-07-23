@@ -1686,7 +1686,7 @@ bool ReadBlockFromDisk(CBlock& block, const CDiskBlockPos& pos, const Consensus:
 
     // Check the header
     CValidationState state;
-    if (!CheckProofOfDryStake(block, state, consensusParams, NULL)
+    if (!CheckProofOfTransaction(block, state, consensusParams, NULL)
             && state.GetRejectReason().find("bad-prevblk") == std::string::npos)
         return error("ReadBlockFromDisk: Errors in block header at %s", pos.ToString());
 
@@ -3618,7 +3618,7 @@ bool FindUndoPos(CValidationState &state, int nFile, CDiskBlockPos &pos, unsigne
     return true;
 }
 
-bool CheckProofOfDryStake(const CBlockHeader& block, CValidationState& state,
+bool CheckProofOfTransaction(const CBlockHeader& block, CValidationState& state,
         const Consensus::Params& consensusParams, const CBlockIndex* pindexPrev)
 {
     LOCK(cs_main);
@@ -3637,7 +3637,7 @@ bool CheckProofOfDryStake(const CBlockHeader& block, CValidationState& state,
     assert(pindexPrev);
 
     PodsErr error;
-    if (!CheckProofOfDryStake(pindexPrev->generationSignature, block.pubKeyOfpackager,
+    if (!CheckProofOfTransaction(pindexPrev->generationSignature, block.pubKeyOfpackager,
                 pindexPrev->nHeight + 1, block.nTime - pindexPrev->nTime, block.baseTarget, consensusParams, error)) {
         return state.DoS(50, false, REJECT_INVALID, "high-hit", false, "proof of stake failed");
     }
@@ -3674,7 +3674,7 @@ bool CheckBlockHeader(const CBlockHeader& block, CValidationState& state, const 
         //return state.DoS(50, false, REJECT_INVALID, "high-hash", false, "proof of work failed");
 
     // Check proof of stake matches claimed amount
-    if (fCheckPOW && !CheckProofOfDryStake(block, state, consensusParams, pindexPrev))
+    if (fCheckPOW && !CheckProofOfTransaction(block, state, consensusParams, pindexPrev))
         return state.DoS(50, false, REJECT_INVALID, "high-hit", false, "proof of stake failed");
 
     return true;
@@ -4320,9 +4320,9 @@ bool static LoadBlockIndexDB()
         // For bitcoin, pow verification is implemented in "LoadBlockIndexGuts".
         // But for pods, we have to do this work after all BlockIndexed are loaded.
         if (pindex->pprev) {
-            if (!CheckProofOfDryStake(pindex->GetBlockHeader(), dummy, chainparams.GetConsensus(),
+            if (!CheckProofOfTransaction(pindex->GetBlockHeader(), dummy, chainparams.GetConsensus(),
                     pindex->pprev)) {
-                return error("LoadBlockIndex(): CheckProofOfDryStake failed: %s", pindex->ToString());
+                return error("LoadBlockIndex(): CheckProofOfTransaction failed: %s", pindex->ToString());
             }
 
             if (pindex->nChainDiff != pindex->pprev->nChainDiff + GetBlockProof(*pindex))

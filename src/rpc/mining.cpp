@@ -17,7 +17,7 @@
 #include "miner.h"
 #include "net.h"
 #include "pow.h"
-#include "pods.h"
+#include "pot.h"
 #include "rpc/server.h"
 #include "txmempool.h"
 #include "util.h"
@@ -126,7 +126,7 @@ UniValue generateBlocksWithPos(boost::shared_ptr<CReserveScript> coinbaseScript,
          uint64_t baseTarget = getNextPosRequired(prevIndex);
          PodsErr error;
 
-         if (CheckProofOfDryStake(prevIndex->generationSignature, coinbaseScript->pubkeyString,
+         if (CheckProofOfTransaction(prevIndex->generationSignature, coinbaseScript->pubkeyString,
                  prevIndex->nHeight + 1, now - prevIndex->nTime, baseTarget, Params().GetConsensus(), error))
          {
               std::unique_ptr<CBlockTemplate> pblocktemplate(BlockAssembler(Params()).CreateNewBlock(coinbaseScript->reserveScript,coinbaseScript->pubkeyString));

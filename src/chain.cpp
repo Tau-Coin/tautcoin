@@ -4,7 +4,7 @@
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
 #include "chain.h"
-#include "pods.h"
+#include "pot.h"
 
 using namespace std;
 

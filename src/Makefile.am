@@ -132,7 +132,7 @@ BITCOIN_CORE_H = \
   support/cleanse.h \
   support/pagelocker.h \
   sync.h \
-  pods.h \
+  pot.h \
   tool.h \
   stake.h \
   threadsafety.h \
@@ -185,7 +185,7 @@ libbitcoin_server_a_SOURCES = \
   policy/fees.cpp \
   policy/policy.cpp \
   pow.cpp \
-  pods.cpp \
+  pot.cpp \
   stake.cpp \
   rest.cpp \
   rpc/blockchain.cpp \
