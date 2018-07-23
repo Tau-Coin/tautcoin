@@ -177,3 +177,13 @@ int ISNDB::ISNSqlInsert(const string &tablename, const vector<string> &values)
 	
 	return 0;
 }
+
+//Get Balance By Address
+CAmount getBalanceByAddress(const string& address)
+{
+	ISNDB dbLocal;
+	vector<string> fields;
+	fields.push_back(memFieldBalance);
+	mysqlpp::StoreQueryResult bLocal = dbLocal.ISNSqlSelectAA(tableMember, fields, memFieldAddress, address);
+	return bLocal[0]["balance"];
+}

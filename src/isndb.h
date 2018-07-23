@@ -12,7 +12,7 @@
 #include <cmdline.h>
 #include <mysql++.h>
 #include <ssqls.h>
-//#include "isnreward.h"
+#include "amount.h"
 
 using namespace std;
 
@@ -59,4 +59,5 @@ private:
 	mysqlpp::Connection con;
 };
 
+CAmount getBalanceByAddress(const string& address);
 #endif // ISNCOIN_DATABASE_H
