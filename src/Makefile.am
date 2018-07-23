@@ -133,6 +133,7 @@ BITCOIN_CORE_H = \
   support/pagelocker.h \
   sync.h \
   pods.h \
+  tool.h \
   stake.h \
   threadsafety.h \
   timedata.h \
@@ -291,6 +292,7 @@ libbitcoin_common_a_SOURCES = \
   amount.cpp \
   base58.cpp \
   chainparams.cpp \
+  tool.cpp \
   isndb.cpp \
   coins.cpp \
   coinsbyscript.cpp \
