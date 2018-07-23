@@ -264,13 +264,13 @@ public:
         }
         consensus.genesislockCoinHeight = GENESISLOCK_MATURITY;
 
-        genesis = CreateGenesisBlock(1529042124, 3974, 0x1f00ffff, 1, genesisReward);
+        genesis = CreateGenesisBlock(1529042124, 95609, 0x1f00ffff, 1, genesisReward);
         consensus.hashGenesisBlock = genesis.GetHash();
         consensus.hashGenesisTx = genesis.hashMerkleRoot;
         consensus.genesisCumulativeDifficulty = genesis.cumulativeDifficulty;
         consensus.genesisBaseTarget = genesis.baseTarget;
-        assert(consensus.hashGenesisBlock == uint256S("000008bd9d6cdfb6c24be9d1b7cf0f99f5162618a41aada512020126d0d4c0ea"));
-        assert(genesis.hashMerkleRoot == uint256S("9cf9acbe3fc2322508ec1621bd8cc99a6100e7523a02a0cc53b7dbdb9a3ebec9"));
+        assert(consensus.hashGenesisBlock == uint256S("000005068d80c1bdaa176f2d0d7fc2bbef4a45917e7d1924e7329d69e0d21f01"));
+        assert(genesis.hashMerkleRoot == uint256S("772c6eb3628ab6e036763de6236c72f22e5863c6ec2a28c1556a6c4895e3d4b8"));
 
         vSeeds.push_back(CDNSSeedData("imorpheus.io", "dnsseed.imorpheus.io", true));
 
