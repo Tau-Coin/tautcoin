@@ -4,17 +4,15 @@
 // Distributed under the MIT software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
-#ifndef IMCOIN_STAKE_H
-#define IMCOIN_STAKE_H
+#ifndef ISNCOIN_TOOL_H
+#define ISNCOIN_TOOL_H
 
 #include "amount.h"
 #include "base58.h"
 #include "script/script.h"
 
-bool IsAllowForge(const std::string pubKey, int height);
+bool ConvertPubkeyToAddress(const std::string& pubKey, std::string& addrStr);
 
-CAmount GetEffectiveBalance(const std::string address, int nHeight);
+bool ConvertPubKeyIntoBitAdress(const CScript& script, CBitcoinAddress& addr);
 
-bool isForgeScript(const CScript& script, CBitcoinAddress& addr, int& memCount);
-
-#endif //IMCOIN_STAKE_H
+#endif //ISNCOIN_TOOL_H

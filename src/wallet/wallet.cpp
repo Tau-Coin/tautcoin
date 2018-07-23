@@ -25,6 +25,7 @@
 #include "util.h"
 #include "ui_interface.h"
 #include "utilmoneystr.h"
+#include "tool.h"
 #include "stake.h"
 
 #include <assert.h>

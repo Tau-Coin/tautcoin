@@ -9,22 +9,11 @@
 #include "amount.h"
 #include "chainparams.h"
 #include "main.h"
+#include "tool.h"
 #include "txdb.h"
 #include "utilstrencodings.h"
 
 extern CBalanceViewDB *pbalancedbview;
-
-bool ConvertPubkeyToAddress(const std::string& pubKey, std::string& addrStr)
-{
-    if (pubKey.empty())
-        return false;
-
-    const CScript script = CScript() << ParseHex(pubKey) << OP_CHECKSIG;
-    CBitcoinAddress addr;
-
-    bool ret = addr.ScriptPub2Addr(script, addrStr);
-    return ret;
-}
 
 bool IsAllowForge(const std::string pubKey, int height)
 {
@@ -98,16 +87,5 @@ bool isForgeScript(const CScript& script, CBitcoinAddress& addr, int& memCount) 
     memCount = principals.size();
     addr.SetString(strAddr);
 
-    return true;
-}
-
-bool ConvertPubKeyIntoBitAdress(const CScript& script, CBitcoinAddress& addr) {
-    std::string strAddr;
-    if (!addr.ScriptPub2Addr(script, strAddr)) {
-        LogPrintf("ConvertPubKeyIntoBitAdress, ScriptPub2Addr fail\n");
-        return false;
-    }
-
-    addr.SetString(strAddr);
     return true;
 }

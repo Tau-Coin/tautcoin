@@ -23,6 +23,7 @@
 #include "util.h"
 #include "utilstrencodings.h"
 #include "hash.h"
+#include "tool.h"
 #include "stake.h"
 #include <stdint.h>
 #include <univalue.h>

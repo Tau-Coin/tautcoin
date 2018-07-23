@@ -3,6 +3,7 @@
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
 #include "coins.h"
+#include "tool.h"
 #include "isndb.h"
 
 #include "memusage.h"
@@ -269,18 +270,16 @@ bool CCoinsViewCache::HaveInputs(const CTransaction& tx) const
 		// vbalance - CowTC
 		CAmount bIn = 0;
         for (unsigned int i = 0; i < tx.vbalance.size(); i++) {
-        	bIn += tx.vbalance[i].senderBalance;
+        	bIn = tx.vbalance[i].senderBalance;
+			string addrStr;
+			ConvertPubkeyToAddress(tx.vbalance[i].senderPubkey, addrStr);
+			CAmount bLocal= getBalanceByAddress(addrStr);
+			/*
+        	if (bLocal[0]["balance"]< bIn) {
+        		return false;
+			}
+			*/
         }
-		ISNDB dbLocal;
-		vector<string> fields;
-		fields.push_back(memFieldBalance);
-		string value= tx.vbalance[0].senderPubkey;
-		mysqlpp::StoreQueryResult bLocal = dbLocal.ISNSqlSelectAA(tableMember, fields, memFieldAddress, value);
-		/*
-        if (bLocal[0]["balance"]< bIn) {
-        	return false;
-		}
-		*/
 
     }
     return true;
