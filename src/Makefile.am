@@ -28,7 +28,6 @@ LIBBITCOIN_UTIL=libbitcoin_util.a
 LIBBITCOIN_CRYPTO=crypto/libbitcoin_crypto.a
 LIBBITCOINQT=qt/libbitcoinqt.a
 LIBSECP256K1=secp256k1/libsecp256k1.la
-MYSQLPP_LIBS=-L/usr/local/lib -lmysqlpp -L/usr/lib/x86_64-linux-gnu/ -lmysqlclient
 
 if ENABLE_ZMQ
 LIBBITCOIN_ZMQ=libbitcoin_zmq.a
@@ -355,7 +354,6 @@ endif
 
 bitcoind_LDADD = \
   $(LIBBITCOIN_SERVER) \
-  $(MYSQLPP_LIBS) \
   $(LIBBITCOIN_COMMON) \
   $(LIBUNIVALUE) \
   $(LIBBITCOIN_UTIL) \
@@ -400,7 +398,6 @@ endif
 
 bitcoin_tx_LDADD = \
   $(LIBUNIVALUE) \
-  $(MYSQLPP_LIBS) \
   $(LIBBITCOIN_COMMON) \
   $(LIBBITCOIN_UTIL) \
   $(LIBBITCOIN_CONSENSUS) \
