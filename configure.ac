@@ -664,10 +664,11 @@ if test x$use_tests = xyes; then
 
   fi
 fi
-
+MYSQL_LIBS="-L/usr/lib/x86_64-linux-gnu/  -lmysqlclient"
+MYSQLPP_LIBS="-L/usr/local/lib/  -lmysqlpp"
 if test x$use_boost = xyes; then
 
-BOOST_LIBS="$BOOST_LDFLAGS $BOOST_SYSTEM_LIB $BOOST_FILESYSTEM_LIB $BOOST_PROGRAM_OPTIONS_LIB $BOOST_THREAD_LIB $BOOST_CHRONO_LIB"
+BOOST_LIBS="$BOOST_LDFLAGS $BOOST_SYSTEM_LIB $BOOST_FILESYSTEM_LIB $BOOST_PROGRAM_OPTIONS_LIB $BOOST_THREAD_LIB $BOOST_CHRONO_LIB $MYSQL_LIBS $MYSQLPP_LIBS"
 
 
 dnl If boost (prior to 1.57) was built without c++11, it emulated scoped enums
@@ -681,7 +682,7 @@ dnl fail.
 dnl BOOST_NO_SCOPED_ENUMS was changed to BOOST_NO_CXX11_SCOPED_ENUMS in 1.51.
 
 TEMP_LIBS="$LIBS"
-LIBS="$BOOST_LIBS $LIBS"
+LIBS="$BOOST_LIBS $LIBS $MYSQL_LIBS $MYSQLPP_LIBS"
 TEMP_CPPFLAGS="$CPPFLAGS"
 CPPFLAGS="$CPPFLAGS $BOOST_CPPFLAGS"
 AC_MSG_CHECKING([for mismatched boost c++11 scoped enums])
@@ -711,7 +712,7 @@ dnl a working version is available, else fall back to sleep. sleep was removed
 dnl after 1.56.
 dnl If neither is available, abort.
 TEMP_LIBS="$LIBS"
-LIBS="$BOOST_LIBS $LIBS"
+LIBS="$BOOST_LIBS $LIBS $MYSQL_LIBS $MYSQLPP_LIBS"
 TEMP_CPPFLAGS="$CPPFLAGS"
 CPPFLAGS="$CPPFLAGS $BOOST_CPPFLAGS"
 AC_LINK_IFELSE([AC_LANG_PROGRAM([[
@@ -732,7 +733,7 @@ CPPFLAGS="$TEMP_CPPFLAGS"
 
 if test x$boost_sleep != xyes; then
 TEMP_LIBS="$LIBS"
-LIBS="$BOOST_LIBS $LIBS"
+LIBS="$BOOST_LIBS $LIBS $MYSQL_LIBS $MYSQLPP_LIBS"
 TEMP_CPPFLAGS="$CPPFLAGS"
 CPPFLAGS="$CPPFLAGS $BOOST_CPPFLAGS"
 AC_LINK_IFELSE([AC_LANG_PROGRAM([[
