@@ -45,7 +45,7 @@ class ISNDB
 public:
 	ISNDB();
 
-	// select from ISNDB according to address
+	// select from ISNDB according to condition
 	mysqlpp::StoreQueryResult ISNSqlSelectAA(const string &tablename, const vector<string> &field, const string &condition, const string &cvalue);
 
 	// update ISNDB with condition
@@ -55,9 +55,13 @@ public:
 	// insert ISNDB with condition
 	int ISNSqlInsert(const string &tablename, const vector<string> &values);
 
+	//  from ISNDB according to condition
+	bool ISNSqlDelete(const string &tablename, const string &condition, const string &cvalue);
+
 private:
 	mysqlpp::Connection con;
 };
 
 CAmount getBalanceByAddress(const string& address);
+
 #endif // ISNCOIN_DATABASE_H

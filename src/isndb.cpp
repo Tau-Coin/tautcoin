@@ -178,6 +178,32 @@ int ISNDB::ISNSqlInsert(const string &tablename, const vector<string> &values)
 	return 0;
 }
 
+// delete from ISNDB
+bool ISNDB::ISNSqlDelete(const string &tablename, const string &condition, const string &value)
+{
+	try{
+
+		mysqlpp::Query query= con.query();
+		//according tablename in different way
+		query<< "delete from %0"" where %1"" = %2q";
+		query.parse();
+		mysqlpp::SimpleResult dataTmp = query.execute(tablename, condition, value);
+		return true;
+	}
+	catch (const mysqlpp::BadQuery& er) {
+		// Handle any query errors
+		cerr << "Query error: " << er.what() << endl;
+		exit(-1);
+	}
+	catch (const mysqlpp::BadConversion& er) {
+		// Handle bad conversions; e.g. type mismatch populating 'stock'
+		cerr << "Conversion error: " << er.what() << endl <<
+				"\tretrieved data size: " << er.retrieved <<
+				", actual size: " << er.actual_size << endl;
+		exit(-1);
+	}
+}
+
 //Get Balance By Address
 CAmount getBalanceByAddress(const string& address)
 {
