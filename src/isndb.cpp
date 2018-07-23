@@ -145,7 +145,7 @@ mysqlpp::SimpleResult ISNDB::ISNSqlAddOne(const string &tablename, const vector<
 int ISNDB::ISNSqlInsert(const string &tablename, const vector<string> &values)
 {
 	try{
-		if(tablename=="clubinfo")
+        if(tablename==tableClub)
 		{
 			mysqlpp::Query query= con.query();
 			query << "insert clubinfo(address, ttc) values(%0q, %1q)";
@@ -153,7 +153,7 @@ int ISNDB::ISNSqlInsert(const string &tablename, const vector<string> &values)
 			mysqlpp::SimpleResult dataTmp = query.execute(values[0], values[1]);
 			return dataTmp.insert_id();
 		}
-		else if(tablename=="memberinfo")
+        else if(tablename==tableMember)
 		{
 			mysqlpp::Query query= con.query();
 			query << "insert memberinfo(address, club_id, father, tc, balance) values(%0q, %1q, %2q, %3q, %4q)";

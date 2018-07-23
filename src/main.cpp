@@ -39,6 +39,7 @@
 #include "validationinterface.h"
 #include "versionbits.h"
 #include "base58.h"
+#include "isndb.h"
 
 #include <atomic>
 #include <sstream>
@@ -90,6 +91,13 @@ struct MinerClub
     std::multimap<std::string, std::string> mapMinerClubs;
     int nHeight;
 } minerClub;
+
+struct EntrustInfo
+{
+    std::string son;
+    std::string lastFather;
+    std::string father;
+};
 
 CFeeRate minRelayTxFee = CFeeRate(DEFAULT_MIN_RELAY_TX_FEE);
 CAmount maxTxFee = DEFAULT_TRANSACTION_MAXFEE;
@@ -2169,6 +2177,29 @@ bool DisconnectBlock(CBlock& block, CValidationState& state, CBlockIndex* pindex
 {
     assert(pindex->GetBlockHash() == view.GetBestBlock());
 
+    //read entrust change graphic
+    std::vector<std::string> vecAddress, vecLastFatherAddress, vecFatherAddress;
+    std::ifstream ifile;
+    char fileName[16];
+    std::string address, lastFatherAddress, fatherAddress;
+    snprintf(fileName, sizeof(fileName), "%09d.txt", pindex->nHeight);
+    boost::filesystem::path path = GetDataDir() / "minerclub" / fileName;
+    //std::cout << path.string() << std::endl;
+    ifile.open(path.string());
+    if(ifile.is_open()){
+        ifile >> address >> lastFatherAddress >> fatherAddress;
+        while(ifile.good()){
+            vecAddress.push_back(address);
+            vecLastFatherAddress.push_back(lastFatherAddress);
+            vecFatherAddress.push_back(fatherAddress);
+            ifile >> address >> lastFatherAddress >> fatherAddress;
+        }
+    }
+    else {
+        std::cout << "Error opening file!" << std::endl;
+    }
+    ifile.close();
+
     if (pfClean)
         *pfClean = false;
 
@@ -2225,6 +2256,7 @@ bool DisconnectBlock(CBlock& block, CValidationState& state, CBlockIndex* pindex
     // move best block pointer to prevout block
     view.SetBestBlock(pindex->pprev->GetBlockHash());
 
+    /*
     //undo minerclub info
     {
         minerClub.nHeight--;
@@ -2249,6 +2281,7 @@ bool DisconnectBlock(CBlock& block, CValidationState& state, CBlockIndex* pindex
         }
         ifile.close();
     }
+    */
 
     if (pfClean) {
         *pfClean = fClean;
@@ -2423,8 +2456,26 @@ bool ConnectBlock(const CBlock& block, CValidationState& state, CBlockIndex* pin
         if (!fJustCheck)
             view.SetBestBlock(pindex->GetBlockHash());
 
+        //natural miners
+        //insert into club table and member table
+
+        ISNDB dbLocal;
+        /*
+        vector<string> fields;
+        fields.push_back(memFieldBalance);
+        string value = "imaddtc";
+        mysqlpp::StoreQueryResult bLocal = dbLocal.ISNSqlSelectAA("memberinfo", fields, memFieldAddress, value);
+        */
+        std::vector<std::string> values;
+        values.push_back("address_test");
+        values.push_back("1");
+        dbLocal.ISNSqlInsert(tableClub, values);
+        //std::cout << "111111111111111111111111----" << bLocal[0]["balance"] << std::endl;
+
+        /*
         minerClub.nHeight = pindex->nHeight;
         std::cout << "------------------------Now connect the genesis block:----------------------" << minerClub.nHeight << std::endl;
+        */
 
         UpdateCoins(block.vtx[0], view, 0);
         if (!pbalancedbview->UpdateBalance(block.vtx[0], view, 0))
@@ -2536,6 +2587,15 @@ bool ConnectBlock(const CBlock& block, CValidationState& state, CBlockIndex* pin
     std::vector<std::pair<uint256, CDiskTxPos> > vPos;
     vPos.reserve(block.vtx.size());
     blockundo.vtxundo.reserve(block.vtx.size() - 1);
+
+    std::ofstream ofile;
+    char fileName[16];
+    snprintf(fileName, sizeof(fileName), "%09d.txt", pindex->nHeight);
+    boost::filesystem::path path = GetDataDir() / "minerclub" / fileName;
+    //TryCreateDirectory(path);
+    //std::cout << path.string() << std::endl;
+    ofile.open(path.string());
+
     for (unsigned int i = 0; i < block.vtx.size(); i++)
     {
         const CTransaction &tx = block.vtx[i];
@@ -2595,10 +2655,62 @@ bool ConnectBlock(const CBlock& block, CValidationState& state, CBlockIndex* pin
         }
 
         CTxUndo undoDummy;
-        uint256 temp;
+        //uint256 temp;
         if (i > 0) {
             blockundo.vtxundo.push_back(CTxUndo());
 
+            //extract vin's Address(which offer the most money)
+            CTxDestination vinAddress;
+            CCoins coins;
+            if(view.GetCoins(tx.vin[0].prevout.hash, coins)){
+                if (tx.vin[0].prevout.n >= coins.vout.size() || coins.vout[tx.vin[0].prevout.n].IsNull())
+                    assert(false);
+                //balance and transaction type ....
+                ExtractDestinationFromP2PKAndP2PKH(coins.vout[tx.vin[0].prevout.n].scriptPubKey, vinAddress);
+            }
+            //if an entrustment transaction
+            bool bEntrustTx = false;
+            CTxDestination entrustAddress;
+            if (tx.vin.size() == 1 && tx.vout.size() == 2 && tx.vout[0].nValue == 0){
+                CTxDestination voutAddress;
+                ExtractDestinationFromP2PKAndP2PKH(tx.vout[1].scriptPubKey, voutAddress);
+                if (voutAddress == vinAddress) {
+                    bEntrustTx = true;
+                }
+            }
+            if (bEntrustTx) {//Y
+                std::string lastFatherAddress;
+                //get last father address
+                ExtractDestinationFromP2PKAndP2PKH(tx.vout[0].scriptPubKey, entrustAddress);
+                ofile << CBitcoinAddress(vinAddress).ToString() << "    " << lastFatherAddress << "    " << CBitcoinAddress(entrustAddress).ToString()<< std::endl;
+                if (entrustAddress == vinAddress) {//entrust yourself
+                    bool bEntrusted = false;
+                    //check it
+                    if (bEntrusted) {//Y
+
+                    } else {//N
+
+                    }
+                } else {//entrust others
+
+                }
+            } else {//N
+                //check vout
+                BOOST_FOREACH(const CTxOut &txout, tx.vout) {
+                    //if vout a new address
+                    CTxDestination address;
+                    ExtractDestinationFromP2PKAndP2PKH(txout.scriptPubKey, address);
+                    //check address if a new address
+                    bool bFirst;
+                    if (bFirst) {//a new address
+
+                    } else {//an exist address
+
+                    }
+                }
+            }
+
+            /*
             //--------------------------------------------------------minerclub--------------------------------------------------------------------
             BOOST_FOREACH(const CTxOut &txout, tx.vout) {
                 if (txout.nValue == 0){
@@ -2633,12 +2745,13 @@ bool ConnectBlock(const CBlock& block, CValidationState& state, CBlockIndex* pin
                     }
                 }
             }
+            */
         }
         if (!pbalancedbview->UpdateBalance(tx, view, pindex->nHeight))
             return error("Failed to update balance db!");
         UpdateCoins(tx, view, i == 0 ? undoDummy : blockundo.vtxundo.back(), pindex->nHeight);
 
-        /*
+        /*for test
         CTxDestination address;
         CCoins coins;
         if(view.GetCoins(temp, coins)){
@@ -2661,6 +2774,7 @@ bool ConnectBlock(const CBlock& block, CValidationState& state, CBlockIndex* pin
     }
     pbalancedbview->ClearCache();
 
+    /*
     minerClub.nHeight = pindex->nHeight;
     std::ofstream ofile;
     char fileName[16];
@@ -2673,6 +2787,7 @@ bool ConnectBlock(const CBlock& block, CValidationState& state, CBlockIndex* pin
         ofile << (*iter).first << "    " << (*iter).second << std::endl;
     }
     ofile.close();
+    */
 
     int64_t nTime3 = GetTimeMicros(); nTimeConnect += nTime3 - nTime2;
     LogPrint("bench", "      - Connect %u transactions: %.2fms (%.3fms/tx, %.3fms/txin) [%.2fs]\n", (unsigned)block.vtx.size(), 0.001 * (nTime3 - nTime2), 0.001 * (nTime3 - nTime2) / block.vtx.size(), nInputs <= 1 ? 0 : 0.001 * (nTime3 - nTime2) / (nInputs-1), nTimeConnect * 0.000001);
