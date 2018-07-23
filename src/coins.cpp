@@ -274,11 +274,9 @@ bool CCoinsViewCache::HaveInputs(const CTransaction& tx) const
 			string addrStr;
 			ConvertPubkeyToAddress(tx.vbalance[i].senderPubkey, addrStr);
 			CAmount bLocal= getBalanceByAddress(addrStr);
-			/*
-        	if (bLocal[0]["balance"]< bIn) {
+        	if (bLocal< bIn) {
         		return false;
 			}
-			*/
         }
 
     }
