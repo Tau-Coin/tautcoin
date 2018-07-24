@@ -117,15 +117,15 @@ mysqlpp::SimpleResult ISNDB::ISNSqlUpdate(const string &tablename, const vector<
 	}
 }
 // for ttc+= 1
-mysqlpp::SimpleResult ISNDB::ISNSqlAddOne(const string &tablename, const vector<string> &field, const string &condition)
+mysqlpp::SimpleResult ISNDB::ISNSqlAddOne(const string &tablename, const vector<string> &field, const string &condition, const string &cvalue)
 {
 	try{
 
 		mysqlpp::Query query= con.query();
 		//according tablename in different way
-		query<< "update %0"" set %1""=%1""+ 1 where address = %2q";
+		query<< "update %0"" set %1""=%1""+ 1 where %2""= %3q";
 		query.parse();
-		mysqlpp::SimpleResult dataTmp = query.execute(tablename, field[0], condition);
+		mysqlpp::SimpleResult dataTmp = query.execute(tablename, field[0], condition, cvalue);
 		return dataTmp;
 	}
 	catch (const mysqlpp::BadQuery& er) {

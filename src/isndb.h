@@ -50,7 +50,7 @@ public:
 
 	// update ISNDB with condition
 	mysqlpp::SimpleResult ISNSqlUpdate(const string &tablename, const vector<string> &field, const vector<string> &values, const string &condition);
-	mysqlpp::SimpleResult ISNSqlAddOne(const string &tablename, const vector<string> &field, const string &condition);
+	mysqlpp::SimpleResult ISNSqlAddOne(const string &tablename, const vector<string> &field, const string &condition, const string &cvalue);
 
 	// insert ISNDB with condition
 	int ISNSqlInsert(const string &tablename, const vector<string> &values);
