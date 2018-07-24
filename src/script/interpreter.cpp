@@ -991,6 +991,42 @@ bool EvalScript(vector<vector<unsigned char> >& stack, const CScript& script, un
                 }
                 break;
 
+                case OP_CHECKREWARDSIG:
+                case OP_CHECKREWARDSIGVERIFY:
+                {
+                    // (sig pubkey -- bool)
+                    if (stack.size() < 2)
+                        return set_error(serror, SCRIPT_ERR_INVALID_STACK_OPERATION);
+
+                    valtype& vchSig    = stacktop(-2);
+                    valtype& vchPubKey = stacktop(-1);
+
+                    // Subset of script starting at the most recent codeseparator
+                    CScript scriptCode(pbegincodehash, pend);
+
+                    // Drop the signature, since there's no way for a signature to sign itself
+                    if (sigversion == SIGVERSION_BASE) {
+                        scriptCode.FindAndDelete(CScript(vchSig));
+                    }
+
+                    if (!CheckSignatureEncoding(vchSig, flags, serror) || !CheckPubKeyEncoding(vchPubKey, flags, serror)) {
+                        //serror is set
+                        return false;
+                    }
+                    bool fSuccess = checker.CheckSig(vchSig, vchPubKey, scriptCode, sigversion);
+
+                    popstack(stack);
+                    popstack(stack);
+                    stack.push_back(fSuccess ? vchTrue : vchFalse);
+                    if (opcode == OP_CHECKREWARDSIGVERIFY)
+                    {
+                        if (fSuccess)
+                            popstack(stack);
+                        else
+                            return set_error(serror, SCRIPT_ERR_CHECKSIGVERIFY);
+                    }
+                }
+
                 default:
                     return set_error(serror, SCRIPT_ERR_BAD_OPCODE);
             }
