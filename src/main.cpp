@@ -84,7 +84,7 @@ size_t nCoinCacheUsage = 5000 * 300;
 uint64_t nPruneTarget = 0;
 int64_t nMaxTipAge = DEFAULT_MAX_TIP_AGE;
 bool fEnableReplacement = DEFAULT_ENABLE_REPLACEMENT;
-CBalanceViewDB *pbalancedbview = NULL;
+//CBalanceViewDB *pbalancedbview = NULL;
 
 struct MinerClub
 {
@@ -1060,7 +1060,7 @@ int64_t GetTransactionSigOpCost(const CTransaction& tx, const CCoinsViewCache& i
 
 bool CheckTxReward(const CTransaction& tx, CValidationState &state)
 {
-    if (tx.vbalance.empty())
+    if (tx.vreward.empty())
         return true;
 
     static const int nOneMonth = 30 * 24 * 60 * 60;
@@ -1069,20 +1069,20 @@ bool CheckTxReward(const CTransaction& tx, CValidationState &state)
     std::set<CTxReward> vInRewards;
     CAmount nBalanceTotal = 0;
 
-    BOOST_FOREACH(const CTxReward& rw, tx.vbalance)
+    BOOST_FOREACH(const CTxReward& rw, tx.vreward)
     {
         if (vInRewards.count(rw))
-            return state.DoS(100, false, REJECT_INVALID, "bad-txns-vbalance-duplicate");
+            return state.DoS(100, false, REJECT_INVALID, "bad-txns-vreward-duplicate");
         vInRewards.insert(rw);
 
-        if (rw.senderPubkey.empty() || rw.senderBalance <= 0 || rw.transTime == 0)
+        if (rw.senderPubkey.empty() || rw.rewardBalance <= 0 || rw.transTime == 0)
         {
-            return state.DoS(100, false, REJECT_INVALID, "bad-txns-vbalance-negative");
+            return state.DoS(100, false, REJECT_INVALID, "bad-txns-vreward-negative");
         }
 
-        if (rw.senderBalance > MAX_MONEY)
+        if (rw.rewardBalance > MAX_MONEY)
         {
-            return state.DoS(100, false, REJECT_INVALID, "bad-txns-vbalance-toolarge");
+            return state.DoS(100, false, REJECT_INVALID, "bad-txns-vreward-toolarge");
         }
 
         if (rw.transTime < now - nOneMonth || rw.transTime > now + nOneMonth)
@@ -1090,7 +1090,7 @@ bool CheckTxReward(const CTransaction& tx, CValidationState &state)
             return state.DoS(100, false, REJECT_INVALID, "bad-txns-timestamp-old or future");
         }
 
-        nBalanceTotal += rw.senderBalance;
+        nBalanceTotal += rw.rewardBalance;
         if (!MoneyRange(nBalanceTotal))
         {
             return state.DoS(100, false, REJECT_INVALID, "bad-txns-balancetotal-toolarge");
@@ -2029,16 +2029,16 @@ bool CheckTxInputs(const CTransaction& tx, CValidationState& state, const CCoins
         // Check rewards balance which is haversted from mining club.
         std::map<std::string, CAmount> mPubkeyToRewards;
 
-        for (unsigned int i = 0; i < tx.vbalance.size(); i++)
+        for (unsigned int i = 0; i < tx.vreward.size(); i++)
         {
-            const CTxReward &reward = tx.vbalance[i];
-            if (!MoneyRange(reward.senderBalance))
+            const CTxReward &reward = tx.vreward[i];
+            if (!MoneyRange(reward.rewardBalance))
             {
                 return state.DoS(100, false, REJECT_INVALID, "bad-txns-balance-outofrange");
             }
 
             CAmount local = GetRewardsByPubkey(reward.senderPubkey);
-            if (reward.senderBalance > local)
+            if (reward.rewardBalance > local)
             {
                 return state.DoS(100, false, REJECT_INVALID, "bad-txns-balance-largethandb");
             }
@@ -2047,18 +2047,18 @@ bool CheckTxInputs(const CTransaction& tx, CValidationState& state, const CCoins
             if (it == mPubkeyToRewards.end())
             {
                 mPubkeyToRewards.insert(std::map<std::string, CAmount>::value_type(
-                        reward.senderPubkey, reward.senderBalance));
+                        reward.senderPubkey, reward.rewardBalance));
             }
             else
             {
-                it->second += reward.senderBalance;
+                it->second += reward.rewardBalance;
                 if (it->second > local || !MoneyRange(it->second))
                 {
                     return state.DoS(100, false, REJECT_INVALID, "bad-txns-balancetotal-outofrange");
                 }
             }
 
-            nValueIn += reward.senderBalance;
+            nValueIn += reward.rewardBalance;
             if (!MoneyRange(nValueIn))
             {
                 return state.DoS(100, false, REJECT_INVALID, "bad-txns-balanceinput-outofrange");
@@ -2510,10 +2510,6 @@ bool ConnectBlock(const CBlock& block, CValidationState& state, CBlockIndex* pin
         minerClub.nHeight = pindex->nHeight;
         std::cout << "------------------------Now connect the genesis block:----------------------" << minerClub.nHeight << std::endl;
 
-        UpdateCoins(block.vtx[0], view, 0);
-        if (!pbalancedbview->UpdateBalance(block.vtx[0], view, 0))
-            return error("Failed to update balance db in genesis block!");
-        pbalancedbview->ClearCache();
         return true;
     }
 
@@ -2625,7 +2621,7 @@ bool ConnectBlock(const CBlock& block, CValidationState& state, CBlockIndex* pin
         const CTransaction &tx = block.vtx[i];
 
         nInputs += tx.vin.size();
-        nInputs += tx.vbalance.size();
+        nInputs += tx.vreward.size();
 
         if (!tx.IsCoinBase())
         {
@@ -2719,8 +2715,6 @@ bool ConnectBlock(const CBlock& block, CValidationState& state, CBlockIndex* pin
                 }
             }
         }
-        if (!pbalancedbview->UpdateBalance(tx, view, pindex->nHeight))
-            return error("Failed to update balance db!");
         UpdateCoins(tx, view, i == 0 ? undoDummy : blockundo.vtxundo.back(), pindex->nHeight);
 
         /*
@@ -2744,7 +2738,6 @@ bool ConnectBlock(const CBlock& block, CValidationState& state, CBlockIndex* pin
         vPos.push_back(std::make_pair(tx.GetHash(), pos));
         pos.nTxOffset += ::GetSerializeSize(tx, SER_DISK, CLIENT_VERSION);
     }
-    pbalancedbview->ClearCache();
 
     minerClub.nHeight = pindex->nHeight;
     std::ofstream ofile;

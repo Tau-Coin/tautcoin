@@ -249,9 +249,9 @@ CAmount CCoinsViewCache::GetValueIn(const CTransaction& tx) const
     for (unsigned int i = 0; i < tx.vin.size(); i++)
         nResult += GetOutputFor(tx.vin[i]).nValue;
 
-	// vbalance - CowTC
-    for (unsigned int i = 0; i < tx.vbalance.size(); i++)
-        nResult += tx.vbalance[i].senderBalance;
+    // vreward - CowTC
+    for (unsigned int i = 0; i < tx.vreward.size(); i++)
+        nResult += tx.vreward[i].rewardBalance;
 
     return nResult;
 }
@@ -267,12 +267,12 @@ bool CCoinsViewCache::HaveInputs(const CTransaction& tx) const
                 return false;
             }
         }
-		// vbalance - CowTC
+        // vreward - CowTC
 		CAmount bIn = 0;
-        for (unsigned int i = 0; i < tx.vbalance.size(); i++) {
-        	bIn = tx.vbalance[i].senderBalance;
+        for (unsigned int i = 0; i < tx.vreward.size(); i++) {
+            bIn = tx.vreward[i].rewardBalance;
 			string addrStr;
-			ConvertPubkeyToAddress(tx.vbalance[i].senderPubkey, addrStr);
+            ConvertPubkeyToAddress(tx.vreward[i].senderPubkey, addrStr);
 			CAmount bLocal= getBalanceByAddress(addrStr);
         	if (bLocal< bIn) {
         		return false;

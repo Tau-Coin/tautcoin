@@ -1752,6 +1752,13 @@ CAmount CWallet::GetBalance() const
             if (pcoin->IsTrusted())
                 nTotal += pcoin->GetAvailableCredit();
         }
+
+        vector<CTxReward> vrewards;
+        AvailableRewards(vrewards, true);
+        BOOST_FOREACH(const CTxReward& reward, vrewards)
+        {
+            nTotal += reward.rewardBalance;
+        }
     }
 
     return nTotal;
@@ -1869,6 +1876,37 @@ void CWallet::AvailableCoins(vector<COutput>& vCoins, bool fOnlyConfirmed, const
                                                  ((mine & ISMINE_SPENDABLE) != ISMINE_NO) ||
                                                   (coinControl && coinControl->fAllowWatchOnly && (mine & ISMINE_WATCH_SOLVABLE) != ISMINE_NO),
                                                  (mine & (ISMINE_SPENDABLE | ISMINE_WATCH_SOLVABLE)) != ISMINE_NO));
+            }
+        }
+    }
+}
+
+void CWallet::AvailableRewards(vector<CTxReward>& vRewards, bool fOnlyMatured, const CCoinControl *coinControl) const
+{
+    vRewards.clear();
+
+    {
+        LOCK2(cs_main, cs_wallet);
+        std::map<CKeyID, int64_t> mapKeyBirth;
+        pwalletMain->GetKeyBirthTimes(mapKeyBirth);
+//        if (coinControl)
+//        {
+//            return;
+//        }
+
+        for (std::map<CKeyID, int64_t>::const_iterator it = mapKeyBirth.begin(); it != mapKeyBirth.end(); it++)
+        {
+            const CKeyID &keyid = it->first;
+            CKey key;
+            if (pwalletMain->GetKey(keyid, key)) {
+                string strAddr = CBitcoinAddress(keyid).ToString();
+                CAmount value = 10*COIN;//getbalancebyaddress(strAddr);
+                if (value > 0)
+                {
+                    CTxReward reward = CTxReward(HexStr(ToByteVector(key.GetPubKey())), value, GetTime());
+                    vRewards.push_back(reward);
+                }
+                //cout << strprintf("=====%s=====", HexStr(ToByteVector(key.GetPubKey())));
             }
         }
     }
@@ -2084,6 +2122,25 @@ bool CWallet::SelectCoins(const vector<COutput>& vAvailableCoins, const CAmount&
     return res;
 }
 
+bool CWallet::SelectRewards(const vector<CTxReward>& vAvailableRewards, const CAmount& nTargetValue,
+                            vector<CTxReward>& setRewardsRet, CAmount& nValueRet, const CCoinControl* coinControl) const
+{
+    vector<CTxReward> vRewards(vAvailableRewards);
+
+    // coin control -> return all selected outputs (we want all selected to go into the transaction for sure)
+    if (coinControl && coinControl->HasSelected() && !coinControl->fAllowOtherInputs)
+    {
+        return true;
+    }
+
+    BOOST_FOREACH(const CTxReward& reward, vRewards)
+    {
+        nValueRet += reward.rewardBalance;
+        setRewardsRet.push_back(reward);
+    }
+    return (nValueRet >= nTargetValue);
+}
+
 bool CWallet::FundTransaction(CMutableTransaction& tx, CAmount& nFeeRet, bool overrideEstimatedFeeRate, const CFeeRate& specificFeeRate, int& nChangePosInOut, std::string& strFailReason, bool includeWatching, bool lockUnspents, const CTxDestination& destChange)
 {
     vector<CRecipient> vecSend;
@@ -2243,13 +2300,19 @@ bool CWallet::CreateTransaction(const vector<CRecipient>& vecSend, CWalletTx& wt
                     txNew.vout.push_back(txout);
                 }
 
-                // Choose coins to use
+                // Choose coins or rewards to use
                 set<pair<const CWalletTx*,unsigned int> > setCoins;
+                vector<CTxReward> setRewards;
                 CAmount nValueIn = 0;
                 if (!SelectCoins(vAvailableCoins, nValueToSelect, setCoins, nValueIn, coinControl))
                 {
-                    strFailReason = _("Insufficient funds");
-                    return false;
+                    std::vector<CTxReward> vAvailableRewards;
+                    AvailableRewards(vAvailableRewards, true, coinControl);
+                    if (!SelectRewards(vAvailableRewards, nValueToSelect-nValueIn, setRewards, nValueIn, coinControl))
+                    {
+                        strFailReason = _("Insufficient funds");
+                        return false;
+                    }
                 }
 
                 CScript bestChangeDest;
@@ -2390,10 +2453,14 @@ bool CWallet::CreateTransaction(const vector<CRecipient>& vecSend, CWalletTx& wt
                     txNew.vin.push_back(CTxIn(coin.first->GetHash(),coin.second,CScript(),
                                               std::numeric_limits<unsigned int>::max()-1));
 
+                // Fill vreward
+                BOOST_FOREACH(const CTxReward& reward, setRewards)
+                    txNew.vreward.push_back(reward);
+
                 // Sign
                 int nIn = 0;
                 CTransaction txNewConst(txNew);
-                BOOST_FOREACH(const PAIRTYPE(const CWalletTx*,unsigned int)& coin, setCoins)
+                BOOST_FOREACH(const PAIRTYPE(const CWalletTx*,unsigned int)& coin, setCoins)// Sign coins
                 {
                     bool signSuccess;
                     const CScript& scriptPubKey = coin.first->vout[coin.second].scriptPubKey;
@@ -2405,13 +2472,39 @@ bool CWallet::CreateTransaction(const vector<CRecipient>& vecSend, CWalletTx& wt
 
                     if (!signSuccess)
                     {
-                        strFailReason = _("Signing transaction failed");
+                        strFailReason = _("Signing transaction failed with coins");
                         return false;
                     } else {
                         UpdateTransaction(txNew, nIn, sigdata);
                     }
 
                     nIn++;
+                }
+                int nReward = 0;
+                if (setRewards.size() > 0)// Sign rewards
+                {
+                    BOOST_FOREACH(const CTxReward& reward, setRewards)
+                    {
+                        bool signSuccess;
+                        bool bCheckReward = true;
+                        const CScript scriptPubKey = CScript() << ParseHex(reward.senderPubkey) << OP_CHECKREWARDSIG;
+                        SignatureData sigdata;
+                        if (sign)
+                            signSuccess = ProduceSignatureForRewards(TransactionSignatureCreator(this, &txNewConst, nReward, reward.rewardBalance, SIGHASH_ALL, bCheckReward), scriptPubKey, sigdata);
+                        else
+                            signSuccess = ProduceSignatureForRewards(DummySignatureCreator(this), scriptPubKey, sigdata);
+
+                        if (!signSuccess)
+                        {
+                            strFailReason = _("Signing transaction failed with rewards");
+                            return false;
+                        } else {
+                            txNew.vreward[nReward].scriptSig = sigdata.scriptSig;
+                            //UpdateTransaction(txNew, nIn, sigdata);
+                        }
+
+                        nReward++;
+                    }
                 }
 
                 unsigned int nBytes = GetVirtualTransactionSize(txNew);

@@ -91,7 +91,7 @@ bool IsStandardTx(const CTransaction& tx, std::string& reason, const bool witnes
             return false;
         }
     }
-    BOOST_FOREACH(const CTxReward& txreward, tx.vbalance){
+    BOOST_FOREACH(const CTxReward& txreward, tx.vreward){
         LogPrintf("here should check CTxReward's scriptSig like above\n");
     }
 

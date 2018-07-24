@@ -227,8 +227,8 @@ void Shutdown()
 		
         delete pblocktree;
         pblocktree = NULL;
-        delete pbalancedbview;
-        pbalancedbview = NULL;
+        //delete pbalancedbview;
+        //pbalancedbview = NULL;
     }
 #ifdef ENABLE_WALLET
     if (pwalletMain)
@@ -1253,13 +1253,13 @@ bool AppInit2(boost::thread_group& threadGroup, CScheduler& scheduler)
                 delete pcoinsdbview;
                 delete pcoinscatcher;
                 delete pblocktree;
-                delete pbalancedbview;
+                //delete pbalancedbview;
 
                 pblocktree = new CBlockTreeDB(nBlockTreeDBCache, false, fReindex);
                 pcoinsdbview = new CCoinsViewDB(nCoinDBCache, false, fReindex || fReindexChainState);
                 pcoinscatcher = new CCoinsViewErrorCatcher(pcoinsdbview);
                 pcoinsTip = new CCoinsViewCache(pcoinscatcher);
-                pbalancedbview = new CBalanceViewDB();
+                //pbalancedbview = new CBalanceViewDB();
 
                 if (fReindex) {
                     pblocktree->WriteReindexing(true);

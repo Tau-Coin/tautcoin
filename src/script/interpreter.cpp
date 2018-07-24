@@ -1103,6 +1103,11 @@ public:
         ::WriteCompactSize(s, nOutputs);
         for (unsigned int nOutput = 0; nOutput < nOutputs; nOutput++)
              SerializeOutput(s, nOutput, nType, nVersion);
+        // Serialize reward
+        unsigned int nRewards = txTo.vreward.size();
+        ::WriteCompactSize(s, nRewards);
+        for (unsigned int nReward = 0; nReward < nRewards; nReward++)
+             ::Serialize(s, txTo.vreward[nReward], nType, nVersion);
         // Serialize nLockTime
         ::Serialize(s, txTo.nLockTime, nType, nVersion);
     }
@@ -1110,7 +1115,8 @@ public:
 
 } // anon namespace
 
-uint256 SignatureHash(const CScript& scriptCode, const CTransaction& txTo, unsigned int nIn, int nHashType, const CAmount& amount, SigVersion sigversion)
+uint256 SignatureHash(const CScript& scriptCode, const CTransaction& txTo, unsigned int nIn, int nHashType,
+                      const CAmount& amount, SigVersion sigversion, bool bCheckReward)
 {
     if (sigversion == SIGVERSION_WITNESS_V0) {
         uint256 hashPrevouts;
@@ -1169,8 +1175,12 @@ uint256 SignatureHash(const CScript& scriptCode, const CTransaction& txTo, unsig
     }
 
     static const uint256 one(uint256S("0000000000000000000000000000000000000000000000000000000000000001"));
-    if (nIn >= txTo.vin.size()) {
+    if (nIn >= txTo.vin.size() && !bCheckReward) {
         //  nIn out of range
+        return one;
+    }
+    if (nIn >= txTo.vreward.size() && bCheckReward) {
+        //  nReward out of range
         return one;
     }
 

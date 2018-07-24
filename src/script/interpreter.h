@@ -104,7 +104,8 @@ enum SigVersion
     SIGVERSION_WITNESS_V0 = 1,
 };
 
-uint256 SignatureHash(const CScript &scriptCode, const CTransaction& txTo, unsigned int nIn, int nHashType, const CAmount& amount, SigVersion sigversion);
+uint256 SignatureHash(const CScript &scriptCode, const CTransaction& txTo, unsigned int nIn, int nHashType,
+                      const CAmount& amount, SigVersion sigversion, bool bCheckReward=false);
 
 class BaseSignatureChecker
 {

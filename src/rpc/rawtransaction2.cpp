@@ -99,22 +99,22 @@ void TxToJSON(const CTransaction& tx, const uint256 hashBlock, UniValue& entry)
     }
     entry.push_back(Pair("vin", vin));
 
-    UniValue vbalance(UniValue::VARR);
-    for (unsigned int i = 0; i < tx.vbalance.size(); i++) {
-        const CTxReward& rw = tx.vbalance[i];
+    UniValue vreward(UniValue::VARR);
+    for (unsigned int i = 0; i < tx.vreward.size(); i++) {
+        const CTxReward& rw = tx.vreward[i];
         UniValue in(UniValue::VOBJ);
 
         in.push_back(Pair("senderPubkey", rw.senderPubkey));
-        in.push_back(Pair("senderBalance", (int64_t)rw.senderBalance));
+        in.push_back(Pair("rewardBalance", (int64_t)rw.rewardBalance));
         in.push_back(Pair("transTime", (uint64_t)rw.transTime));
         UniValue o(UniValue::VOBJ);
         o.push_back(Pair("asm", ScriptToAsmStr(rw.scriptSig, true)));
         o.push_back(Pair("hex", HexStr(rw.scriptSig.begin(), rw.scriptSig.end())));
         in.push_back(Pair("scriptSig", o));
 
-        vbalance.push_back(in);
+        vreward.push_back(in);
     }
-    entry.push_back(Pair("vbalance", vbalance));
+    entry.push_back(Pair("vreward", vreward));
 
     UniValue vout(UniValue::VARR);
     for (unsigned int i = 0; i < tx.vout.size(); i++) {

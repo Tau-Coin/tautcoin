@@ -187,7 +187,7 @@ extern CBlockIndex *pindexBestHeader;
 /** Minimum disk space required - used in CheckDiskSpace() */
 static const uint64_t nMinDiskSpace = 52428800;
 
-extern CBalanceViewDB *pbalancedbview;
+//extern CBalanceViewDB *pbalancedbview;
 
 /** Pruning-related variables and constants */
 /** True if any block files have ever been pruned. */

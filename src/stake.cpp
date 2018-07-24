@@ -14,8 +14,6 @@
 #include "txdb.h"
 #include "utilstrencodings.h"
 
-extern CBalanceViewDB *pbalancedbview;
-
 bool IsAllowForge(const std::string pubKey, int height)
 {
     if (pubKey.empty() || height < 0)
@@ -56,7 +54,7 @@ CAmount GetEffectiveBalance(const std::string address, int nHeight)
     for (std::vector<std::string>::iterator it = principals.begin();
         it != principals.end(); it++)
     {
-        balance = pbalancedbview->GetBalance(*it, nHeight);
+        balance = 10*COIN;//pbalancedbview->GetBalance(*it, nHeight);
         LogPrintf("GetEffectiveBalance, addr:%s, balance:%d\n", *it, balance / COIN);
         total += balance;
     }

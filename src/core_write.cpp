@@ -172,21 +172,21 @@ void TxToUniv(const CTransaction& tx, const uint256& hashBlock, UniValue& entry)
     }
     entry.pushKV("vin", vin);
 
-    UniValue vbalance(UniValue::VARR);
-    BOOST_FOREACH(const CTxReward& rw, tx.vbalance) {
+    UniValue vreward(UniValue::VARR);
+    BOOST_FOREACH(const CTxReward& rw, tx.vreward) {
         UniValue in(UniValue::VOBJ);
 
         in.pushKV("senderPubkey", rw.senderPubkey);
-        in.pushKV("senderBalance", (int64_t)rw.senderBalance);
+        in.pushKV("rewardBalance", (int64_t)rw.rewardBalance);
         in.pushKV("transTime", (uint64_t)rw.transTime);
         UniValue o(UniValue::VOBJ);
         o.pushKV("asm", ScriptToAsmStr(rw.scriptSig, true));
         o.pushKV("hex", HexStr(rw.scriptSig.begin(), rw.scriptSig.end()));
         in.pushKV("scriptSig", o);
 
-        vbalance.push_back(in);
+        vreward.push_back(in);
     }
-    entry.pushKV("vbalance", vbalance);
+    entry.pushKV("vreward", vreward);
 
     UniValue vout(UniValue::VARR);
     for (unsigned int i = 0; i < tx.vout.size(); i++) {
