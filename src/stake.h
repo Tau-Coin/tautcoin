@@ -17,4 +17,6 @@ CAmount GetEffectiveBalance(const std::string address, int nHeight);
 
 bool isForgeScript(const CScript& script, CBitcoinAddress& addr, int& memCount);
 
+CAmount GetRewardsByPubkey(const std::string &pubkey);
+
 #endif //IMCOIN_STAKE_H

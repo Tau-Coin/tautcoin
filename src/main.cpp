@@ -28,6 +28,7 @@
 #include "script/script.h"
 #include "script/sigcache.h"
 #include "script/standard.h"
+#include "stake.h"
 #include "tinyformat.h"
 #include "txdb.h"
 #include "txmempool.h"
@@ -1057,14 +1058,58 @@ int64_t GetTransactionSigOpCost(const CTransaction& tx, const CCoinsViewCache& i
 }
 
 
+bool CheckTxReward(const CTransaction& tx, CValidationState &state)
+{
+    if (tx.vbalance.empty())
+        return true;
 
+    static const int nOneMonth = 30 * 24 * 60 * 60;
+    int64_t now = GetTime();
 
+    std::set<CTxReward> vInRewards;
+    CAmount nBalanceTotal = 0;
+
+    BOOST_FOREACH(const CTxReward& rw, tx.vbalance)
+    {
+        if (vInRewards.count(rw))
+            return state.DoS(100, false, REJECT_INVALID, "bad-txns-vbalance-duplicate");
+        vInRewards.insert(rw);
+
+        if (rw.senderPubkey.empty() || rw.senderBalance <= 0 || rw.transTime == 0)
+        {
+            return state.DoS(100, false, REJECT_INVALID, "bad-txns-vbalance-negative");
+        }
+
+        if (rw.senderBalance > MAX_MONEY)
+        {
+            return state.DoS(100, false, REJECT_INVALID, "bad-txns-vbalance-toolarge");
+        }
+
+        if (rw.transTime < now - nOneMonth || rw.transTime > now + nOneMonth)
+        {
+            return state.DoS(100, false, REJECT_INVALID, "bad-txns-timestamp-old or future");
+        }
+
+        nBalanceTotal += rw.senderBalance;
+        if (!MoneyRange(nBalanceTotal))
+        {
+            return state.DoS(100, false, REJECT_INVALID, "bad-txns-balancetotal-toolarge");
+        }
+    }
+
+    return true;
+}
 
 bool CheckTransaction(const CTransaction& tx, CValidationState &state)
 {
     // Basic checks that don't depend on any context
     if (tx.vin.empty())
         return state.DoS(10, false, REJECT_INVALID, "bad-txns-vin-empty");
+
+    CheckTxReward(tx, state);
+    if (!state.IsValid())
+        return false;
+
     if (tx.vout.empty())
         return state.DoS(10, false, REJECT_INVALID, "bad-txns-vout-empty");
     // Size limits (this doesn't take the witness into account, as that hasn't been checked for malleability)
@@ -1979,6 +2024,45 @@ bool CheckTxInputs(const CTransaction& tx, CValidationState& state, const CCoins
             if (!MoneyRange(coins->vout[prevout.n].nValue) || !MoneyRange(nValueIn))
                 return state.DoS(100, false, REJECT_INVALID, "bad-txns-inputvalues-outofrange");
 
+        }
+
+        // Check rewards balance which is haversted from mining club.
+        std::map<std::string, CAmount> mPubkeyToRewards;
+
+        for (unsigned int i = 0; i < tx.vbalance.size(); i++)
+        {
+            const CTxReward &reward = tx.vbalance[i];
+            if (!MoneyRange(reward.senderBalance))
+            {
+                return state.DoS(100, false, REJECT_INVALID, "bad-txns-balance-outofrange");
+            }
+
+            CAmount local = GetRewardsByPubkey(reward.senderPubkey);
+            if (reward.senderBalance > local)
+            {
+                return state.DoS(100, false, REJECT_INVALID, "bad-txns-balance-largethandb");
+            }
+
+            std::map<std::string, CAmount>::iterator it = mPubkeyToRewards.find(reward.senderPubkey);
+            if (it == mPubkeyToRewards.end())
+            {
+                mPubkeyToRewards.insert(std::map<std::string, CAmount>::value_type(
+                        reward.senderPubkey, reward.senderBalance));
+            }
+            else
+            {
+                it->second += reward.senderBalance;
+                if (it->second > local || !MoneyRange(it->second))
+                {
+                    return state.DoS(100, false, REJECT_INVALID, "bad-txns-balancetotal-outofrange");
+                }
+            }
+
+            nValueIn += reward.senderBalance;
+            if (!MoneyRange(nValueIn))
+            {
+                return state.DoS(100, false, REJECT_INVALID, "bad-txns-balanceinput-outofrange");
+            }
         }
 
         if (nValueIn < tx.GetValueOut())

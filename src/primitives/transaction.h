@@ -147,6 +147,29 @@ public:
         READWRITE(*(CScriptBase*)(&scriptSig));
     }
 
+    friend bool operator==(const CTxReward& a, const CTxReward& b)
+    {
+        return (a.senderPubkey   == b.senderPubkey &&
+                a.scriptSig == b.scriptSig &&
+                a.senderBalance == b.senderBalance &&
+                a.transTime == b.transTime);
+    }
+
+    friend bool operator!=(const CTxReward& a, const CTxReward& b)
+    {
+        return !(a == b);
+    }
+
+    friend bool operator<(const CTxReward& a, const CTxReward& b)
+    {
+        if (a.transTime < b.transTime)
+            return true;
+        if (a.senderBalance < b.senderBalance)
+            return true;
+
+        return false;
+    }
+
 };
 /** An output of a transaction.  It contains the public key that the next input
  * must be able to sign with to claim it.

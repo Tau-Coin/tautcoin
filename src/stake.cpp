@@ -8,6 +8,7 @@
 
 #include "amount.h"
 #include "chainparams.h"
+#include "isndb.h"
 #include "main.h"
 #include "tool.h"
 #include "txdb.h"
@@ -88,4 +89,14 @@ bool isForgeScript(const CScript& script, CBitcoinAddress& addr, int& memCount) 
     addr.SetString(strAddr);
 
     return true;
+}
+
+CAmount GetRewardsByPubkey(const std::string &pubkey)
+{
+    std::string addrStr;
+
+    if (!ConvertPubkeyToAddress(pubkey, addrStr))
+        return 0;
+
+    return getBalanceByAddress(addrStr);
 }
