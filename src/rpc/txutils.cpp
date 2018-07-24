@@ -334,10 +334,15 @@ bool CTransactionUtils::CreateTransaction(std::map<std::string, CAmount>& receip
     assert(tx.nLockTime < LOCKTIME_THRESHOLD);
 
     std::vector<COutPoint> coins;
+    std::vector<CTxReward> vAvailableRewards;
     if (!AvailableCoins(pubKey, coins))
     {
-        strFailReason = _("fail to get UTXOs, invalid address");
-        return false;
+        pwalletMain->AvailableRewards(vAvailableRewards, true, NULL);
+        if (vAvailableRewards.size() == 0)
+        {
+            strFailReason = _("fail to get UTXOs and rewards, invalid address");
+            return false;
+        }
     }
 
     if (coins.size() == 0)
@@ -403,12 +408,21 @@ bool CTransactionUtils::CreateTransaction(std::map<std::string, CAmount>& receip
 
         // Choose coins to use
         std::set<COutPoint> setCoins;
+        std::vector<CTxReward> setRewards;
         CAmount nValueIn = 0;
         LogPrintf("selected value:%d\n", nValueToSelect);
         if (!SelectCoins(coins, nValueToSelect, setCoins, nValueIn))
         {
-            strFailReason = _("Insufficient funds");
-            return false;
+            if (vAvailableRewards.size() == 0)
+            {
+                pwalletMain->AvailableRewards(vAvailableRewards, true, NULL);
+            }
+
+            if (!pwalletMain->SelectRewards(vAvailableRewards, nValueToSelect-nValueIn, setRewards, nValueIn, NULL))
+            {
+                strFailReason = _("Insufficient funds");
+                return false;
+            }
         }
 
         LogPrintf("selected coins value:%d  [\n", nValueIn);
@@ -493,6 +507,9 @@ bool CTransactionUtils::CreateTransaction(std::map<std::string, CAmount>& receip
         BOOST_FOREACH(const COutPoint& coin, setCoins)
             tx.vin.push_back(CTxIn(coin, CScript(),
                                       std::numeric_limits<unsigned int>::max()-1));
+        // Fill vreward
+        BOOST_FOREACH(const CTxReward& reward, setRewards)
+            tx.vreward.push_back(reward);
 
         // Sign
         int nIn = 0;
@@ -521,6 +538,31 @@ bool CTransactionUtils::CreateTransaction(std::map<std::string, CAmount>& receip
             }
 
             nIn++;
+        }
+
+        int nReward = 0;
+        if (setRewards.size() > 0)// Sign rewards
+        {
+            BOOST_FOREACH(const CTxReward& reward, setRewards)
+            {
+                bool signSuccess;
+                bool bCheckReward = true;
+                const CScript scriptPubKey = CScript() << ParseHex(reward.senderPubkey) << OP_CHECKREWARDSIG;
+                SignatureData sigdata;
+
+                signSuccess = ProduceSignatureForRewards(TransactionSignatureCreator(&keystore, &txNewConst, nReward, reward.rewardBalance, SIGHASH_ALL, bCheckReward), scriptPubKey, sigdata);
+
+                if (!signSuccess)
+                {
+                    strFailReason = _("Signing transaction failed with rewards");
+                    return false;
+                } else {
+                    tx.vreward[nReward].scriptSig = sigdata.scriptSig;
+                    //UpdateTransaction(txNew, nIn, sigdata);
+                }
+
+                nReward++;
+            }
         }
 
         unsigned int nBytes = GetVirtualTransactionSize(tx);
