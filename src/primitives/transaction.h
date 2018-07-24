@@ -170,6 +170,7 @@ public:
         return false;
     }
 
+    std::string ToString() const;
 };
 /** An output of a transaction.  It contains the public key that the next input
  * must be able to sign with to claim it.
@@ -446,7 +447,7 @@ public:
     }
 
     bool IsNull() const {
-        return vin.empty() && vout.empty();
+        return vin.empty() && vout.empty() && vbalance.empty();
     }
 
     const uint256& GetHash() const {

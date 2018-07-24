@@ -2625,6 +2625,7 @@ bool ConnectBlock(const CBlock& block, CValidationState& state, CBlockIndex* pin
         const CTransaction &tx = block.vtx[i];
 
         nInputs += tx.vin.size();
+        nInputs += tx.vbalance.size();
 
         if (!tx.IsCoinBase())
         {
