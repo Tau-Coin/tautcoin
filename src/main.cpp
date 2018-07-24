@@ -2507,6 +2507,8 @@ bool ConnectBlock(const CBlock& block, CValidationState& state, CBlockIndex* pin
         if (!fJustCheck)
             view.SetBestBlock(pindex->GetBlockHash());
 
+        UpdateCoins(block.vtx[0], view, 0);
+
         minerClub.nHeight = pindex->nHeight;
         std::cout << "------------------------Now connect the genesis block:----------------------" << minerClub.nHeight << std::endl;
 
