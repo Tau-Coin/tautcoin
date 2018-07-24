@@ -246,6 +246,11 @@ UniValue generatetoaddress(const UniValue& params, bool fHelp)
     boost::shared_ptr<CReserveScript> coinbaseScript(new CReserveScript());
     coinbaseScript->reserveScript = GetScriptForDestination(address.Get());
 
+    CBitcoinAddress dummyAddr;
+    int dummyInt = 0;
+    if (!isForgeScript(coinbaseScript->reserveScript, dummyAddr, dummyInt))
+        throw JSONRPCError(RPC_TYPE_ERROR, "Address not allowed to forge");
+
     CKeyID keyID;
     if (!address.GetKeyID(keyID))
         throw JSONRPCError(RPC_TYPE_ERROR, "Address does not refer to a key");

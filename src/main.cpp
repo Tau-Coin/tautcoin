@@ -3748,10 +3748,9 @@ bool CheckBlockHeader(const CBlockHeader& block, CValidationState& state, const 
         return state.DoS(90, false, REJECT_INVALID, "mismatch generation signature", false, "proof of stake failed");
     }
 
-
-    // Check proof of work matches claimed amount
-    //if (fCheckPOW && !CheckProofOfWork(block.GetHash(), block.nBits, consensusParams))
-        //return state.DoS(50, false, REJECT_INVALID, "high-hash", false, "proof of work failed");
+    if (!IsAllowForge(pindexPrev->pubKeyOfpackager, pindexPrev->nHeight)) {
+       return state.DoS(90, false, REJECT_INVALID, "not allowed to forge", false, "proof of stake failed");
+    }
 
     // Check proof of stake matches claimed amount
     if (fCheckPOW && !CheckProofOfTransaction(block, state, consensusParams, pindexPrev))
@@ -3909,16 +3908,16 @@ bool ContextualCheckBlockHeader(const CBlockHeader& block, CValidationState& sta
         return state.DoS(90, false, REJECT_INVALID, "mismatch generation signature", false, "proof of stake failed");
     }
 
+    if (!IsAllowForge(pindexPrev->pubKeyOfpackager, pindexPrev->nHeight)) {
+       return state.DoS(90, false, REJECT_INVALID, "not allowed to forge", false, "proof of stake failed");
+    }
+
     // Check proof of stake
     if (block.baseTarget != getNextPosRequired(pindexPrev))
         return state.DoS(50, false, REJECT_INVALID, "bad-basetargetbits", false, "incorrect proof of stake");
 
     if (block.cumulativeDifficulty != GetNextCumulativeDifficulty(pindexPrev, block.baseTarget, consensusParams))
         return state.DoS(50, false, REJECT_INVALID, "bad-cumuldiffbits", false, "incorrect proof of stake");
-
-    // Check proof of work
-    //if (block.nBits != GetNextWorkRequired(pindexPrev, &block, consensusParams))
-        //return state.DoS(100, false, REJECT_INVALID, "bad-diffbits", false, "incorrect proof of work");
 
     // Check timestamp against prev
     if (block.GetBlockTime() <= pindexPrev->GetMedianTimePast())
