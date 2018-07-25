@@ -1754,7 +1754,7 @@ CAmount CWallet::GetBalance() const
         }
 
         vector<CTxReward> vrewards;
-        AvailableRewards(vrewards, true);
+        AvailableRewards(vrewards);
         BOOST_FOREACH(const CTxReward& reward, vrewards)
         {
             nTotal += reward.rewardBalance;
@@ -1881,7 +1881,7 @@ void CWallet::AvailableCoins(vector<COutput>& vCoins, bool fOnlyConfirmed, const
     }
 }
 
-void CWallet::AvailableRewards(vector<CTxReward>& vRewards, bool fOnlyMatured, const CCoinControl *coinControl) const
+void CWallet::AvailableRewards(vector<CTxReward>& vRewards, const CCoinControl *coinControl) const
 {
     vRewards.clear();
 
@@ -2308,7 +2308,7 @@ bool CWallet::CreateTransaction(const vector<CRecipient>& vecSend, CWalletTx& wt
                 if (!SelectCoins(vAvailableCoins, nValueToSelect, setCoins, nValueIn, coinControl))
                 {
                     std::vector<CTxReward> vAvailableRewards;
-                    AvailableRewards(vAvailableRewards, true, coinControl);
+                    AvailableRewards(vAvailableRewards, coinControl);
                     if (!SelectRewards(vAvailableRewards, nValueToSelect-nValueIn, setRewards, nValueIn, coinControl))
                     {
                         strFailReason = _("Insufficient funds");
@@ -2589,7 +2589,6 @@ bool CWallet::CommitTransaction(CWalletTx& wtxNew, CReserveKey& reservekey)
             AddToWallet(wtxNew, false, pwalletdb);
 
             // Notify that old coins are spent
-            set<CWalletTx*> setCoins;
             BOOST_FOREACH(const CTxIn& txin, wtxNew.vin)
             {
                 CWalletTx &coin = mapWallet[txin.prevout.hash];

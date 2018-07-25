@@ -45,10 +45,15 @@ std::string CTxIn::ToString() const
 
 std::string CTxReward::ToString() const
 {
+    bool sign = rewardBalance < 0;
+    int64_t n_abs = (sign ? -rewardBalance : rewardBalance);
+    int64_t quotient = n_abs / COIN;
+    int64_t remainder = n_abs % COIN;
+
     std::string str;
     str += "CTxReward(";
     str += strprintf(" senderPubkey %s", senderPubkey);
-    str += strprintf(", rewardBalance %d", rewardBalance);
+    str += strprintf(", rewardBalance %s%d.%08d", sign ? "-" : "", quotient, remainder);
     str += strprintf(", transTime %d", transTime);
     str += strprintf(", scriptSig=%s", HexStr(scriptSig).substr(0, 24));
     str += ")";

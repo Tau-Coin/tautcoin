@@ -1116,6 +1116,23 @@ public:
             ::Serialize(s, txTo.vin[nInput].nSequence, nType, nVersion);
     }
 
+    /** Serialize an reward of txTo */
+    template<typename S>
+    void SerializeReward(S &s, unsigned int nReward, int nType, int nVersion) const {
+        // Serialize the senderPubkey
+        ::Serialize(s, txTo.vreward[nReward].senderPubkey, nType, nVersion);
+        // Serialize the rewardBalance
+        ::Serialize(s, txTo.vreward[nReward].rewardBalance, nType, nVersion);
+        // Serialize the scriptSig
+        if (nReward != nIn)
+            // Blank out other inputs' signatures
+            ::Serialize(s, CScriptBase(), nType, nVersion);
+        else
+            SerializeScriptCode(s, nType, nVersion);
+        // Serialize the transTime
+        ::Serialize(s, txTo.vreward[nReward].transTime, nType, nVersion);
+    }
+
     /** Serialize an output of txTo */
     template<typename S>
     void SerializeOutput(S &s, unsigned int nOutput, int nType, int nVersion) const {
@@ -1145,7 +1162,8 @@ public:
         unsigned int nRewards = txTo.vreward.size();
         ::WriteCompactSize(s, nRewards);
         for (unsigned int nReward = 0; nReward < nRewards; nReward++)
-             ::Serialize(s, txTo.vreward[nReward], nType, nVersion);
+            SerializeReward(s, nReward, nType, nVersion);
+            //::Serialize(s, txTo.vreward[nReward], nType, nVersion);
         // Serialize nLockTime
         ::Serialize(s, txTo.nLockTime, nType, nVersion);
     }
