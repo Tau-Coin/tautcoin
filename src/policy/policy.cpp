@@ -92,9 +92,17 @@ bool IsStandardTx(const CTransaction& tx, std::string& reason, const bool witnes
         }
     }
     BOOST_FOREACH(const CTxReward& txreward, tx.vreward){
-        LogPrintf("here should check CTxReward's scriptSig like above\n");
+        if (txreward.scriptSig.size() > 1650){
+            reason = "scriptsig size in txreward";
+            return false;
+        }
+        if (!txreward.scriptSig.IsPushOnly){
+            reason = "scriptsig not pushonly in txreward";
+            return false;
+        }
+        //LogPrintf("here should check CTxReward's scriptSig like above\n");
     }
-
+    LogPrintf("in function %s test log\n",__func__);
     unsigned int nDataOut = 0;
     txnouttype whichType;
     BOOST_FOREACH(const CTxOut& txout, tx.vout) {
