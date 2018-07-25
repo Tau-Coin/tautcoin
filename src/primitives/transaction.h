@@ -184,6 +184,8 @@ public:
             return true;
         if (a.rewardBalance < b.rewardBalance)
             return true;
+        if (a.senderPubkey.compare(b.senderPubkey) < 0)
+            return true;
 
         return false;
     }

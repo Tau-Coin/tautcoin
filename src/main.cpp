@@ -1066,14 +1066,16 @@ bool CheckTxReward(const CTransaction& tx, CValidationState &state)
     static const int nOneMonth = 30 * 24 * 60 * 60;
     int64_t now = GetTime();
 
-    std::set<CTxReward> vInRewards;
+    set<CTxReward> vInRewards;
+    vInRewards.clear();
     CAmount nBalanceTotal = 0;
 
     BOOST_FOREACH(const CTxReward& rw, tx.vreward)
     {
-//        if (vInRewards.count(rw))
-//            return state.DoS(100, false, REJECT_INVALID, "bad-txns-vreward-duplicate");
-//        vInRewards.insert(rw);
+        LogPrintf("%s, pubkey:%s, reward:%d, transTime:%d\n", __func__, rw.senderPubkey, rw.rewardBalance, rw.transTime);
+        if (vInRewards.count(rw))
+            return state.DoS(100, false, REJECT_INVALID, "bad-txns-vreward-duplicate");
+        vInRewards.insert(rw);
 
         if (rw.senderPubkey.empty() || rw.rewardBalance <= 0 || rw.transTime == 0)
         {
