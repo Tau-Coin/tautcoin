@@ -21,6 +21,8 @@
 #include "script/script_error.h"
 #include "script/sign.h"
 #include "script/standard.h"
+#include "stake.h"
+#include "tool.h"
 #include "txmempool.h"
 #include "uint256.h"
 #include "utilstrencodings.h"
@@ -998,6 +1000,92 @@ UniValue sendtransactiontoaddress(const UniValue& params, bool fHelp){
 
     return hashTx.GetHex();
 }
+
+UniValue getbalancebypubkey(const UniValue& params, bool fHelp)
+{
+    if (fHelp || params.size() < 1 || params.size() > 1)
+        throw runtime_error(
+            "getbalancebypubkey [\"pubkey1\",\"pubkey2\",...]\n"
+            "\nReturns a list of unspent transaction outputs and rewards by pubkey.\n"
+            "Note that the result will not include the mempool.\n"
+            "The unspent transaction outputs must be confirmed at least 1 time.\n"
+            "\nTo use this function, you must start isono with the -txoutsbyaddressindex parameter.\n"
+            "\nArguments:\n"
+            "1. \"pubkeys\"    (string) A json array of bitcoin pubkeys\n"
+            "    [\n"
+            "      \"pubkey1\"   (string) bitcoin pubkey\n"
+            "      ,...\n"
+            "    ]\n"
+            "\nResult\n"
+            "[                   (array of json object)\n"
+            "  {\n"
+            "    \"pubkey\" : \"pubkey1\",     (string)  Pubkey passed\n"
+            "    \"utxo\" : utxo-value,             (numeric) The vout value \n"
+            "    \"rewards\" : rewards-value,  (numeric) The rewards value\n"
+            "  }\n"
+            "  ,...\n"
+            "]\n"
+            "\nExamples:\n"
+            + HelpExampleCli("getbalancebypubkey", "[\\\"1PGFqEzfmQch1gKD3ra4k18PNj3tTUUSqg\\\",\\\"1LtvqCaApEdUGFkpKMM4MstjcaL4dKg8SP\\\"]")
+            + "\nAs a json rpc call\n"
+            + HelpExampleRpc("getbalancebypubkey", "[\\\"1PGFqEzfmQch1gKD3ra4k18PNj3tTUUSqg\\\",\\\"1LtvqCaApEdUGFkpKMM4MstjcaL4dKg8SP\\\"]")
+        );
+
+    if (!fTxOutsByAddressIndex)
+        throw JSONRPCError(RPC_METHOD_NOT_FOUND, "To use this function, you must start isono with the -txoutsbyaddressindex parameter.");
+
+    RPCTypeCheck(params, boost::assign::list_of(UniValue::VARR), true);
+
+    UniValue results(UniValue::VARR);
+    UniValue inputs = params[0].get_array();
+
+    for (unsigned int i = 0; i < inputs.size(); i++) {
+        const std::string pubkey = inputs[i].get_str();
+        if (pubkey.empty())
+            continue;
+        std::string strAddr;
+        ConvertPubkeyToAddress(pubkey, strAddr);
+
+        CScript script;
+        CBitcoinAddress address(strAddr);
+        if (address.IsValid()) {
+            script = GetScriptForDestination(address.Get());
+        } else {
+            throw JSONRPCError(RPC_INVALID_ADDRESS_OR_KEY, "Invalid ISONO pubkey: " + pubkey);
+        }
+
+        CCoinsByScript coinsByScript;
+        pcoinsByScript->GetCoinsByScript(script, coinsByScript);
+
+        uint64_t utxoTotal = 0;
+
+        BOOST_FOREACH(const COutPoint &outpoint, coinsByScript.setCoins)
+        {
+            CCoins coins;
+
+            if (!pcoinsTip->GetCoins(outpoint.hash, coins))
+                continue;
+
+            if (outpoint.n < coins.vout.size() && !coins.vout[outpoint.n].IsNull() && !coins.vout[outpoint.n].scriptPubKey.IsUnspendable())
+            {
+                utxoTotal += coins.vout[outpoint.n].nValue;
+            }
+        }
+
+        uint64_t rewards = 0;
+        rewards = GetRewardsByPubkey(pubkey);
+
+        UniValue o(UniValue::VOBJ);
+        o.push_back(Pair("pubkey", pubkey));
+        o.push_back(Pair("utxo", utxoTotal));
+        o.push_back(Pair("rewards", rewards));
+
+        results.push_back(o);
+    }
+
+    return results;
+}
+
 static const CRPCCommand commands[] =
 { //  category              name                      actor (function)         okSafeMode
   //  --------------------- ------------------------  -----------------------  ----------
@@ -1008,6 +1096,7 @@ static const CRPCCommand commands[] =
     { "rawtransactions",    "sendrawtransaction",     &sendrawtransaction,     false },
     { "rawtransactions",    "signrawtransaction",     &signrawtransaction,     false }, /* uses wallet if enabled */
     { "rawtransactions",    "sendtransactiontoaddress", &sendtransactiontoaddress,  true  },
+    { "rawtransactions",    "getbalancebypubkey",     &getbalancebypubkey,     true  },
 
 
     { "blockchain",         "gettxoutproof",          &gettxoutproof,          true  },

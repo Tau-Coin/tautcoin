@@ -96,7 +96,7 @@ bool IsStandardTx(const CTransaction& tx, std::string& reason, const bool witnes
             reason = "scriptsig size in txreward";
             return false;
         }
-        if (!txreward.scriptSig.IsPushOnly){
+        if (!txreward.scriptSig.IsPushOnly()){
             reason = "scriptsig not pushonly in txreward";
             return false;
         }

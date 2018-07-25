@@ -101,6 +101,8 @@ static const CRPCConvertParam vRPCConvertParams[] =
     { "sendtransactiontoaddress", 2 },
     { "sendtransactiontoaddress", 3 },
     { "sendtransactiontoaddress", 4 },
+    { "getbalancebypubkey", 0 },
+    { "getbalancebypubkey", 1 },
     { "keypoolrefill", 0 },
     { "getrawmempool", 0 },
     { "estimatefee", 0 },

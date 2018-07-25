@@ -366,6 +366,7 @@ bool CTransactionUtils::CreateTransaction(std::map<std::string, CAmount>& receip
     while (true)
     {
         tx.vin.clear();
+        tx.vreward.clear();
         tx.vout.clear();
 
         bool fFirst = true;
