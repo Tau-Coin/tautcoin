@@ -177,7 +177,8 @@ void TxToUniv(const CTransaction& tx, const uint256& hashBlock, UniValue& entry)
         UniValue in(UniValue::VOBJ);
 
         in.pushKV("senderPubkey", rw.senderPubkey);
-        in.pushKV("rewardBalance", (int64_t)rw.rewardBalance);
+        UniValue reward(UniValue::VNUM, FormatMoney(rw.rewardBalance));
+        in.pushKV("rewardBalance", reward);
         in.pushKV("transTime", (uint64_t)rw.transTime);
         UniValue o(UniValue::VOBJ);
         o.pushKV("asm", ScriptToAsmStr(rw.scriptSig, true));

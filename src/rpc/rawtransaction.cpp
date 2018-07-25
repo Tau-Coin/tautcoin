@@ -104,7 +104,7 @@ void TxToJSON(const CTransaction& tx, const uint256 hashBlock, UniValue& entry)
         UniValue in(UniValue::VOBJ);
 
         in.push_back(Pair("senderPubkey", rw.senderPubkey));
-        in.push_back(Pair("senderBalance", (int64_t)rw.senderBalance));
+        in.push_back(Pair("senderBalance", ValueFromAmount(rw.senderBalance));
         in.push_back(Pair("transTime", (uint64_t)rw.transTime));
         UniValue o(UniValue::VOBJ);
         o.push_back(Pair("asm", ScriptToAsmStr(rw.scriptSig, true)));

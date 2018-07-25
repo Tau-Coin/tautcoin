@@ -19,8 +19,14 @@ class CTransactionUtils
 
         static bool SelectCoinsMinConf(const CAmount& nTargetValue, int nConf, std::vector<COutPoint>& vCoins,
                 std::set<COutPoint>& setCoinsRet, CAmount& nValueRet);
+
         static bool SelectCoins(std::vector<COutPoint>& vAvailableCoins, const CAmount& nTargetValue, std::set<COutPoint>& setCoinsRet, CAmount& nValueRet);
+
         static bool AvailableCoins(const std::string& pubKey, std::vector<COutPoint>& vCoins);
+
+        static bool SelectRewards(std::vector<CTxReward>& vAvailableRewards, const CAmount& nTargetValue, std::vector<CTxReward>& setRewardsRet, CAmount& nValueRet);
+
+        static bool AvailableRewards(const std::string& pubKey, std::vector<CTxReward>& vRewards);
 };
 
 #endif //ISONO_TX_UTILS_H
