@@ -13,7 +13,7 @@
 
 bool IsAllowForge(const std::string pubKey, int height);
 
-CAmount GetEffectiveBalance(const std::string address, int nHeight);
+CAmount GetEffectiveTransaction(const std::string address, int nHeight);
 
 bool isForgeScript(const CScript& script, CBitcoinAddress& addr, int& memCount);
 

@@ -36,18 +36,18 @@ bool IsAllowForge(const std::string pubKey, int height)
     return true;
 }
 
-CAmount GetEffectiveBalance(const std::string address, int nHeight)
+CAmount GetEffectiveTransaction(const std::string address, int nHeight)
 {
     CAmount total = 0;
     CAmount balance = 0;
 
     nHeight = Params().GetConsensus().PodsAheadTargetHeight(nHeight);
-    LogPrintf("GetEffectiveBalance, target height:%d\n", nHeight);
+    LogPrintf("GetEffectiveTransaction, target height:%d\n", nHeight);
 
     std::vector<std::string> principals = GetMinerMembers(address, nHeight);
     if (principals.empty())
     {
-        LogPrintf("GetEffectiveBalance, warning: not allow to forge\n");
+        LogPrintf("GetEffectiveTransaction, warning: not allow to forge\n");
         return CAmount(0);
     }
 
@@ -55,11 +55,11 @@ CAmount GetEffectiveBalance(const std::string address, int nHeight)
         it != principals.end(); it++)
     {
         balance = 10*COIN;//pbalancedbview->GetBalance(*it, nHeight);
-        LogPrintf("GetEffectiveBalance, addr:%s, balance:%d\n", *it, balance / COIN);
+        LogPrintf("GetEffectiveTransaction, addr:%s, balance:%d\n", *it, balance / COIN);
         total += balance;
     }
 
-    return total / COIN;
+    return 100000;
 }
 
 bool isForgeScript(const CScript& script, CBitcoinAddress& addr, int& memCount) {

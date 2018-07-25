@@ -275,9 +275,9 @@ bool CheckProofOfTransaction(const std::string& prevGenerationSignature, const s
         LogPrintf("CheckProofOfTransaction, strAddr:%s\n", strAddr);
 
     // get effective balance with nHeight
-    uint64_t effectiveBalance =  (uint64_t)GetEffectiveBalance(strAddr, nHeight);
+    uint64_t effectiveTx =  (uint64_t)GetEffectiveTransaction(strAddr, nHeight);
     // If effective balance is zero, return false directly.
-    if (effectiveBalance == 0) {
+    if (effectiveTx == 0) {
         LogPrintf("CheckProofOfTransaction failed, zero balance\n");
         checkErr = PODS_BALANCE_ERR;
         return false;
@@ -285,10 +285,10 @@ bool CheckProofOfTransaction(const std::string& prevGenerationSignature, const s
 
     arith_uint256 thresold(baseTarget);
     thresold *= arith_uint256((uint64_t)nTime);
-    thresold *= arith_uint256((uint64_t)effectiveBalance);
+    thresold *= arith_uint256((uint64_t)effectiveTx);
 
-    LogPrintf("CheckProofOfTransaction, effective balance:%d\n", effectiveBalance);
-    LogPrintf("CheckProofOfTransaction, hit:%s\n", arith_uint256(hit).ToString());
+    LogPrintf("CheckProofOfTransaction, effectiveTx:%d\n", effectiveTx);
+    LogPrintf("CheckProofOfTransaction, hit     :%s\n", arith_uint256(hit).ToString());
     LogPrintf("CheckProofOfTransaction, thresold:%s\n", thresold.ToString());
     if (thresold.CompareTo(arith_uint256(hit)) > 0) {
         return true;
