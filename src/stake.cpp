@@ -59,7 +59,7 @@ CAmount GetEffectiveTransaction(const std::string address, int nHeight)
         total += balance;
     }
 
-    return 100000;
+    return 10000000;
 }
 
 bool isForgeScript(const CScript& script, CBitcoinAddress& addr, int& memCount) {
