@@ -309,8 +309,8 @@ bool CTransactionUtils::SelectRewards(std::vector<CTxReward>& vAvailableRewards,
     if (rw.rewardBalance < nTargetValue)
         return false;
 
-    nValueRet = nTargetValue;
-    setRewardsRet.push_back(CTxReward(rw.senderPubkey, nTargetValue, rw.transTime));
+    nValueRet = rw.rewardBalance;
+    setRewardsRet.push_back(rw);
 
     return true;
 }
