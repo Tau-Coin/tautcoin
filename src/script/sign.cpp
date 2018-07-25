@@ -22,10 +22,11 @@ TransactionSignatureCreator::TransactionSignatureCreator(const CKeyStore* keysto
                                                          unsigned int nInIn, const CAmount& amountIn, int nHashTypeIn,
                                                          bool isCheckReward) :
     BaseSignatureCreator(keystoreIn),
-    txTo(txToIn), nIn(nInIn),
+    txTo(txToIn),
+    nIn(nInIn),
     nHashType(nHashTypeIn),
     amount(amountIn),
-    checker(txTo, nIn, amountIn),
+    checker(txTo, nIn, amountIn, isCheckReward),
     bCheckReward(isCheckReward) {}
 
 bool TransactionSignatureCreator::CreateSig(std::vector<unsigned char>& vchSig, const CKeyID& address, const CScript& scriptCode, SigVersion sigversion) const

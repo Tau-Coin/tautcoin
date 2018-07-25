@@ -12,6 +12,7 @@
 #include "pubkey.h"
 #include "script/script.h"
 #include "uint256.h"
+#include "utilstrencodings.h"
 
 using namespace std;
 
@@ -1026,6 +1027,7 @@ bool EvalScript(vector<vector<unsigned char> >& stack, const CScript& script, un
                             return set_error(serror, SCRIPT_ERR_CHECKSIGVERIFY);
                     }
                 }
+                break;
 
                 default:
                     return set_error(serror, SCRIPT_ERR_BAD_OPCODE);
@@ -1255,10 +1257,17 @@ bool TransactionSignatureChecker::CheckSig(const vector<unsigned char>& vchSigIn
     int nHashType = vchSig.back();
     vchSig.pop_back();
 
-    uint256 sighash = SignatureHash(scriptCode, *txTo, nIn, nHashType, amount, sigversion);
+    uint256 sighash = SignatureHash(scriptCode, *txTo, nIn, nHashType, amount, sigversion, bCheckReward);
 
     if (!VerifySignature(vchSig, pubkey, sighash))
         return false;
+
+    if (bCheckReward)
+    {
+        CPubKey senderPubkey(ParseHex(txTo->vreward[nIn].senderPubkey));
+        if (pubkey != senderPubkey || 10*COIN/*getreward(txTo->vreward[nIn].senderPubkey)*/ != amount)
+            return false;
+    }
 
     return true;
 }

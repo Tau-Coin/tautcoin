@@ -167,7 +167,7 @@ public:
 
     friend bool operator==(const CTxReward& a, const CTxReward& b)
     {
-        return (a.senderPubkey   == b.senderPubkey &&
+        return (a.senderPubkey == b.senderPubkey &&
                 a.scriptSig == b.scriptSig &&
                 a.rewardBalance == b.rewardBalance &&
                 a.transTime == b.transTime);
