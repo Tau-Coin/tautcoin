@@ -1071,9 +1071,9 @@ bool CheckTxReward(const CTransaction& tx, CValidationState &state)
 
     BOOST_FOREACH(const CTxReward& rw, tx.vreward)
     {
-        if (vInRewards.count(rw))
-            return state.DoS(100, false, REJECT_INVALID, "bad-txns-vreward-duplicate");
-        vInRewards.insert(rw);
+//        if (vInRewards.count(rw))
+//            return state.DoS(100, false, REJECT_INVALID, "bad-txns-vreward-duplicate");
+//        vInRewards.insert(rw);
 
         if (rw.senderPubkey.empty() || rw.rewardBalance <= 0 || rw.transTime == 0)
         {
@@ -1103,10 +1103,12 @@ bool CheckTxReward(const CTransaction& tx, CValidationState &state)
 bool CheckTransaction(const CTransaction& tx, CValidationState &state)
 {
     // Basic checks that don't depend on any context
-    if (tx.vin.empty())
-        return state.DoS(10, false, REJECT_INVALID, "bad-txns-vin-empty");
+    if (tx.vin.empty() && tx.vreward.empty())
+        return state.DoS(10, false, REJECT_INVALID, "bad-txns-vin-and-vreward-empty");
 
-    CheckTxReward(tx, state);
+    if (!CheckTxReward(tx, state))
+        return false;
+
     if (!state.IsValid())
         return false;
 
@@ -3748,10 +3750,12 @@ bool CheckBlockHeader(const CBlockHeader& block, CValidationState& state, const 
         return state.DoS(90, false, REJECT_INVALID, "mismatch generation signature", false, "proof of stake failed");
     }
 
-    if (!IsAllowForge(pindexPrev->pubKeyOfpackager, pindexPrev->nHeight))
-        return state.DoS(90, false, REJECT_INVALID, "not allowed to forge", false, "proof of stake failed");
 
-    // Check proof of transaction matches claimed amount
+    // Check proof of work matches claimed amount
+    //if (fCheckPOW && !CheckProofOfWork(block.GetHash(), block.nBits, consensusParams))
+        //return state.DoS(50, false, REJECT_INVALID, "high-hash", false, "proof of work failed");
+
+    // Check proof of stake matches claimed amount
     if (fCheckPOW && !CheckProofOfTransaction(block, state, consensusParams, pindexPrev))
         return state.DoS(50, false, REJECT_INVALID, "high-hit", false, "proof of stake failed");
 
@@ -3907,15 +3911,16 @@ bool ContextualCheckBlockHeader(const CBlockHeader& block, CValidationState& sta
         return state.DoS(90, false, REJECT_INVALID, "mismatch generation signature", false, "proof of stake failed");
     }
 
-    if (!IsAllowForge(pindexPrev->pubKeyOfpackager, pindexPrev->nHeight))
-        return state.DoS(90, false, REJECT_INVALID, "not allowed to forge", false, "proof of stake failed");
-
     // Check proof of stake
     if (block.baseTarget != getNextPosRequired(pindexPrev))
         return state.DoS(50, false, REJECT_INVALID, "bad-basetargetbits", false, "incorrect proof of stake");
 
     if (block.cumulativeDifficulty != GetNextCumulativeDifficulty(pindexPrev, block.baseTarget, consensusParams))
         return state.DoS(50, false, REJECT_INVALID, "bad-cumuldiffbits", false, "incorrect proof of stake");
+
+    // Check proof of work
+    //if (block.nBits != GetNextWorkRequired(pindexPrev, &block, consensusParams))
+        //return state.DoS(100, false, REJECT_INVALID, "bad-diffbits", false, "incorrect proof of work");
 
     // Check timestamp against prev
     if (block.GetBlockTime() <= pindexPrev->GetMedianTimePast())

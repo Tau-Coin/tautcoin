@@ -96,5 +96,5 @@ CAmount GetRewardsByPubkey(const std::string &pubkey)
     if (!ConvertPubkeyToAddress(pubkey, addrStr))
         return 0;
 
-    return getBalanceByAddress(addrStr);
+    return 10*COIN;//getBalanceByAddress(addrStr);
 }

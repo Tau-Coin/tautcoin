@@ -273,7 +273,7 @@ bool CCoinsViewCache::HaveInputs(const CTransaction& tx) const
             bIn = tx.vreward[i].rewardBalance;
 			string addrStr;
             ConvertPubkeyToAddress(tx.vreward[i].senderPubkey, addrStr);
-			CAmount bLocal= getBalanceByAddress(addrStr);
+            CAmount bLocal = 10*COIN;//getRewardByAddress(addrStr);
         	if (bLocal< bIn) {
         		return false;
 			}
