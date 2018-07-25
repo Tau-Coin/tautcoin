@@ -33,8 +33,8 @@
 #include <secp256k1.h>
 #include <secp256k1_recovery.h>
 
-#define MAXRATIO 670
-#define MINRATIO 530
+#define MAXRATIO 67
+#define MINRATIO 53
 #define GAMMA 0.64
 
 const uint256 DiffAdjustNumerator = uint256S("0x010000000000000000");
@@ -173,7 +173,10 @@ uint64_t calculateHitOfPOS(const uint256 &phash){
     //EncodeBase64(phash.begin(), phash.size())<<std::endl;
     uint64_t hit=0;
     memcpy(&hit,phash.begin(),8);
-    return hit;
+    arith_uint256 temp = hit+1;
+    double logarithm = (temp/Arith256DiffAdjustNumerator).getdouble();
+    arith_uint256 arihit = Arith256DiffAdjustNumerator*log(logarithm);
+    return ArithToUint256(arihit).GetUint64(0);
 }
 //watch out that CblockHeader is parent of Cblock
 uint64_t getNextPosRequired(const CBlockIndex* pindexLast){
@@ -188,14 +191,14 @@ uint64_t getNextPosRequired(const CBlockIndex* pindexLast){
    uint64_t lastBlockParentTime = ancestor->GetBlockTime();
    uint64_t Sa = (lastTime - lastBlockParentTime)/3 ;
    uint64_t newBaseTarget = 0;
-   if (Sa > 600){
+   if (Sa > 60){
        uint64_t min = 0;
        if(Sa < MAXRATIO){
            min = Sa;
        }else{
            min = MAXRATIO;
        }
-       newBaseTarget = (min * pindexLast->baseTarget)/600;
+       newBaseTarget = (min * pindexLast->baseTarget)/60;
    }else{
        uint64_t max = 0;
        if(Sa > MINRATIO){
@@ -203,7 +206,7 @@ uint64_t getNextPosRequired(const CBlockIndex* pindexLast){
        }else{
            max = MINRATIO;
        }
-       newBaseTarget = pindexLast->baseTarget - ((600 - max) * GAMMA * pindexLast->baseTarget)/600;
+       newBaseTarget = pindexLast->baseTarget - ((60 - max) * GAMMA * pindexLast->baseTarget)/60;
    }
    LogPrintf("NewBaseTarget is %s last time is %s lastBlockParentTime %s\n",newBaseTarget,lastTime,lastBlockParentTime);
    return newBaseTarget;
