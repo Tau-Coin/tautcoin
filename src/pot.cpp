@@ -39,6 +39,9 @@
 
 const uint256 DiffAdjustNumerator = uint256S("0x010000000000000000");
 const arith_uint256 Arith256DiffAdjustNumerator = UintToArith256(DiffAdjustNumerator);
+const uint256 DiffAdjustNumeratorHalf = uint256S("0x0100000000");
+const arith_uint256 Arith256DiffAdjustNumeratorHalf = UintToArith256(DiffAdjustNumeratorHalf);
+
 const static bool fDebugPODS = true;
 
 #if 0
@@ -174,8 +177,13 @@ uint64_t calculateHitOfPOS(const uint256 &phash){
     uint64_t hit=0;
     memcpy(&hit,phash.begin(),8);
     arith_uint256 temp = hit+1;
-    double logarithm = (temp/Arith256DiffAdjustNumerator).getdouble();
-    arith_uint256 arihit = Arith256DiffAdjustNumerator*log(logarithm);
+    double logarithm = log(temp.getdouble()) - 2 * log(Arith256DiffAdjustNumeratorHalf.getdouble());
+    LogPrintf("logarithm is %lf, %lf\n", logarithm, fabs(logarithm));
+    arith_uint256 arihit = Arith256DiffAdjustNumerator * fabs(logarithm);
+    long double h = (long double)Arith256DiffAdjustNumeratorHalf.getdouble()
+            * (long double)Arith256DiffAdjustNumeratorHalf.getdouble()
+            * fabs(logarithm);
+    LogPrintf("arihit is %s\n", arith_uint256(arihit).ToString());
     return ArithToUint256(arihit).GetUint64(0);
 }
 //watch out that CblockHeader is parent of Cblock
