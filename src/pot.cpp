@@ -40,6 +40,7 @@
 const uint256 DiffAdjustNumerator = uint256S("0x010000000000000000");
 const arith_uint256 Arith256DiffAdjustNumerator = UintToArith256(DiffAdjustNumerator);
 const uint256 DiffAdjustNumeratorHalf = uint256S("0x0100000000");
+const uint256 DiffAdjustNumeratorfor55 = uint256S("0x80000000000000");
 const arith_uint256 Arith256DiffAdjustNumeratorHalf = UintToArith256(DiffAdjustNumeratorHalf);
 
 const static bool fDebugPODS = true;
@@ -173,17 +174,13 @@ std::string GetPubKeyForPackage(){
 }
 uint64_t calculateHitOfPOS(const uint256 &phash){
     LogPrintf("Generation Signature Hash is %s\n",HexStr(phash));
-    //EncodeBase64(phash.begin(), phash.size())<<std::endl;
     uint64_t hit=0;
     memcpy(&hit,phash.begin(),8);
     arith_uint256 temp = hit+1;
     double logarithm = log(temp.getdouble()) - 2 * log(Arith256DiffAdjustNumeratorHalf.getdouble());
-    LogPrintf("logarithm is %lf, %lf\n", logarithm, fabs(logarithm));
-    arith_uint256 arihit = Arith256DiffAdjustNumerator * fabs(logarithm);
-    long double h = (long double)Arith256DiffAdjustNumeratorHalf.getdouble()
-            * (long double)Arith256DiffAdjustNumeratorHalf.getdouble()
-            * fabs(logarithm);
-    LogPrintf("arihit is %s\n", arith_uint256(arihit).ToString());
+    logarithm = fabs(logarithm);
+    uint64_t ulogarithm =  logarithm * 1000;
+    arith_uint256 arihit = UintToArith256(DiffAdjustNumeratorfor55) * arith_uint256(ulogarithm) / 1000;
     return ArithToUint256(arihit).GetUint64(0);
 }
 //watch out that CblockHeader is parent of Cblock
