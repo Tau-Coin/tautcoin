@@ -639,6 +639,7 @@ public:
 
     std::map<uint256, CWalletTx> mapWallet;
     std::list<CAccountingEntry> laccentries;
+    std::map<std::string, bool> mapSpentReward;
 
     typedef std::pair<CWalletTx*, CAccountingEntry*> TxPair;
     typedef std::multimap<int64_t, TxPair > TxItems;

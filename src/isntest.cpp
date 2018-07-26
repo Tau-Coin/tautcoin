@@ -38,7 +38,7 @@ int
 main(int argc, char *argv[])
 {
 
-	ISNDB imtest;
+	ISNDB* imtest = ISNDB::GetInstance();
 	string tablename, condition, cvalue;
 	vector<string> field, values;
 
@@ -47,7 +47,7 @@ main(int argc, char *argv[])
 	field.push_back("ttc");
 	condition= "address";
 	cvalue= "imtestadd";
-	mysqlpp::StoreQueryResult dataSelect= imtest.ISNSqlSelectAA(tablename, field, condition, cvalue);
+	mysqlpp::StoreQueryResult dataSelect= imtest->ISNSqlSelectAA(tablename, field, condition, cvalue);
 	cout << "select test is: " << dataSelect[0]["ttc"] << endl;
 	field.clear();
 
@@ -56,7 +56,7 @@ main(int argc, char *argv[])
 	field.push_back("father");
 	values.push_back("24");
 	condition= "imaddtc";
-	mysqlpp::SimpleResult  dataUpdate= imtest.ISNSqlUpdate(tablename, field, values, condition);
+	mysqlpp::SimpleResult  dataUpdate= imtest->ISNSqlUpdate(tablename, field, values, condition);
 	cout << "update test is: " << dataUpdate << endl;
 	field.clear();
 	
@@ -64,7 +64,7 @@ main(int argc, char *argv[])
 	tablename="memberinfo";
 	field.push_back("tc");
 	condition= "imaddtc";
-	mysqlpp::SimpleResult  dataAddOne= imtest.ISNSqlAddOne(tablename, field, condition);
+	mysqlpp::SimpleResult  dataAddOne= imtest->ISNSqlAddOne(tablename, field, condition);
 	cout << "add one test is: " << dataAddOne << endl;
 	field.clear();
 	values.clear();
@@ -76,7 +76,7 @@ main(int argc, char *argv[])
 	values.push_back("11");
 	values.push_back("9");
 	values.push_back("19");
-	int  dataInsert= imtest.ISNSqlInsert(tablename, values);
+	int  dataInsert= imtest->ISNSqlInsert(tablename, values);
 	cout << "insert id is: " << dataInsert << endl;
 
 	return 0;

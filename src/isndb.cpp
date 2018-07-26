@@ -4,6 +4,38 @@
 
 #include "isndb.h"
 
+#include "sync.h"
+#include "util.h"
+
+static CCriticalSection cs_isndb;
+
+ISNDB* ISNDB::pIsnDBSingleton = NULL;
+
+void ISNDB::StartISNDBService()
+{
+    // Start db connection
+    LogPrintf("Starting ISNDB service...\n");
+    ISNDB::GetInstance();
+}
+
+void ISNDB::StopISNDBService()
+{
+    LogPrintf("Stopping ISNDB service...\n");
+    delete(pIsnDBSingleton);
+}
+
+ISNDB* ISNDB::GetInstance()
+{
+    LOCK(cs_isndb);
+
+    if (pIsnDBSingleton == NULL)
+    {
+        pIsnDBSingleton = new ISNDB();
+    }
+
+    return pIsnDBSingleton;
+}
+
 ISNDB::ISNDB()
 {
 	try{
@@ -14,6 +46,11 @@ ISNDB::ISNDB()
 		cerr << "Error: " << er.what() << endl;
 		exit(-1);
 	}
+}
+
+ISNDB::~ISNDB()
+{
+    // Disconnect db connection
 }
 
 // select from ISNDB according to address
@@ -212,9 +249,9 @@ bool ISNDB::ISNSqlDelete(const string &tablename, const string &condition, const
 //Get Balance By Address
 CAmount getBalanceByAddress(const string& address)
 {
-	ISNDB dbLocal;
+	ISNDB* pdbLocal = ISNDB::GetInstance();
 	vector<string> fields;
 	fields.push_back(memFieldBalance);
-	mysqlpp::StoreQueryResult bLocal = dbLocal.ISNSqlSelectAA(tableMember, fields, memFieldAddress, address);
+	mysqlpp::StoreQueryResult bLocal = pdbLocal->ISNSqlSelectAA(tableMember, fields, memFieldAddress, address);
 	return bLocal[0]["balance"];
 }

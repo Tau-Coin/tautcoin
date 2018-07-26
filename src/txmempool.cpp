@@ -777,6 +777,7 @@ void CTxMemPool::check(const CCoinsViewCache *pcoins) const
         else {
             CValidationState state;
             assert(CheckInputs(tx, state, mempoolDuplicate, false, 0, false, NULL));
+            assert(CheckRewards(tx, state, false, 0, false));
             UpdateCoins(tx, mempoolDuplicate, 1000000);
         }
     }
@@ -791,6 +792,7 @@ void CTxMemPool::check(const CCoinsViewCache *pcoins) const
             assert(stepsSinceLastRemove < waitingOnDependants.size());
         } else {
             assert(CheckInputs(entry->GetTx(), state, mempoolDuplicate, false, 0, false, NULL));
+            assert(CheckRewards(entry->GetTx(), state, false, 0, false));
             UpdateCoins(entry->GetTx(), mempoolDuplicate, 1000000);
             stepsSinceLastRemove = 0;
         }

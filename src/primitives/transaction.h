@@ -442,8 +442,8 @@ public:
     // structure, including the hash.
     const int32_t nVersion;
     const std::vector<CTxIn> vin;
-    const std::vector<CTxReward> vreward;
     const std::vector<CTxOut> vout;
+    const std::vector<CTxReward> vreward;
     CTxWitness wit; // Not const: can change without invalidating the txid cache
     const uint32_t nLockTime;
 
