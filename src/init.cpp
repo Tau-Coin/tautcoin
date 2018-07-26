@@ -18,6 +18,7 @@
 #include "consensus/validation.h"
 #include "httpserver.h"
 #include "httprpc.h"
+#include "isndb.h"
 #include "key.h"
 #include "main.h"
 #include "miner.h"
@@ -257,6 +258,10 @@ void Shutdown()
 #endif
     globalVerifyHandle.reset();
     ECC_Stop();
+
+    // Stop ISNDB service
+    ISNDB::StopISNDBService();
+
     LogPrintf("%s: done\n", __func__);
 }
 
@@ -1044,6 +1049,9 @@ bool AppInit2(boost::thread_group& threadGroup, CScheduler& scheduler)
         if (!AppInitServers(threadGroup))
             return InitError(_("Unable to start HTTP server. See debug log for details."));
     }
+
+    // Here start ISNDB service ASAP
+    ISNDB::StartISNDBService();
 
     int64_t nStart;
 

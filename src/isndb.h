@@ -43,7 +43,6 @@ const string memFieldBalance= "balance";
 class ISNDB
 {
 public:
-	ISNDB();
 
 	// select from ISNDB according to condition
 	mysqlpp::StoreQueryResult ISNSqlSelectAA(const string &tablename, const vector<string> &field, const string &condition, const string &cvalue);
@@ -58,8 +57,21 @@ public:
 	//  from ISNDB according to condition
 	bool ISNSqlDelete(const string &tablename, const string &condition, const string &cvalue);
 
+    ~ISNDB();
+
+    static ISNDB* GetInstance();
+
+    static void StartISNDBService();
+
+    static void StopISNDBService();
+
 private:
 	mysqlpp::Connection con;
+
+    static ISNDB* pIsnDBSingleton;
+
+protected:
+    ISNDB();
 };
 
 CAmount getBalanceByAddress(const string& address);
