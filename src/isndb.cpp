@@ -51,6 +51,7 @@ ISNDB::ISNDB()
 ISNDB::~ISNDB()
 {
     // Disconnect db connection
+    con.disconnect();
 }
 
 // select from ISNDB according to address
@@ -244,14 +245,4 @@ bool ISNDB::ISNSqlDelete(const string &tablename, const string &condition, const
 				", actual size: " << er.actual_size << endl;
 		exit(-1);
 	}
-}
-
-//Get Balance By Address
-CAmount getBalanceByAddress(const string& address)
-{
-	ISNDB* pdbLocal = ISNDB::GetInstance();
-	vector<string> fields;
-	fields.push_back(memFieldBalance);
-	mysqlpp::StoreQueryResult bLocal = pdbLocal->ISNSqlSelectAA(tableMember, fields, memFieldAddress, address);
-	return bLocal[0]["balance"];
 }

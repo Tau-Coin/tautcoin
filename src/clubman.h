@@ -2,8 +2,8 @@
 // Distributed under the MIT software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
-#ifndef ISNCOIN_CLUB_MANAGER_H
-#define ISNCOIN_CLUB_MANAGER_H
+#ifndef TAUCOIN_CLUB_MANAGER_H
+#define TAUCOIN_CLUB_MANAGER_H
 
 #include "amount.h"
 #include "isndb.h"
@@ -11,6 +11,8 @@
 class ClubManager
 {
     public:
+
+        static const int DEFAULT_HARVEST_POWER = 1;
 
         static ClubManager* GetInstance();
 
@@ -26,5 +28,5 @@ class ClubManager
 
         ISNDB* backendDb;
 };
-#endif // ISNCOIN_REWARD_MANAGER_H
+#endif // TAUCOIN_REWARD_MANAGER_H
 

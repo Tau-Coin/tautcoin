@@ -31,7 +31,15 @@ CAmount RewardManager::GetRewardsByAddress(std::string& address)
 	std::vector<string> fields;
 	fields.push_back(memFieldBalance);
 	mysqlpp::StoreQueryResult bLocal = backendDb->ISNSqlSelectAA(tableMember, fields, memFieldAddress, address);
-	return bLocal[0]["balance"];
+
+    if (bLocal.num_rows() > 0)
+    {
+	    return bLocal[0]["balance"];
+    }
+    else
+    {
+        return 0;
+    }
 }
 
 CAmount RewardManager::GetRewardsByPubkey(const std::string &pubkey)
@@ -41,7 +49,7 @@ CAmount RewardManager::GetRewardsByPubkey(const std::string &pubkey)
     if (!ConvertPubkeyToAddress(pubkey, addrStr))
         return 0;
 
-    return 10*COIN;//getBalanceByAddress(addrStr);
+    return GetRewardsByAddress(addrStr);
 }
 
 RewardManager::RewardManager()

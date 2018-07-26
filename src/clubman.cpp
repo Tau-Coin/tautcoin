@@ -30,7 +30,14 @@ uint64_t ClubManager::GetHarvestPowerByAddress(std::string& address)
     std::vector<string> fields;
 	fields.push_back(clubFieldCount);
 	mysqlpp::StoreQueryResult bLocal = backendDb->ISNSqlSelectAA(tableClub, fields, clubFieldAddress, address);
-	return (uint64_t)bLocal[0]["ttc"];
+    if (bLocal.num_rows() > 0)
+    {
+	    return (uint64_t)bLocal[0]["ttc"];
+    }
+    else
+    {
+        return DEFAULT_HARVEST_POWER;
+    }
 }
 
 ClubManager::ClubManager()

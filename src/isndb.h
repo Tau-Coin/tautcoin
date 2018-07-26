@@ -74,6 +74,4 @@ protected:
     ISNDB();
 };
 
-CAmount getBalanceByAddress(const string& address);
-
 #endif // ISNCOIN_DATABASE_H
