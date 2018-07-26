@@ -895,7 +895,7 @@
         <translation>Кількість</translation>
     </message>
     <message>
-        <source>Enter a Bitcoin address (e.g. %1)</source>
+        <source>Enter a Taucoin address (e.g. %1)</source>
         <translation>Введіть адресу Bitcoin (наприклад %1)</translation>
     </message>
     <message>
