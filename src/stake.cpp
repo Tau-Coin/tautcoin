@@ -88,13 +88,3 @@ bool isForgeScript(const CScript& script, CBitcoinAddress& addr, int& memCount) 
 
     return true;
 }
-
-CAmount GetRewardsByPubkey(const std::string &pubkey)
-{
-    std::string addrStr;
-
-    if (!ConvertPubkeyToAddress(pubkey, addrStr))
-        return 0;
-
-    return 10*COIN;//getBalanceByAddress(addrStr);
-}
