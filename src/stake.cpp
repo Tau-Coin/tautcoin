@@ -8,12 +8,11 @@
 
 #include "amount.h"
 #include "chainparams.h"
+#include "isndb.h"
 #include "main.h"
 #include "tool.h"
 #include "txdb.h"
 #include "utilstrencodings.h"
-
-extern CBalanceViewDB *pbalancedbview;
 
 bool IsAllowForge(const std::string pubKey, int height)
 {
@@ -37,30 +36,30 @@ bool IsAllowForge(const std::string pubKey, int height)
     return true;
 }
 
-CAmount GetEffectiveBalance(const std::string address, int nHeight)
+CAmount GetEffectiveTransaction(const std::string address, int nHeight)
 {
     CAmount total = 0;
     CAmount balance = 0;
 
     nHeight = Params().GetConsensus().PodsAheadTargetHeight(nHeight);
-    LogPrintf("GetEffectiveBalance, target height:%d\n", nHeight);
+    LogPrintf("GetEffectiveTransaction, target height:%d\n", nHeight);
 
     std::vector<std::string> principals = GetMinerMembers(address, nHeight);
     if (principals.empty())
     {
-        LogPrintf("GetEffectiveBalance, warning: not allow to forge\n");
+        LogPrintf("GetEffectiveTransaction, warning: not allow to forge\n");
         return CAmount(0);
     }
 
     for (std::vector<std::string>::iterator it = principals.begin();
         it != principals.end(); it++)
     {
-        balance = pbalancedbview->GetBalance(*it, nHeight);
-        LogPrintf("GetEffectiveBalance, addr:%s, balance:%d\n", *it, balance / COIN);
+        balance = 10*COIN;//pbalancedbview->GetBalance(*it, nHeight);
+        LogPrintf("GetEffectiveTransaction, addr:%s, balance:%d\n", *it, balance / COIN);
         total += balance;
     }
 
-    return total / COIN;
+    return 100000;
 }
 
 bool isForgeScript(const CScript& script, CBitcoinAddress& addr, int& memCount) {
@@ -88,4 +87,14 @@ bool isForgeScript(const CScript& script, CBitcoinAddress& addr, int& memCount) 
     addr.SetString(strAddr);
 
     return true;
+}
+
+CAmount GetRewardsByPubkey(const std::string &pubkey)
+{
+    std::string addrStr;
+
+    if (!ConvertPubkeyToAddress(pubkey, addrStr))
+        return 0;
+
+    return 10*COIN;//getBalanceByAddress(addrStr);
 }

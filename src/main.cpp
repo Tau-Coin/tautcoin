@@ -28,6 +28,7 @@
 #include "script/script.h"
 #include "script/sigcache.h"
 #include "script/standard.h"
+#include "stake.h"
 #include "tinyformat.h"
 #include "txdb.h"
 #include "txmempool.h"
@@ -87,7 +88,7 @@ size_t nCoinCacheUsage = 5000 * 300;
 uint64_t nPruneTarget = 0;
 int64_t nMaxTipAge = DEFAULT_MAX_TIP_AGE;
 bool fEnableReplacement = DEFAULT_ENABLE_REPLACEMENT;
-CBalanceViewDB *pbalancedbview = NULL;
+//CBalanceViewDB *pbalancedbview = NULL;
 
 struct MinerClub
 {
@@ -1171,14 +1172,62 @@ int64_t GetTransactionSigOpCost(const CTransaction& tx, const CCoinsViewCache& i
 }
 
 
+bool CheckTxReward(const CTransaction& tx, CValidationState &state)
+{
+    if (tx.vreward.empty())
+        return true;
 
+    static const int nOneMonth = 30 * 24 * 60 * 60;
+    int64_t now = GetTime();
 
+    set<CTxReward> vInRewards;
+    vInRewards.clear();
+    CAmount nBalanceTotal = 0;
+
+    BOOST_FOREACH(const CTxReward& rw, tx.vreward)
+    {
+        LogPrintf("%s, pubkey:%s, reward:%d, transTime:%d\n", __func__, rw.senderPubkey, rw.rewardBalance, rw.transTime);
+        if (vInRewards.count(rw))
+            return state.DoS(100, false, REJECT_INVALID, "bad-txns-vreward-duplicate");
+        vInRewards.insert(rw);
+
+        if (rw.senderPubkey.empty() || rw.rewardBalance <= 0 || rw.transTime == 0)
+        {
+            return state.DoS(100, false, REJECT_INVALID, "bad-txns-vreward-negative");
+        }
+
+        if (rw.rewardBalance > MAX_MONEY)
+        {
+            return state.DoS(100, false, REJECT_INVALID, "bad-txns-vreward-toolarge");
+        }
+
+        if (rw.transTime < now - nOneMonth || rw.transTime > now + nOneMonth)
+        {
+            return state.DoS(100, false, REJECT_INVALID, "bad-txns-timestamp-old or future");
+        }
+
+        nBalanceTotal += rw.rewardBalance;
+        if (!MoneyRange(nBalanceTotal))
+        {
+            return state.DoS(100, false, REJECT_INVALID, "bad-txns-balancetotal-toolarge");
+        }
+    }
+
+    return true;
+}
 
 bool CheckTransaction(const CTransaction& tx, CValidationState &state)
 {
     // Basic checks that don't depend on any context
-    if (tx.vin.empty())
-        return state.DoS(10, false, REJECT_INVALID, "bad-txns-vin-empty");
+    if (tx.vin.empty() && tx.vreward.empty())
+        return state.DoS(10, false, REJECT_INVALID, "bad-txns-vin-and-vreward-empty");
+
+    if (!CheckTxReward(tx, state))
+        return false;
+
+    if (!state.IsValid())
+        return false;
+
     if (tx.vout.empty())
         return state.DoS(10, false, REJECT_INVALID, "bad-txns-vout-empty");
     // Size limits (this doesn't take the witness into account, as that hasn't been checked for malleability)
@@ -1800,7 +1849,7 @@ bool ReadBlockFromDisk(CBlock& block, const CDiskBlockPos& pos, const Consensus:
 
     // Check the header
     CValidationState state;
-    if (!CheckProofOfDryStake(block, state, consensusParams, NULL)
+    if (!CheckProofOfTransaction(block, state, consensusParams, NULL)
             && state.GetRejectReason().find("bad-prevblk") == std::string::npos)
         return error("ReadBlockFromDisk: Errors in block header at %s", pos.ToString());
 
@@ -2093,6 +2142,45 @@ bool CheckTxInputs(const CTransaction& tx, CValidationState& state, const CCoins
             if (!MoneyRange(coins->vout[prevout.n].nValue) || !MoneyRange(nValueIn))
                 return state.DoS(100, false, REJECT_INVALID, "bad-txns-inputvalues-outofrange");
 
+        }
+
+        // Check rewards balance which is haversted from mining club.
+        std::map<std::string, CAmount> mPubkeyToRewards;
+
+        for (unsigned int i = 0; i < tx.vreward.size(); i++)
+        {
+            const CTxReward &reward = tx.vreward[i];
+            if (!MoneyRange(reward.rewardBalance))
+            {
+                return state.DoS(100, false, REJECT_INVALID, "bad-txns-balance-outofrange");
+            }
+
+            CAmount local = GetRewardsByPubkey(reward.senderPubkey);
+            if (reward.rewardBalance > local)
+            {
+                return state.DoS(100, false, REJECT_INVALID, "bad-txns-balance-largethandb");
+            }
+
+            std::map<std::string, CAmount>::iterator it = mPubkeyToRewards.find(reward.senderPubkey);
+            if (it == mPubkeyToRewards.end())
+            {
+                mPubkeyToRewards.insert(std::map<std::string, CAmount>::value_type(
+                        reward.senderPubkey, reward.rewardBalance));
+            }
+            else
+            {
+                it->second += reward.rewardBalance;
+                if (it->second > local || !MoneyRange(it->second))
+                {
+                    return state.DoS(100, false, REJECT_INVALID, "bad-txns-balancetotal-outofrange");
+                }
+            }
+
+            nValueIn += reward.rewardBalance;
+            if (!MoneyRange(nValueIn))
+            {
+                return state.DoS(100, false, REJECT_INVALID, "bad-txns-balanceinput-outofrange");
+            }
         }
 
         if (nValueIn < tx.GetValueOut())
@@ -2559,9 +2647,15 @@ void BreadthFirstSearch(ISNDB &db, std::string root_id, int club_id, int ttc)
     std::queue<std::string> idQueue;
     idQueue.push(root_id);
     std::string id;
-    std::vector<std::string> field;
+    std::vector<std::string> field,fields, values;
+
     field.push_back(memFieldID);
     field.push_back(memFieldCount);
+
+    fields.push_back(memFieldClub);
+
+    values.push_back(std::to_string(club_id));
+
     while (!idQueue.empty()) {
         id = idQueue.front();
         std::cout << "----------" << id << std::endl;
@@ -2571,6 +2665,7 @@ void BreadthFirstSearch(ISNDB &db, std::string root_id, int club_id, int ttc)
         for (int i = 0; i < nSize; i++) {
             idQueue.push(data[i]["address_id"].c_str());
             //change its club_id
+            db.ISNSqlUpdate(tableMember, fields, values, memFieldID, data[i]["address_id"].c_str());
             ttc += atoi(data[i]["tc"].c_str());
         }
     }
@@ -2609,9 +2704,7 @@ bool ConnectBlock(const CBlock& block, CValidationState& state, CBlockIndex* pin
         }
 
         UpdateCoins(block.vtx[0], view, 0);
-        if (!pbalancedbview->UpdateBalance(block.vtx[0], view, 0))
-            return error("Failed to update balance db in genesis block!");
-        pbalancedbview->ClearCache();
+
         return true;
     }
 
@@ -2732,6 +2825,7 @@ bool ConnectBlock(const CBlock& block, CValidationState& state, CBlockIndex* pin
         const CTransaction &tx = block.vtx[i];
 
         nInputs += tx.vin.size();
+        nInputs += tx.vreward.size();
 
         if (!tx.IsCoinBase())
         {
@@ -2796,13 +2890,13 @@ bool ConnectBlock(const CBlock& block, CValidationState& state, CBlockIndex* pin
             //CTxDestination vinAddress;
             std::string maxValueAddress;
             CAmount maxValue = 0;
-            for (unsigned int i = 0; i < tx.vbalance.size(); i++) {
-                if (maxValue < tx.vbalance[i].senderBalance) {
+            for (unsigned int i = 0; i < tx.vreward.size(); i++) {
+                if (maxValue < tx.vreward[i].rewardBalance) {
                     std::string address;
-                    ConvertPubkeyToAddress(tx.vbalance[i].senderPubkey, address);
+                    ConvertPubkeyToAddress(tx.vreward[i].senderPubkey, address);
                     std::cout << "Balance address:" << address << std::endl;
                     maxValueAddress = address;
-                    maxValue = tx.vbalance[i].senderBalance;
+                    maxValue = tx.vreward[i].rewardBalance;
                 }
             }
             for (unsigned int i = 0; i < tx.vin.size(); i++) {
@@ -2819,7 +2913,6 @@ bool ConnectBlock(const CBlock& block, CValidationState& state, CBlockIndex* pin
                 }
             }
 
-            /*
             //if an entrustment transaction
             //bool bEntrustTx = false;
             std::vector<std::string> values;
@@ -2843,42 +2936,107 @@ bool ConnectBlock(const CBlock& block, CValidationState& state, CBlockIndex* pin
                         mysqlpp::StoreQueryResult data = db.ISNSqlSelectAA(tableClub, field, clubFieldAddress, voutAddress);
                         if (data.empty()) {//has not entrusted
                             //a new club
+                            values.clear();
                             values.push_back(voutAddress);
                             values.push_back("0");
                             int clubId = db.ISNSqlInsert(tableClub, values);
-                            int ttc = 0;
+                            int ttc = 0, rootc, fatherttc;
                             field.clear();
                             field.push_back(memFieldID);
                             field.push_back(memFieldCount);
                             field.push_back(memFieldClub);
                             mysqlpp::StoreQueryResult root = db.ISNSqlSelectAA(tableMember, field, memFieldAddress, voutAddress);
+                            rootc = atoi(data[0]["tc"].c_str()) + 1;
                             //update voutaddress clubid and tx++, update ttc
                             BreadthFirstSearch(db, root[0]["address_id"].c_str(), clubId, ttc);
-                            //outaddress's ttc=ttc+1
-                            //update lastfather's ttc= TTC-ttc
-                            //get ttc
-                            //db.ISNSqlUpdate(tableClub,);
-                            //jian qu fathter club
+                            field.clear();
+                            field.push_back(clubFieldCount);
+                            values.clear();
+                            values.push_back(std::to_string(ttc + rootc));
+                            db.ISNSqlUpdate(tableClub, field, values, memFieldAddress, voutAddress);
+
+                            field.clear();
+                            field.push_back(clubFieldCount);
+                            mysqlpp::StoreQueryResult fatherClub = db.ISNSqlSelectAA(tableClub, field, clubFieldID, root[0]["club_id"].c_str());
+                            fatherttc = atoi(fatherClub[0]["ttc"].c_str()) - ttc - rootc + 1;
+
+                            field.clear();
+                            field.push_back(clubFieldCount);
+                            values.clear();
+                            values.push_back(std::to_string(fatherttc));
+                            db.ISNSqlUpdate(tableClub, field, values, clubFieldID, root[0]["club_id"].c_str());
+
+                            field.clear();
+                            field.push_back(memFieldFather);
+                            field.push_back(memFieldClub);
+                            field.push_back(memFieldCount);
+                            values.clear();
+                            values.push_back("-1");
+                            values.push_back(std::to_string(clubId));
+                            values.push_back(std::to_string(rootc));
+                            db.ISNSqlUpdate(tableMember, field, values, memFieldAddress, voutAddress);
                         } else {//has entrusted
-                            //tx++
-                            //ttx++
+                            field.clear();
+                            field.push_back(memFieldCount);
+                            db.ISNSqlAddOne(tableMember, field, memFieldAddress, voutAddress);
+                            field.clear();
+                            field.push_back(clubFieldCount);
+                            db.ISNSqlAddOne(tableClub, field, clubFieldAddress, voutAddress);
                         }
                     } else {//entrust others
                         //must entrust a miner
                         field.clear();
-                        field.push_back(clubFieldAddress);
+                        field.push_back(clubFieldID);
                         mysqlpp::StoreQueryResult data = db.ISNSqlSelectAA(tableClub, field, clubFieldAddress, voutAddress);
                         if (!data.empty()) {// it is a miner
-                            //
+                            //miner data
+                            field.clear();
+                            field.push_back(memFieldID);
+                            mysqlpp::StoreQueryResult fatherData = db.ISNSqlSelectAA(tableMember, field, clubFieldAddress, voutAddress);
                             //tc++
-                            //db.ISNSqlAddOne(tableMember, )
-                            //ttc++
+                            field.clear();
+                            field.push_back(memFieldCount);
+                            db.ISNSqlAddOne(tableMember, field, memFieldAddress, voutAddress);
+
+                            int ttc = 0, rootc, fatherttc;
+                            field.clear();
+                            field.push_back(memFieldID);
+                            field.push_back(memFieldCount);
+                            field.push_back(memFieldClub);
+                            mysqlpp::StoreQueryResult root = db.ISNSqlSelectAA(tableMember, field, memFieldAddress, maxValueAddress);
+                            rootc = atoi(data[0]["tc"].c_str());
+                            //update voutaddress clubid and tx++, update ttc
+                            BreadthFirstSearch(db, root[0]["address_id"].c_str(), atoi(data[0]["club_id"].c_str()), ttc);
+                            field.clear();
+                            field.push_back(clubFieldCount);
+                            values.clear();
+                            values.push_back(std::to_string(ttc + rootc + 1));
+                            db.ISNSqlUpdate(tableClub, field, values, memFieldAddress, voutAddress);
+
+                            field.clear();
+                            field.push_back(clubFieldCount);
+                            mysqlpp::StoreQueryResult fatherClub = db.ISNSqlSelectAA(tableClub, field, clubFieldID, root[0]["club_id"].c_str());
+                            fatherttc = atoi(fatherClub[0]["ttc"].c_str()) - ttc - rootc;
+
+                            field.clear();
+                            field.push_back(clubFieldCount);
+                            values.clear();
+                            values.push_back(std::to_string(fatherttc));
+                            db.ISNSqlUpdate(tableClub, field, values, clubFieldID, root[0]["club_id"].c_str());
+
+                            field.clear();
+                            field.push_back(memFieldFather);
+                            field.push_back(memFieldClub);
+                            values.clear();
+                            values.push_back(fatherData[0]["address_id"].c_str());
+                            values.push_back(data[0]["club_id"].c_str());
+                            db.ISNSqlUpdate(tableMember, field, values, memFieldAddress, maxValueAddress);
                         }
                     }
-                } else {//  N
+                } else {//  Not a entrusted tx
                     if (dataSelect.empty()) {//a new address
                         std::cout << "aaaaaaaaaaaaaaaa new address!" << std::endl;
-                        ofile << CBitcoinAddress(voutAddress).ToString() << "    " << maxValueAddress << "    " << "MAGICCODE" << std::endl;
+                        ofile << voutAddress << "    " << maxValueAddress << "    " << "MAGICCODE" << std::endl;
 
                         field.clear();
                         field.push_back(memFieldID);
@@ -2891,15 +3049,25 @@ bool ConnectBlock(const CBlock& block, CValidationState& state, CBlockIndex* pin
                         tableMemberValues.push_back("0");
                         db.ISNSqlInsert(tableMember, tableMemberValues);
                         //ttc++ depend on clubid
-                        //db.ISNSqlAddOne(tableClub,);
+                        field.clear();
+                        field.push_back(clubFieldCount);
+                        db.ISNSqlAddOne(tableClub, field, clubFieldID, data[0]["club_id"].c_str());
                     } else {// an existed address, do not change the entrust graph
                         std::cout << "aaaaaaaaaaaaannnnnnnnnn existed address!" << std::endl;
                         //tc++
                         //ttc++
+                        field.clear();
+                        field.push_back(memFieldCount);
+                        db.ISNSqlAddOne(tableMember, field, memFieldAddress, voutAddress);
+                        field.clear();
+                        field.push_back(memFieldClub);
+                        mysqlpp::StoreQueryResult data = db.ISNSqlSelectAA(tableMember, field, memFieldAddress, voutAddress);
+                        field.clear();
+                        field.push_back(clubFieldCount);
+                        db.ISNSqlAddOne(tableClub, field, clubFieldID, data[0]["club_id"].c_str());
                     }
                 }
             }
-            */
 
             /*
             if (bEntrustTx) {//Y
@@ -2972,8 +3140,6 @@ bool ConnectBlock(const CBlock& block, CValidationState& state, CBlockIndex* pin
             }
             */
         }
-        if (!pbalancedbview->UpdateBalance(tx, view, pindex->nHeight))
-            return error("Failed to update balance db!");
         UpdateCoins(tx, view, i == 0 ? undoDummy : blockundo.vtxundo.back(), pindex->nHeight);
 
         /*for test
@@ -2997,7 +3163,6 @@ bool ConnectBlock(const CBlock& block, CValidationState& state, CBlockIndex* pin
         vPos.push_back(std::make_pair(tx.GetHash(), pos));
         pos.nTxOffset += ::GetSerializeSize(tx, SER_DISK, CLIENT_VERSION);
     }
-    pbalancedbview->ClearCache();
 
     ofile .close();
 
@@ -3960,7 +4125,7 @@ bool FindUndoPos(CValidationState &state, int nFile, CDiskBlockPos &pos, unsigne
     return true;
 }
 
-bool CheckProofOfDryStake(const CBlockHeader& block, CValidationState& state,
+bool CheckProofOfTransaction(const CBlockHeader& block, CValidationState& state,
         const Consensus::Params& consensusParams, const CBlockIndex* pindexPrev)
 {
     LOCK(cs_main);
@@ -3979,7 +4144,7 @@ bool CheckProofOfDryStake(const CBlockHeader& block, CValidationState& state,
     assert(pindexPrev);
 
     PodsErr error;
-    if (!CheckProofOfDryStake(pindexPrev->generationSignature, block.pubKeyOfpackager,
+    if (!CheckProofOfTransaction(pindexPrev->generationSignature, block.pubKeyOfpackager,
                 pindexPrev->nHeight + 1, block.nTime - pindexPrev->nTime, block.baseTarget, consensusParams, error)) {
         return state.DoS(50, false, REJECT_INVALID, "high-hit", false, "proof of stake failed");
     }
@@ -4016,7 +4181,7 @@ bool CheckBlockHeader(const CBlockHeader& block, CValidationState& state, const 
         //return state.DoS(50, false, REJECT_INVALID, "high-hash", false, "proof of work failed");
 
     // Check proof of stake matches claimed amount
-    if (fCheckPOW && !CheckProofOfDryStake(block, state, consensusParams, pindexPrev))
+    if (fCheckPOW && !CheckProofOfTransaction(block, state, consensusParams, pindexPrev))
         return state.DoS(50, false, REJECT_INVALID, "high-hit", false, "proof of stake failed");
 
     return true;
@@ -4662,9 +4827,9 @@ bool static LoadBlockIndexDB()
         // For bitcoin, pow verification is implemented in "LoadBlockIndexGuts".
         // But for pods, we have to do this work after all BlockIndexed are loaded.
         if (pindex->pprev) {
-            if (!CheckProofOfDryStake(pindex->GetBlockHeader(), dummy, chainparams.GetConsensus(),
+            if (!CheckProofOfTransaction(pindex->GetBlockHeader(), dummy, chainparams.GetConsensus(),
                     pindex->pprev)) {
-                return error("LoadBlockIndex(): CheckProofOfDryStake failed: %s", pindex->ToString());
+                return error("LoadBlockIndex(): CheckProofOfTransaction failed: %s", pindex->ToString());
             }
 
             if (pindex->nChainDiff != pindex->pprev->nChainDiff + GetBlockProof(*pindex))

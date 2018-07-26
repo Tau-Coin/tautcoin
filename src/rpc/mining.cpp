@@ -17,7 +17,7 @@
 #include "miner.h"
 #include "net.h"
 #include "pow.h"
-#include "pods.h"
+#include "pot.h"
 #include "rpc/server.h"
 #include "txmempool.h"
 #include "util.h"
@@ -126,7 +126,7 @@ UniValue generateBlocksWithPos(boost::shared_ptr<CReserveScript> coinbaseScript,
          uint64_t baseTarget = getNextPosRequired(prevIndex);
          PodsErr error;
 
-         if (CheckProofOfDryStake(prevIndex->generationSignature, coinbaseScript->pubkeyString,
+         if (CheckProofOfTransaction(prevIndex->generationSignature, coinbaseScript->pubkeyString,
                  prevIndex->nHeight + 1, now - prevIndex->nTime, baseTarget, Params().GetConsensus(), error))
          {
               std::unique_ptr<CBlockTemplate> pblocktemplate(BlockAssembler(Params()).CreateNewBlock(coinbaseScript->reserveScript,coinbaseScript->pubkeyString));
@@ -245,6 +245,11 @@ UniValue generatetoaddress(const UniValue& params, bool fHelp)
     
     boost::shared_ptr<CReserveScript> coinbaseScript(new CReserveScript());
     coinbaseScript->reserveScript = GetScriptForDestination(address.Get());
+
+    CBitcoinAddress dummyAddr;
+    int dummyInt = 0;
+    if (!isForgeScript(coinbaseScript->reserveScript, dummyAddr, dummyInt))
+        throw JSONRPCError(RPC_TYPE_ERROR, "Address not allowed to forge");
 
     CKeyID keyID;
     if (!address.GetKeyID(keyID))

@@ -18,7 +18,16 @@ using namespace std;
 
 typedef std::vector<unsigned char> valtype;
 
-TransactionSignatureCreator::TransactionSignatureCreator(const CKeyStore* keystoreIn, const CTransaction* txToIn, unsigned int nInIn, const CAmount& amountIn, int nHashTypeIn) : BaseSignatureCreator(keystoreIn), txTo(txToIn), nIn(nInIn), nHashType(nHashTypeIn), amount(amountIn), checker(txTo, nIn, amountIn) {}
+TransactionSignatureCreator::TransactionSignatureCreator(const CKeyStore* keystoreIn, const CTransaction* txToIn,
+                                                         unsigned int nInIn, const CAmount& amountIn, int nHashTypeIn,
+                                                         bool isCheckReward) :
+    BaseSignatureCreator(keystoreIn),
+    txTo(txToIn),
+    nIn(nInIn),
+    nHashType(nHashTypeIn),
+    amount(amountIn),
+    checker(txTo, nIn, amountIn, isCheckReward),
+    bCheckReward(isCheckReward) {}
 
 bool TransactionSignatureCreator::CreateSig(std::vector<unsigned char>& vchSig, const CKeyID& address, const CScript& scriptCode, SigVersion sigversion) const
 {
@@ -26,7 +35,7 @@ bool TransactionSignatureCreator::CreateSig(std::vector<unsigned char>& vchSig, 
     if (!keystore->GetKey(address, key))
         return false;
 
-    uint256 hash = SignatureHash(scriptCode, *txTo, nIn, nHashType, amount, sigversion);
+    uint256 hash = SignatureHash(scriptCode, *txTo, nIn, nHashType, amount, sigversion, bCheckReward);
     if (!key.Sign(hash, vchSig))
         return false;
     vchSig.push_back((unsigned char)nHashType);
@@ -183,6 +192,21 @@ bool ProduceSignature(const BaseSignatureCreator& creator, const CScript& fromPu
 
     // Test solution
     return solved && VerifyScript(sigdata.scriptSig, fromPubKey, &sigdata.scriptWitness, STANDARD_SCRIPT_VERIFY_FLAGS, creator.Checker());
+}
+
+bool ProduceSignatureForRewards(const BaseSignatureCreator& creator, const CScript& fromPubKey, SignatureData& sigdata)
+{
+    CScript script = fromPubKey;
+    bool solved = true;
+    std::vector<valtype> result;
+    txnouttype whichType;
+    solved = SignStep(creator, script, result, whichType, SIGVERSION_BASE);
+    sigdata.scriptWitness.stack.clear();
+    sigdata.scriptSig = PushAll(result);
+
+    // Test solution
+    return solved && VerifyScript(sigdata.scriptSig, fromPubKey, &sigdata.scriptWitness,
+                                  STANDARD_SCRIPT_VERIFY_FLAGS, creator.Checker());
 }
 
 SignatureData DataFromTransaction(const CMutableTransaction& tx, unsigned int nIn)

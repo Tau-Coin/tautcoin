@@ -104,7 +104,8 @@ enum SigVersion
     SIGVERSION_WITNESS_V0 = 1,
 };
 
-uint256 SignatureHash(const CScript &scriptCode, const CTransaction& txTo, unsigned int nIn, int nHashType, const CAmount& amount, SigVersion sigversion);
+uint256 SignatureHash(const CScript &scriptCode, const CTransaction& txTo, unsigned int nIn, int nHashType,
+                      const CAmount& amount, SigVersion sigversion, bool bCheckReward=false);
 
 class BaseSignatureChecker
 {
@@ -133,12 +134,13 @@ private:
     const CTransaction* txTo;
     unsigned int nIn;
     const CAmount amount;
+    bool bCheckReward;
 
 protected:
     virtual bool VerifySignature(const std::vector<unsigned char>& vchSig, const CPubKey& vchPubKey, const uint256& sighash) const;
 
 public:
-    TransactionSignatureChecker(const CTransaction* txToIn, unsigned int nInIn, const CAmount& amountIn) : txTo(txToIn), nIn(nInIn), amount(amountIn) {}
+    TransactionSignatureChecker(const CTransaction* txToIn, unsigned int nInIn, const CAmount& amountIn, bool isCheckReward=false) : txTo(txToIn), nIn(nInIn), amount(amountIn), bCheckReward(isCheckReward) {}
     bool CheckSig(const std::vector<unsigned char>& scriptSig, const std::vector<unsigned char>& vchPubKey, const CScript& scriptCode, SigVersion sigversion) const;
     bool CheckLockTime(const CScriptNum& nLockTime) const;
     bool CheckSequence(const CScriptNum& nSequence) const;

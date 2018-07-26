@@ -131,10 +131,28 @@ public:
 class CTxReward
 {
 public:
-	std::string senderPubkey;	
-    CAmount senderBalance;
+    std::string senderPubkey;
+    CAmount rewardBalance;
     uint32_t transTime;
     CScript scriptSig;
+
+    CTxReward() {}
+
+    CTxReward(std::string pubkey, CAmount balance, uint32_t time, CScript sig=CScript()):
+        senderPubkey(pubkey),
+        rewardBalance(balance),
+        transTime(time),
+        scriptSig(sig) {}
+
+    CTxReward(const CTxReward& copy)
+    {
+        senderPubkey = copy.senderPubkey;
+        rewardBalance = copy.rewardBalance;
+        transTime = copy.transTime;
+        scriptSig = copy.scriptSig;
+    }
+
+    std::string ToString() const;
 
 	//Serialize
     ADD_SERIALIZE_METHODS;
@@ -142,9 +160,34 @@ public:
     template <typename Stream, typename Operation>
     inline void SerializationOp(Stream& s, Operation ser_action, int nType, int nVersion) {
         READWRITE(senderPubkey);
-        READWRITE(senderBalance);
+        READWRITE(rewardBalance);
         READWRITE(transTime);
         READWRITE(*(CScriptBase*)(&scriptSig));
+    }
+
+    friend bool operator==(const CTxReward& a, const CTxReward& b)
+    {
+        return (a.senderPubkey == b.senderPubkey &&
+                a.scriptSig == b.scriptSig &&
+                a.rewardBalance == b.rewardBalance &&
+                a.transTime == b.transTime);
+    }
+
+    friend bool operator!=(const CTxReward& a, const CTxReward& b)
+    {
+        return !(a == b);
+    }
+
+    friend bool operator<(const CTxReward& a, const CTxReward& b)
+    {
+        if (a.transTime < b.transTime)
+            return true;
+        if (a.rewardBalance < b.rewardBalance)
+            return true;
+        if (a.senderPubkey.compare(b.senderPubkey) < 0)
+            return true;
+
+        return false;
     }
 
 };
@@ -317,18 +360,18 @@ inline void SerializeTransaction(TxType& tx, Stream& s, Operation ser_action, in
     unsigned char flags = 0;
     if (ser_action.ForRead()) {
         const_cast<std::vector<CTxIn>*>(&tx.vin)->clear();
-        const_cast<std::vector<CTxReward>*>(&tx.vbalance)->clear();
+        const_cast<std::vector<CTxReward>*>(&tx.vreward)->clear();
         const_cast<std::vector<CTxOut>*>(&tx.vout)->clear();
         const_cast<CTxWitness*>(&tx.wit)->SetNull();
         /* Try to read the vin. In case the dummy is there, this will be read as an empty vector. */
         READWRITE(*const_cast<std::vector<CTxIn>*>(&tx.vin));
-        READWRITE(*const_cast<std::vector<CTxReward>*>(&tx.vbalance));
-        if (tx.vin.size() == 0 && tx.vbalance.size() == 0 && !(nVersion & SERIALIZE_TRANSACTION_NO_WITNESS)) {
+        READWRITE(*const_cast<std::vector<CTxReward>*>(&tx.vreward));
+        if (tx.vin.size() == 0 && tx.vreward.size() == 0 && !(nVersion & SERIALIZE_TRANSACTION_NO_WITNESS)) {
             /* We read a dummy or an empty vin. */
             READWRITE(flags);
             if (flags != 0) {
                 READWRITE(*const_cast<std::vector<CTxIn>*>(&tx.vin));
-                READWRITE(*const_cast<std::vector<CTxReward>*>(&tx.vbalance));
+                READWRITE(*const_cast<std::vector<CTxReward>*>(&tx.vreward));
                 READWRITE(*const_cast<std::vector<CTxOut>*>(&tx.vout));
             }
         } else {
@@ -363,7 +406,7 @@ inline void SerializeTransaction(TxType& tx, Stream& s, Operation ser_action, in
             READWRITE(flags);
         }
         READWRITE(*const_cast<std::vector<CTxIn>*>(&tx.vin));
-        READWRITE(*const_cast<std::vector<CTxReward>*>(&tx.vbalance));
+        READWRITE(*const_cast<std::vector<CTxReward>*>(&tx.vreward));
         READWRITE(*const_cast<std::vector<CTxOut>*>(&tx.vout));
         if (flags & 1) {
             const_cast<CTxWitness*>(&tx.wit)->vtxinwit.resize(tx.vin.size());
@@ -399,7 +442,7 @@ public:
     // structure, including the hash.
     const int32_t nVersion;
     const std::vector<CTxIn> vin;
-    const std::vector<CTxReward> vbalance;
+    const std::vector<CTxReward> vreward;
     const std::vector<CTxOut> vout;
     CTxWitness wit; // Not const: can change without invalidating the txid cache
     const uint32_t nLockTime;
@@ -469,7 +512,7 @@ struct CMutableTransaction
 {
     int32_t nVersion;
     std::vector<CTxIn> vin;
-    std::vector<CTxReward> vbalance;
+    std::vector<CTxReward> vreward;
     std::vector<CTxOut> vout;
     CTxWitness wit;
     uint32_t nLockTime;

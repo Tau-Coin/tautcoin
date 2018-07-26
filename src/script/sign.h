@@ -37,9 +37,12 @@ class TransactionSignatureCreator : public BaseSignatureCreator {
     int nHashType;
     CAmount amount;
     const TransactionSignatureChecker checker;
+    bool bCheckReward;
 
 public:
-    TransactionSignatureCreator(const CKeyStore* keystoreIn, const CTransaction* txToIn, unsigned int nInIn, const CAmount& amountIn, int nHashTypeIn=SIGHASH_ALL);
+    TransactionSignatureCreator(const CKeyStore* keystoreIn, const CTransaction* txToIn,
+                                unsigned int nInIn, const CAmount& amountIn,
+                                int nHashTypeIn=SIGHASH_ALL, bool isCheckReward=false);
     const BaseSignatureChecker& Checker() const { return checker; }
     bool CreateSig(std::vector<unsigned char>& vchSig, const CKeyID& keyid, const CScript& scriptCode, SigVersion sigversion) const;
 };
@@ -69,6 +72,7 @@ struct SignatureData {
 
 /** Produce a script signature using a generic signature creator. */
 bool ProduceSignature(const BaseSignatureCreator& creator, const CScript& scriptPubKey, SignatureData& sigdata);
+bool ProduceSignatureForRewards(const BaseSignatureCreator& creator, const CScript &fromPubKey, SignatureData& sigdata);
 
 /** Produce a script signature for a transaction. */
 bool SignSignature(const CKeyStore &keystore, const CScript& fromPubKey, CMutableTransaction& txTo, unsigned int nIn, const CAmount& amount, int nHashType);

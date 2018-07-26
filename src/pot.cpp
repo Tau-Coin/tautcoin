@@ -4,7 +4,7 @@
 
 #include "arith_uint256.h"
 #include "base58.h"
-#include "pods.h"
+#include "pot.h"
 #include "amount.h"
 #include "chain.h"
 #include "chainparams.h"
@@ -33,12 +33,16 @@
 #include <secp256k1.h>
 #include <secp256k1_recovery.h>
 
-#define MAXRATIO 670
-#define MINRATIO 530
+#define MAXRATIO 67
+#define MINRATIO 53
 #define GAMMA 0.64
 
 const uint256 DiffAdjustNumerator = uint256S("0x010000000000000000");
 const arith_uint256 Arith256DiffAdjustNumerator = UintToArith256(DiffAdjustNumerator);
+const uint256 DiffAdjustNumeratorHalf = uint256S("0x0100000000");
+const uint256 DiffAdjustNumeratorfor55 = uint256S("0x80000000000000");
+const arith_uint256 Arith256DiffAdjustNumeratorHalf = UintToArith256(DiffAdjustNumeratorHalf);
+
 const static bool fDebugPODS = true;
 
 #if 0
@@ -170,10 +174,14 @@ std::string GetPubKeyForPackage(){
 }
 uint64_t calculateHitOfPOS(const uint256 &phash){
     LogPrintf("Generation Signature Hash is %s\n",HexStr(phash));
-    //EncodeBase64(phash.begin(), phash.size())<<std::endl;
     uint64_t hit=0;
     memcpy(&hit,phash.begin(),8);
-    return hit;
+    arith_uint256 temp = hit+1;
+    double logarithm = log(temp.getdouble()) - 2 * log(Arith256DiffAdjustNumeratorHalf.getdouble());
+    logarithm = fabs(logarithm);
+    uint64_t ulogarithm =  logarithm * 1000;
+    arith_uint256 arihit = UintToArith256(DiffAdjustNumeratorfor55) * arith_uint256(ulogarithm) / 1000;
+    return ArithToUint256(arihit).GetUint64(0);
 }
 //watch out that CblockHeader is parent of Cblock
 uint64_t getNextPosRequired(const CBlockIndex* pindexLast){
@@ -188,14 +196,14 @@ uint64_t getNextPosRequired(const CBlockIndex* pindexLast){
    uint64_t lastBlockParentTime = ancestor->GetBlockTime();
    uint64_t Sa = (lastTime - lastBlockParentTime)/3 ;
    uint64_t newBaseTarget = 0;
-   if (Sa > 600){
+   if (Sa > 60){
        uint64_t min = 0;
        if(Sa < MAXRATIO){
            min = Sa;
        }else{
            min = MAXRATIO;
        }
-       newBaseTarget = (min * pindexLast->baseTarget)/600;
+       newBaseTarget = (min * pindexLast->baseTarget)/60;
    }else{
        uint64_t max = 0;
        if(Sa > MINRATIO){
@@ -203,7 +211,7 @@ uint64_t getNextPosRequired(const CBlockIndex* pindexLast){
        }else{
            max = MINRATIO;
        }
-       newBaseTarget = pindexLast->baseTarget - ((600 - max) * GAMMA * pindexLast->baseTarget)/600;
+       newBaseTarget = pindexLast->baseTarget - ((60 - max) * GAMMA * pindexLast->baseTarget)/60;
    }
    LogPrintf("NewBaseTarget is %s last time is %s lastBlockParentTime %s\n",newBaseTarget,lastTime,lastBlockParentTime);
    return newBaseTarget;
@@ -232,21 +240,21 @@ uint256 GetNextCumulativeDifficulty(const CBlockIndex* pindexLast, uint64_t base
     return ArithToUint256(ret);
 }
 
-bool CheckProofOfDryStake(const std::string& prevGenerationSignature, const std::string& currPubKey,
+bool CheckProofOfTransaction(const std::string& prevGenerationSignature, const std::string& currPubKey,
         int nHeight, unsigned int nTime, uint64_t baseTarget, const Consensus::Params& consensusParams, PodsErr& checkErr)
 {
     checkErr = PODS_NO_ERR;
 
     if (prevGenerationSignature.empty() || currPubKey.empty() || nHeight < 0 || nTime == 0) {
-        LogPrintf("CheckProofOfDryStake failed, incorrect args, signatrue:%s, pubkey:%s, height:%d, time:%d\n",
+        LogPrintf("CheckProofOfTransaction failed, incorrect args, signatrue:%s, pubkey:%s, height:%d, time:%d\n",
             prevGenerationSignature, currPubKey, nHeight, nTime);
         checkErr = PODS_ARGS_ERR;
         return false;
     }
 
     if (fDebugPODS) {
-        LogPrintf("CheckProofOfDryStake, signature:%s, pubkey:%s\n", prevGenerationSignature, currPubKey);
-        LogPrintf("CheckProofOfDryStake, height:%d, time:%d, baseTarget:%d\n", nHeight, nTime, baseTarget);
+        LogPrintf("CheckProofOfTransaction, signature:%s, pubkey:%s\n", prevGenerationSignature, currPubKey);
+        LogPrintf("CheckProofOfTransaction, height:%d, time:%d, baseTarget:%d\n", nHeight, nTime, baseTarget);
     }
 
     // Note: in block header public key is compressed, but get hit value with uncompressed
@@ -264,29 +272,29 @@ bool CheckProofOfDryStake(const std::string& prevGenerationSignature, const std:
     std::string strAddr;
 
     if (!ConvertPubkeyToAddress(currPubKey, strAddr) || strAddr.empty()) {
-        LogPrintf("CheckProofOfDryStake failed, get strAddr fail\n");
+        LogPrintf("CheckProofOfTransaction failed, get strAddr fail\n");
         checkErr = PODS_ADDR_ERR;
         return false;
     }
     if (fDebugPODS)
-        LogPrintf("CheckProofOfDryStake, strAddr:%s\n", strAddr);
+        LogPrintf("CheckProofOfTransaction, strAddr:%s\n", strAddr);
 
     // get effective balance with nHeight
-    uint64_t effectiveBalance =  (uint64_t)GetEffectiveBalance(strAddr, nHeight);
+    uint64_t effectiveTx =  (uint64_t)GetEffectiveTransaction(strAddr, nHeight);
     // If effective balance is zero, return false directly.
-    if (effectiveBalance == 0) {
-        LogPrintf("CheckProofOfDryStake failed, zero balance\n");
+    if (effectiveTx == 0) {
+        LogPrintf("CheckProofOfTransaction failed, zero balance\n");
         checkErr = PODS_BALANCE_ERR;
         return false;
     }
 
     arith_uint256 thresold(baseTarget);
     thresold *= arith_uint256((uint64_t)nTime);
-    thresold *= arith_uint256((uint64_t)effectiveBalance);
+    thresold *= arith_uint256((uint64_t)effectiveTx);
 
-    LogPrintf("CheckProofOfDryStake, effective balance:%d\n", effectiveBalance);
-    LogPrintf("CheckProofOfDryStake, hit:%s\n", arith_uint256(hit).ToString());
-    LogPrintf("CheckProofOfDryStake, thresold:%s\n", thresold.ToString());
+    LogPrintf("CheckProofOfTransaction, effectiveTx:%d\n", effectiveTx);
+    LogPrintf("CheckProofOfTransaction, hit     :%s\n", arith_uint256(hit).ToString());
+    LogPrintf("CheckProofOfTransaction, thresold:%s\n", thresold.ToString());
     if (thresold.CompareTo(arith_uint256(hit)) > 0) {
         return true;
     }

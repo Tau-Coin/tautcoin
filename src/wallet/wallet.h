@@ -551,6 +551,9 @@ private:
      */
     bool SelectCoins(const std::vector<COutput>& vAvailableCoins, const CAmount& nTargetValue, std::set<std::pair<const CWalletTx*,unsigned int> >& setCoinsRet, CAmount& nValueRet, const CCoinControl *coinControl = NULL) const;
 
+    bool SelectRewards(const std::vector<CTxReward>& vAvailableRewards, const CAmount& nTargetValue,
+                       std::vector<CTxReward>& setRewardsRet, CAmount& nValueRet, const CCoinControl* coinControl) const;
+
     CWalletDB *pwalletdbEncryption;
 
     //! the current wallet version: clients below this version are not able to load the wallet
@@ -661,6 +664,8 @@ public:
      * populate vCoins with vector of available COutputs.
      */
     void AvailableCoins(std::vector<COutput>& vCoins, bool fOnlyConfirmed=true, const CCoinControl *coinControl = NULL, bool fIncludeZeroValue=false) const;
+
+    void AvailableRewards(std::vector<CTxReward>& vRewards, const CCoinControl *coinControl=NULL) const;
 
     /**
      * Shuffle and select coins until nTargetValue is reached while avoiding

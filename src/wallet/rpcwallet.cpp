@@ -714,8 +714,6 @@ UniValue getbalance(const UniValue& params, bool fHelp)
         }
         return  ValueFromAmount(nBalance);
     }
-    else if(params[0].get_str().length() > 32 && params[0].get_str().length() < 36)
-        return ValueFromAmount(pbalancedbview->GetBalance(params[0].get_str(), chainActive.Height()));
 
     string strAccount = AccountFromValue(params[0]);
 

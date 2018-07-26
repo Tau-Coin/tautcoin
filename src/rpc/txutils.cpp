@@ -47,6 +47,15 @@ struct CompareValueOnly
     }
 };
 
+struct CompareRewardOnly
+{
+    bool operator()(const CTxReward& t1,
+                    const CTxReward& t2) const
+    {
+        return t1.rewardBalance < t2.rewardBalance;
+    }
+};
+
 static void ApproximateBestSubset(std::vector<std::pair<CAmount, COutPoint> >vValue, const CAmount& nTotalLower, const CAmount& nTargetValue,
                                   std::vector<char>& vfBest, CAmount& nBest, int iterations = 1000)
 {
@@ -183,7 +192,14 @@ bool CTransactionUtils::SelectCoinsMinConf(const CAmount& nTargetValue, int nCon
     if (nTotalLower < nTargetValue)
     {
         if (coinLowestLarger.second.IsNull())
+        {
+            for (unsigned int i = 0; i < vValue.size(); ++i)
+            {
+                setCoinsRet.insert(vValue[i].second);
+            }
+            nValueRet = nTotalLower;
             return false;
+        }
         setCoinsRet.insert(coinLowestLarger.second);
         nValueRet += coinLowestLarger.first;
         return true;
@@ -279,6 +295,42 @@ bool CTransactionUtils::AvailableCoins(const std::string& pubKey, std::vector<CO
     return true;
 }
 
+bool CTransactionUtils::SelectRewards(std::vector<CTxReward>& vAvailableRewards, const CAmount& nTargetValue, std::vector<CTxReward>& setRewardsRet, CAmount& nValueRet)
+{
+    // Here vAvailableCoins.size() == 1
+    if (vAvailableRewards.size() < 1)
+        return false;
+
+    setRewardsRet.clear();
+    nValueRet = 0;
+
+    // Here, suppose vAvailableRewards.size() == 1
+    const CTxReward& rw = vAvailableRewards[0];
+    if (rw.rewardBalance < nTargetValue)
+        return false;
+
+    nValueRet = rw.rewardBalance;
+    setRewardsRet.push_back(rw);
+
+    return true;
+}
+
+bool CTransactionUtils::AvailableRewards(const std::string& pubKey, std::vector<CTxReward>& vRewards)
+{
+    vRewards.clear();
+    std::string addrStr;
+    if (ConvertPubkeyToAddress(pubKey, addrStr))
+    {
+        LogPrintf("%s addr:%s\n", __func__, addrStr);
+    }
+
+    CAmount rewards = GetRewardsByPubkey(pubKey);
+
+    vRewards.push_back(CTxReward(pubKey, rewards, (uint32_t)GetTime()));
+
+    return true;
+}
+
 bool CTransactionUtils::CreateTransaction(std::map<std::string, CAmount>& receipts, const std::string& pubKey,
         const std::string& prvKey, CFeeRate& userFee, CMutableTransaction& tx, CAmount& nFeeRet, std::string& strFailReason)
 {
@@ -334,10 +386,15 @@ bool CTransactionUtils::CreateTransaction(std::map<std::string, CAmount>& receip
     assert(tx.nLockTime < LOCKTIME_THRESHOLD);
 
     std::vector<COutPoint> coins;
+    std::vector<CTxReward> vAvailableRewards;
     if (!AvailableCoins(pubKey, coins))
     {
-        strFailReason = _("fail to get UTXOs, invalid address");
-        return false;
+        AvailableRewards(pubKey, vAvailableRewards);
+        if (vAvailableRewards.size() == 0)
+        {
+            strFailReason = _("fail to get UTXOs and rewards, invalid address");
+            return false;
+        }
     }
 
     if (coins.size() == 0)
@@ -361,6 +418,7 @@ bool CTransactionUtils::CreateTransaction(std::map<std::string, CAmount>& receip
     while (true)
     {
         tx.vin.clear();
+        tx.vreward.clear();
         tx.vout.clear();
 
         bool fFirst = true;
@@ -403,12 +461,24 @@ bool CTransactionUtils::CreateTransaction(std::map<std::string, CAmount>& receip
 
         // Choose coins to use
         std::set<COutPoint> setCoins;
+        std::vector<CTxReward> setRewards;
         CAmount nValueIn = 0;
+        CAmount nRewardIn = 0;
         LogPrintf("selected value:%d\n", nValueToSelect);
         if (!SelectCoins(coins, nValueToSelect, setCoins, nValueIn))
         {
-            strFailReason = _("Insufficient funds");
-            return false;
+            if (vAvailableRewards.size() == 0)
+            {
+                AvailableRewards(pubKey, vAvailableRewards);
+            }
+
+            CAmount nRewardTargetValue = nValueToSelect - nValueIn;
+            LogPrintf("selected reward target value:%d  [\n", nRewardTargetValue);
+            if (!SelectRewards(vAvailableRewards, nRewardTargetValue, setRewards, nRewardIn))
+            {
+                strFailReason = _("Insufficient funds");
+                return false;
+            }
         }
 
         LogPrintf("selected coins value:%d  [\n", nValueIn);
@@ -418,6 +488,14 @@ bool CTransactionUtils::CreateTransaction(std::map<std::string, CAmount>& receip
         }
         LogPrintf("]\n");
 
+        LogPrintf("selected rewards value:%d  [\n", nRewardIn);
+        BOOST_FOREACH(const CTxReward& rw, setRewards)
+        {
+            LogPrintf("\t%s,\t%d\n", rw.senderPubkey, rw.rewardBalance);
+        }
+        LogPrintf("]\n");
+
+        nValueIn += nRewardIn;
         const CAmount nChange = nValueIn - nValueToSelect;
         if (nChange > 0)
         {
@@ -493,6 +571,9 @@ bool CTransactionUtils::CreateTransaction(std::map<std::string, CAmount>& receip
         BOOST_FOREACH(const COutPoint& coin, setCoins)
             tx.vin.push_back(CTxIn(coin, CScript(),
                                       std::numeric_limits<unsigned int>::max()-1));
+        // Fill vreward
+        BOOST_FOREACH(const CTxReward& reward, setRewards)
+            tx.vreward.push_back(reward);
 
         // Sign
         int nIn = 0;
@@ -521,6 +602,32 @@ bool CTransactionUtils::CreateTransaction(std::map<std::string, CAmount>& receip
             }
 
             nIn++;
+        }
+
+        int nReward = 0;
+        if (setRewards.size() > 0)// Sign rewards
+        {
+            BOOST_FOREACH(const CTxReward& reward, setRewards)
+            {
+                bool signSuccess;
+                bool bCheckReward = true;
+                const CScript scriptPubKey = CScript() << ParseHex(reward.senderPubkey) << OP_CHECKREWARDSIG;
+                LogPrintf("sign rewards pubkey:%s \n", reward.senderPubkey);
+                SignatureData sigdata;
+
+                signSuccess = ProduceSignatureForRewards(TransactionSignatureCreator(&keystore, &txNewConst, nReward, reward.rewardBalance, SIGHASH_ALL, bCheckReward), scriptPubKey, sigdata);
+
+                if (!signSuccess)
+                {
+                    strFailReason = _("Signing transaction failed with rewards");
+                    return false;
+                } else {
+                    tx.vreward[nReward].scriptSig = sigdata.scriptSig;
+                    //UpdateTransaction(txNew, nIn, sigdata);
+                }
+
+                nReward++;
+            }
         }
 
         unsigned int nBytes = GetVirtualTransactionSize(tx);

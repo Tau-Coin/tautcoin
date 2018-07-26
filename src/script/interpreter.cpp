@@ -12,6 +12,7 @@
 #include "pubkey.h"
 #include "script/script.h"
 #include "uint256.h"
+#include "utilstrencodings.h"
 
 using namespace std;
 
@@ -991,6 +992,43 @@ bool EvalScript(vector<vector<unsigned char> >& stack, const CScript& script, un
                 }
                 break;
 
+                case OP_CHECKREWARDSIG:
+                case OP_CHECKREWARDSIGVERIFY:
+                {
+                    // (sig pubkey -- bool)
+                    if (stack.size() < 2)
+                        return set_error(serror, SCRIPT_ERR_INVALID_STACK_OPERATION);
+
+                    valtype& vchSig    = stacktop(-2);
+                    valtype& vchPubKey = stacktop(-1);
+
+                    // Subset of script starting at the most recent codeseparator
+                    CScript scriptCode(pbegincodehash, pend);
+
+                    // Drop the signature, since there's no way for a signature to sign itself
+                    if (sigversion == SIGVERSION_BASE) {
+                        scriptCode.FindAndDelete(CScript(vchSig));
+                    }
+
+                    if (!CheckSignatureEncoding(vchSig, flags, serror) || !CheckPubKeyEncoding(vchPubKey, flags, serror)) {
+                        //serror is set
+                        return false;
+                    }
+                    bool fSuccess = checker.CheckSig(vchSig, vchPubKey, scriptCode, sigversion);
+
+                    popstack(stack);
+                    popstack(stack);
+                    stack.push_back(fSuccess ? vchTrue : vchFalse);
+                    if (opcode == OP_CHECKREWARDSIGVERIFY)
+                    {
+                        if (fSuccess)
+                            popstack(stack);
+                        else
+                            return set_error(serror, SCRIPT_ERR_CHECKSIGVERIFY);
+                    }
+                }
+                break;
+
                 default:
                     return set_error(serror, SCRIPT_ERR_BAD_OPCODE);
             }
@@ -1078,6 +1116,23 @@ public:
             ::Serialize(s, txTo.vin[nInput].nSequence, nType, nVersion);
     }
 
+    /** Serialize an reward of txTo */
+    template<typename S>
+    void SerializeReward(S &s, unsigned int nReward, int nType, int nVersion) const {
+        // Serialize the senderPubkey
+        ::Serialize(s, txTo.vreward[nReward].senderPubkey, nType, nVersion);
+        // Serialize the rewardBalance
+        ::Serialize(s, txTo.vreward[nReward].rewardBalance, nType, nVersion);
+        // Serialize the scriptSig
+        if (nReward != nIn)
+            // Blank out other inputs' signatures
+            ::Serialize(s, CScriptBase(), nType, nVersion);
+        else
+            SerializeScriptCode(s, nType, nVersion);
+        // Serialize the transTime
+        ::Serialize(s, txTo.vreward[nReward].transTime, nType, nVersion);
+    }
+
     /** Serialize an output of txTo */
     template<typename S>
     void SerializeOutput(S &s, unsigned int nOutput, int nType, int nVersion) const {
@@ -1103,6 +1158,12 @@ public:
         ::WriteCompactSize(s, nOutputs);
         for (unsigned int nOutput = 0; nOutput < nOutputs; nOutput++)
              SerializeOutput(s, nOutput, nType, nVersion);
+        // Serialize reward
+        unsigned int nRewards = txTo.vreward.size();
+        ::WriteCompactSize(s, nRewards);
+        for (unsigned int nReward = 0; nReward < nRewards; nReward++)
+            SerializeReward(s, nReward, nType, nVersion);
+            //::Serialize(s, txTo.vreward[nReward], nType, nVersion);
         // Serialize nLockTime
         ::Serialize(s, txTo.nLockTime, nType, nVersion);
     }
@@ -1110,7 +1171,8 @@ public:
 
 } // anon namespace
 
-uint256 SignatureHash(const CScript& scriptCode, const CTransaction& txTo, unsigned int nIn, int nHashType, const CAmount& amount, SigVersion sigversion)
+uint256 SignatureHash(const CScript& scriptCode, const CTransaction& txTo, unsigned int nIn, int nHashType,
+                      const CAmount& amount, SigVersion sigversion, bool bCheckReward)
 {
     if (sigversion == SIGVERSION_WITNESS_V0) {
         uint256 hashPrevouts;
@@ -1169,8 +1231,12 @@ uint256 SignatureHash(const CScript& scriptCode, const CTransaction& txTo, unsig
     }
 
     static const uint256 one(uint256S("0000000000000000000000000000000000000000000000000000000000000001"));
-    if (nIn >= txTo.vin.size()) {
+    if (nIn >= txTo.vin.size() && !bCheckReward) {
         //  nIn out of range
+        return one;
+    }
+    if (nIn >= txTo.vreward.size() && bCheckReward) {
+        //  nReward out of range
         return one;
     }
 
@@ -1209,10 +1275,17 @@ bool TransactionSignatureChecker::CheckSig(const vector<unsigned char>& vchSigIn
     int nHashType = vchSig.back();
     vchSig.pop_back();
 
-    uint256 sighash = SignatureHash(scriptCode, *txTo, nIn, nHashType, amount, sigversion);
+    uint256 sighash = SignatureHash(scriptCode, *txTo, nIn, nHashType, amount, sigversion, bCheckReward);
 
     if (!VerifySignature(vchSig, pubkey, sighash))
         return false;
+
+    if (bCheckReward)
+    {
+        CPubKey senderPubkey(ParseHex(txTo->vreward[nIn].senderPubkey));
+        if (pubkey != senderPubkey || 10*COIN/*getreward(txTo->vreward[nIn].senderPubkey)*/ != amount)
+            return false;
+    }
 
     return true;
 }

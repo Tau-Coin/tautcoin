@@ -64,7 +64,7 @@ mysqlpp::StoreQueryResult ISNDB::ISNSqlSelectAA(const string &tablename, const v
 }
 
 // update ISNDB with condition
-mysqlpp::SimpleResult ISNDB::ISNSqlUpdate(const string &tablename, const vector<string> &field, const vector<string> &values, const string &condition)
+mysqlpp::SimpleResult ISNDB::ISNSqlUpdate(const string &tablename, const vector<string> &field, const vector<string> &values, const string &condition, const string &cvalue)
 {
 	// form the query sentence
 	if(field.size()!=values.size())
@@ -81,27 +81,27 @@ mysqlpp::SimpleResult ISNDB::ISNSqlUpdate(const string &tablename, const vector<
 		//according tablename in different way
 		if(fieldSize == 1)
 		{
-			query<< "update %0"" set %1""= %2q where address = %3q";
+			query<< "update %0"" set %1""= %2q where %3""= %4q";
 			query.parse();
-			mysqlpp::SimpleResult dataTmp = query.execute(tablename, field[0], values[0], condition);
+			mysqlpp::SimpleResult dataTmp = query.execute(tablename, field[0], values[0], condition, cvalue);
 			return dataTmp;
 		}
 		else if(fieldSize == 2)
 		{
-			query<< "update %0"" set %1""= %2q, %3""= %4q where address = %5q";
+			query<< "update %0"" set %1""= %2q, %3""= %4q where %5""= %6q";
 			query.parse();
-			mysqlpp::SimpleResult dataTmp = query.execute(tablename, field[0], values[0], field[1], values[1], condition);
+			mysqlpp::SimpleResult dataTmp = query.execute(tablename, field[0], values[0], field[1], values[1], condition, cvalue);
 			return dataTmp;
 		}
 		else if(fieldSize == 3)
 		{
-			query<< "update %0"" set %1""= %2q, %3""= %4q, %5""= %6q where address = %7q";
+			query<< "update %0"" set %1""= %2q, %3""= %4q, %5""= %6q where %7""= %8q";
 			query.parse();
 			mysqlpp::SimpleResult dataTmp = query.execute(tablename,
 														  field[0], values[0],
 														  field[1], values[1],
 														  field[2], values[2],
-														  condition);
+														  condition, cvalue);
 			return dataTmp;
 		}
 	}
@@ -117,15 +117,15 @@ mysqlpp::SimpleResult ISNDB::ISNSqlUpdate(const string &tablename, const vector<
 	}
 }
 // for ttc+= 1
-mysqlpp::SimpleResult ISNDB::ISNSqlAddOne(const string &tablename, const vector<string> &field, const string &condition)
+mysqlpp::SimpleResult ISNDB::ISNSqlAddOne(const string &tablename, const vector<string> &field, const string &condition, const string &cvalue)
 {
 	try{
 
 		mysqlpp::Query query= con.query();
 		//according tablename in different way
-		query<< "update %0"" set %1""=%1""+ 1 where address = %2q";
+		query<< "update %0"" set %1""=%1""+ 1 where %2""= %3q";
 		query.parse();
-		mysqlpp::SimpleResult dataTmp = query.execute(tablename, field[0], condition);
+		mysqlpp::SimpleResult dataTmp = query.execute(tablename, field[0], condition, cvalue);
 		return dataTmp;
 	}
 	catch (const mysqlpp::BadQuery& er) {
