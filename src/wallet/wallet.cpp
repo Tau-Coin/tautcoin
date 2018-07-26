@@ -1056,8 +1056,27 @@ void CWallet::SyncTransaction(const CTransaction& tx, const CBlockIndex *pindex,
 
     BOOST_FOREACH(const CTxReward& txReward, tx.vreward)
     {
-        string pubkeystr(txReward.senderPubkey);
-        mapSpentReward.insert(pair<string, bool>(pubkeystr, true));
+        std::map<string, bool>::const_iterator itermap = mapSpentReward.find(txReward.senderPubkey);
+        if (itermap == mapSpentReward.end())
+            mapSpentReward.insert(pair<string, bool>(txReward.senderPubkey, true));
+    }
+}
+
+void CWallet::RemarkToUnspentReward(const std::vector<CTransaction>& vtx)
+{
+    LOCK2(cs_main, cs_wallet);
+
+    BOOST_FOREACH(const CTransaction& tx, vtx)
+    {
+        if (tx.IsCoinBase())
+            continue;
+
+        BOOST_FOREACH(const CTxReward& txReward, tx.vreward)
+        {
+            std::map<string, bool>::const_iterator itermap = mapSpentReward.find(txReward.senderPubkey);
+            if (itermap != mapSpentReward.end())
+                mapSpentReward.erase(itermap);
+        }
     }
 }
 
