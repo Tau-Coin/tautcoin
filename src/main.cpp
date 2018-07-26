@@ -2690,7 +2690,7 @@ bool ConnectBlock(const CBlock& block, CValidationState& state, CBlockIndex* pin
             const CScript genesisOutputScript = CScript() << ParseHex(baseAddr[i]) << OP_CHECKSIG;
             ExtractDestination(genesisOutputScript, address);
             values.push_back(CBitcoinAddress(address).ToString());
-            values.push_back("0");
+            values.push_back("1");
             clubId = db.ISNSqlInsert(tableClub, values);
 
             values.clear();
@@ -2919,9 +2919,12 @@ bool ConnectBlock(const CBlock& block, CValidationState& state, CBlockIndex* pin
             std::string voutAddress, lastFatherAddress;
             std::vector<std::string> field, tableMemberValues, tableClubValues;
             //string condition, cvalue;
+            std::cout << "-----------------" << tx.vout.size() << std::endl;
             for (unsigned int i = 0; i < tx.vout.size(); i++) {
                 ExtractDestinationFromP2PKAndP2PKH(tx.vout[i].scriptPubKey, address);
                 voutAddress = CBitcoinAddress(address).ToString();
+                std::cout << "----Address:" << voutAddress << std::endl;
+                field.clear();
                 field.push_back(memFieldClub);
                 field.push_back(memFieldFather);
                 mysqlpp::StoreQueryResult dataSelect = db.ISNSqlSelectAA(tableMember, field, memFieldAddress, voutAddress);

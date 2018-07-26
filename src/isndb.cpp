@@ -21,6 +21,7 @@ mysqlpp::StoreQueryResult ISNDB::ISNSqlSelectAA(const string &tablename, const v
 {
 	// form the query sentence
 	int fieldSize= field.size();
+    mysqlpp::StoreQueryResult dataTmp;
 
 	try{
 
@@ -30,21 +31,21 @@ mysqlpp::StoreQueryResult ISNDB::ISNSqlSelectAA(const string &tablename, const v
 		{
 			query<< "select %0"" from %1"" where %2""= %3q";
 			query.parse();
-			mysqlpp::StoreQueryResult dataTmp = query.store(field[0], tablename, condition, cvalue);
+            dataTmp = query.store(field[0], tablename, condition, cvalue);
 			return dataTmp;
 		}
 		else if(fieldSize == 2)
 		{
-			query<< "select %0"", %1"" from %2"" where %2""= %3q";
+            query<< "select %0"", %1"" from %2"" where %3""= %4q";
 			query.parse();
-			mysqlpp::StoreQueryResult dataTmp = query.store(field[0], field[1], tablename, condition, cvalue);
+            dataTmp = query.store(field[0], field[1], tablename, condition, cvalue);
 			return dataTmp;
 		}
 		else if(fieldSize == 3)
 		{
-			query<< "select %0"", %1"", %2"" from %3"" where address = %4q";
+            query<< "select %0"", %1"", %2"" from %3"" where %4"" = %5q";
 			query.parse();
-			mysqlpp::StoreQueryResult dataTmp = query.store(field[0], field[1], field[2], tablename, condition, cvalue);
+            dataTmp = query.store(field[0], field[1], field[2], tablename, condition, cvalue);
 			return dataTmp;
 		}
 	}
@@ -60,7 +61,7 @@ mysqlpp::StoreQueryResult ISNDB::ISNSqlSelectAA(const string &tablename, const v
 				", actual size: " << er.actual_size << endl;
 		exit(-1);
 	}
-
+    return dataTmp;
 }
 
 // update ISNDB with condition
@@ -74,6 +75,7 @@ mysqlpp::SimpleResult ISNDB::ISNSqlUpdate(const string &tablename, const vector<
 	}
 
 	int fieldSize= field.size();
+    mysqlpp::SimpleResult dataTmp;
 
 	try{
 
@@ -108,13 +110,16 @@ mysqlpp::SimpleResult ISNDB::ISNSqlUpdate(const string &tablename, const vector<
 	catch (const mysqlpp::BadQuery& er) {
 		// Handle any query errors
 		cerr << "Query error: " << er.what() << endl;
+        exit(-1);
 	}
 	catch (const mysqlpp::BadConversion& er) {
 		// Handle bad conversions; e.g. type mismatch populating 'stock'
 		cerr << "Conversion error: " << er.what() << endl <<
 				"\tretrieved data size: " << er.retrieved <<
 				", actual size: " << er.actual_size << endl;
+        exit(-1);
 	}
+    return dataTmp;
 }
 // for ttc+= 1
 mysqlpp::SimpleResult ISNDB::ISNSqlAddOne(const string &tablename, const vector<string> &field, const string &condition, const string &cvalue)
