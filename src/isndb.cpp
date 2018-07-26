@@ -15,7 +15,6 @@ void ISNDB::StartISNDBService()
 {
     // Start db connection
     LogPrintf("Starting ISNDB service...\n");
-    pIsnDBSingleton = NULL;
     ISNDB::GetInstance();
 }
 
