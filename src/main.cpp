@@ -2175,11 +2175,9 @@ bool CheckRewards(const CTransaction& tx, CValidationState &state, bool fScriptC
     // this optimisation would allow an invalid chain to be accepted.
     if (fScriptChecks) {
         for (unsigned int i = 0; i < tx.vreward.size(); i++) {
-            CPubKey pubkey(ParseHex(tx.vreward[i].senderPubkey));
-            CKeyID keyid = pubkey.GetID();
             const CAmount senderRewardInTx = tx.vreward[i].rewardBalance;
-            const CAmount senderRewardInDB = 10*COIN;//GetRewardsByPubkey(CBitcoinAddress(keyid).ToString());
-            if (senderRewardInTx != senderRewardInDB)
+            const CAmount senderRewardInDB = GetRewardsByPubkey(tx.vreward[i].senderPubkey);
+            if (senderRewardInTx > senderRewardInDB)
                 return state.DoS(100,false, REJECT_INVALID, "reward-balance-verify-flag-failed");
 
             // Verify signature

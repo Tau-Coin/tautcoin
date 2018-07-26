@@ -1053,6 +1053,12 @@ void CWallet::SyncTransaction(const CTransaction& tx, const CBlockIndex *pindex,
         if (mapWallet.count(txin.prevout.hash))
             mapWallet[txin.prevout.hash].MarkDirty();
     }
+
+    BOOST_FOREACH(const CTxReward& txReward, tx.vreward)
+    {
+        string pubkeystr(txReward.senderPubkey);
+        mapSpentReward.insert(pair<string, bool>(pubkeystr, true));
+    }
 }
 
 
@@ -1899,10 +1905,15 @@ void CWallet::AvailableRewards(vector<CTxReward>& vRewards, const CCoinControl *
             const CKeyID &keyid = it->first;
             CKey key;
             if (pwalletMain->GetKey(keyid, key)) {
-                string strAddr = CBitcoinAddress(keyid).ToString();
-                CAmount value = 10*COIN;//getbalancebyaddress(strAddr);
+                string strPubkey = HexStr(ToByteVector(key.GetPubKey()));
+                CAmount value = GetRewardsByPubkey(strPubkey);
                 if (value > 0)
                 {
+                    // The rewards spent in mempool is not available
+                    std::map<string, bool>::const_iterator itermap = mapSpentReward.find(strPubkey);
+                    if (itermap != mapSpentReward.end() && itermap->second)
+                        continue;
+
                     CTxReward reward = CTxReward(HexStr(ToByteVector(key.GetPubKey())), value, GetTime());
                     vRewards.push_back(reward);
                 }

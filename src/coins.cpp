@@ -267,18 +267,6 @@ bool CCoinsViewCache::HaveInputs(const CTransaction& tx) const
                 return false;
             }
         }
-        // vreward - CowTC
-		CAmount bIn = 0;
-        for (unsigned int i = 0; i < tx.vreward.size(); i++) {
-            bIn = tx.vreward[i].rewardBalance;
-			string addrStr;
-            ConvertPubkeyToAddress(tx.vreward[i].senderPubkey, addrStr);
-            CAmount bLocal = 10*COIN;//getRewardByAddress(addrStr);
-        	if (bLocal< bIn) {
-        		return false;
-			}
-        }
-
     }
     return true;
 }
