@@ -2751,7 +2751,7 @@ bool ConnectBlock(const CBlock& block, CValidationState& state, CBlockIndex* pin
             values.clear();
             values.push_back(CBitcoinAddress(address).ToString());
             values.push_back(std::to_string(clubId));
-            values.push_back("-1");
+            values.push_back("0");
             values.push_back("1");
             values.push_back("0");
             pdb->ISNSqlInsert(tableMember, values);
@@ -3031,7 +3031,7 @@ bool ConnectBlock(const CBlock& block, CValidationState& state, CBlockIndex* pin
                             field.push_back(memFieldClub);
                             field.push_back(memFieldCount);
                             values.clear();
-                            values.push_back("-1");
+                            values.push_back("0");
                             values.push_back(std::to_string(clubId));
                             values.push_back(std::to_string(rootc));
                             pdb->ISNSqlUpdate(tableMember, field, values, memFieldAddress, voutAddress);
