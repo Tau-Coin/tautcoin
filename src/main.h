@@ -21,6 +21,7 @@
 #include "sync.h"
 #include "versionbits.h"
 #include "txdb.h"
+#include "isndb.h"
 
 #include <algorithm>
 #include <exception>
@@ -457,6 +458,9 @@ bool CheckBlock(const CBlock& block, CValidationState& state, const Consensus::P
  *  set; UTXO-related validity checks are done in ConnectBlock(). */
 bool ContextualCheckBlockHeader(const CBlockHeader& block, CValidationState& state, const Consensus::Params& consensusParams, CBlockIndex* pindexPrev, int64_t nAdjustedTime);
 bool ContextualCheckBlock(const CBlock& block, CValidationState& state, CBlockIndex *pindexPrev);
+
+//Non recursive version
+void BreadthFirstSearch(ISNDB &db, std::string root_id, int club_id, int ttc);
 
 /** Apply the effects of this block (with given index) on the UTXO set represented by coins.
  *  Validity checks that depend on the UTXO set are also done; ConnectBlock()

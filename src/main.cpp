@@ -40,7 +40,6 @@
 #include "validationinterface.h"
 #include "versionbits.h"
 #include "base58.h"
-#include "isndb.h"
 #include "tool.h"
 
 #include <atomic>
@@ -3015,14 +3014,20 @@ bool ConnectBlock(const CBlock& block, CValidationState& state, CBlockIndex* pin
 
                             field.clear();
                             field.push_back(clubFieldCount);
+                            field.push_back(clubFieldAddress);
                             mysqlpp::StoreQueryResult fatherClub = db.ISNSqlSelectAA(tableClub, field, clubFieldID, root[0]["club_id"].c_str());
-                            fatherttc = atoi(fatherClub[0]["ttc"].c_str()) - ttc - rootc;
+                            if (maxValueAddress.compare(fatherClub[0]["address"].c_str())) {//vin is not a miner
+                                fatherttc = atoi(fatherClub[0]["ttc"].c_str()) - ttc - rootc;
 
-                            field.clear();
-                            field.push_back(clubFieldCount);
-                            values.clear();
-                            values.push_back(std::to_string(fatherttc));
-                            db.ISNSqlUpdate(tableClub, field, values, clubFieldID, root[0]["club_id"].c_str());
+                                field.clear();
+                                field.push_back(clubFieldCount);
+                                values.clear();
+                                values.push_back(std::to_string(fatherttc));
+                                db.ISNSqlUpdate(tableClub, field, values, clubFieldID, root[0]["club_id"].c_str());
+                            } else {
+                                //delete
+                                db.ISNSqlDelete(tableClub, clubFieldAddress, maxValueAddress);
+                            }
 
                             field.clear();
                             field.push_back(memFieldFather);

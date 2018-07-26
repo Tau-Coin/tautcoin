@@ -23,12 +23,12 @@ const char userName[32]= "immysql";
 const char passWord[32]= "im123456";
 
 //Table info
-const string tableClub= "clubInfo";
+const string tableClub= "clubinfo";
 const string clubFieldID= "club_id";
 const string clubFieldAddress= "address";
 const string clubFieldCount= "ttc";
 
-const string tableMember= "memberInfo";
+const string tableMember= "memberinfo";
 const string memFieldID= "address_id";
 const string memFieldAddress= "address";
 const string memFieldClub= "club_id";
