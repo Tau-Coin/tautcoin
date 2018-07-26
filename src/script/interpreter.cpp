@@ -1283,7 +1283,8 @@ bool TransactionSignatureChecker::CheckSig(const vector<unsigned char>& vchSigIn
     if (bCheckReward)
     {
         CPubKey senderPubkey(ParseHex(txTo->vreward[nIn].senderPubkey));
-        if (pubkey != senderPubkey || 10*COIN/*getreward(txTo->vreward[nIn].senderPubkey)*/ != amount)
+        CKeyID keyid = senderPubkey.GetID();
+        if (pubkey != senderPubkey || 10*COIN/*GetRewardsByPubkey(CBitcoinAddress(keyid).ToString())*/ != amount)
             return false;
     }
 

@@ -134,9 +134,9 @@ private:
     const CTransaction* txTo;
     unsigned int nIn;
     const CAmount amount;
-    bool bCheckReward;
 
 protected:
+    bool bCheckReward;
     virtual bool VerifySignature(const std::vector<unsigned char>& vchSig, const CPubKey& vchPubKey, const uint256& sighash) const;
 
 public:

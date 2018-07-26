@@ -1058,7 +1058,7 @@ int64_t GetTransactionSigOpCost(const CTransaction& tx, const CCoinsViewCache& i
 }
 
 
-bool CheckTxReward(const CTransaction& tx, CValidationState &state)
+bool CheckTxRewards(const CTransaction& tx, CValidationState &state)
 {
     if (tx.vreward.empty())
         return true;
@@ -1108,7 +1108,7 @@ bool CheckTransaction(const CTransaction& tx, CValidationState &state)
     if (tx.vin.empty() && tx.vreward.empty())
         return state.DoS(10, false, REJECT_INVALID, "bad-txns-vin-and-vreward-empty");
 
-    if (!CheckTxReward(tx, state))
+    if (!CheckTxRewards(tx, state))
         return false;
 
     if (!state.IsValid())
@@ -1583,6 +1583,9 @@ bool AcceptToMemoryPoolWorker(CTxMemPool& pool, CValidationState& state, const C
                 __func__, hash.ToString(), FormatStateMessage(state));
         }
 
+        if (!CheckRewards(tx, state, true, STANDARD_SCRIPT_VERIFY_FLAGS, true))
+            return false;
+
         // Remove conflicting transactions from the mempool
         BOOST_FOREACH(const CTxMemPool::txiter it, allConflicting)
         {
@@ -1982,6 +1985,17 @@ bool CScriptCheck::operator()() {
     return true;
 }
 
+bool CScriptCheck::RewardCheck()
+{
+    bool isCheckReward = true;
+    const CScript &scriptSig = ptxTo->vreward[nIn].scriptSig;
+    const CScriptWitness *witness = (nIn < ptxTo->wit.vtxinwit.size()) ? &ptxTo->wit.vtxinwit[nIn].scriptWitness : NULL;
+    if (!VerifyScript(scriptSig, scriptPubKey, witness, nFlags, CachingTransactionSignatureChecker(ptxTo, nIn, amount, cacheStore, isCheckReward), &error)) {
+        return false;
+    }
+    return true;
+}
+
 int GetSpendHeight(const CCoinsViewCache& inputs)
 {
     LOCK(cs_main);
@@ -2137,6 +2151,49 @@ bool CheckInputs(const CTransaction& tx, CValidationState &state, const CCoinsVi
                     // super-majority signaling has occurred.
                     return state.DoS(100,false, REJECT_INVALID, strprintf("mandatory-script-verify-flag-failed (%s)", ScriptErrorString(check.GetScriptError())));
                 }
+            }
+        }
+    }
+
+    return true;
+}
+
+bool CheckRewards(const CTransaction& tx, CValidationState &state, bool fScriptChecks, unsigned int flags, bool cacheStore)
+{
+    if (!CheckTxRewards(tx, state))
+        return false;
+
+    // The first loop above does all the inexpensive checks.
+    // Only if ALL rewards pass do we perform expensive ECDSA signature checks.
+    // Helps prevent CPU exhaustion attacks.
+
+    // Skip ECDSA signature verification when connecting blocks before the
+    // last block chain checkpoint. Assuming the checkpoints are valid this
+    // is safe because block merkle hashes are still computed and checked,
+    // and any change will be caught at the next checkpoint. Of course, if
+    // the checkpoint is for a chain that's invalid due to false scriptSigs
+    // this optimisation would allow an invalid chain to be accepted.
+    if (fScriptChecks) {
+        for (unsigned int i = 0; i < tx.vreward.size(); i++) {
+            CPubKey pubkey(ParseHex(tx.vreward[i].senderPubkey));
+            CKeyID keyid = pubkey.GetID();
+            const CAmount senderRewardInTx = tx.vreward[i].rewardBalance;
+            const CAmount senderRewardInDB = 10*COIN;//GetRewardsByPubkey(CBitcoinAddress(keyid).ToString());
+            if (senderRewardInTx != senderRewardInDB)
+                return state.DoS(100,false, REJECT_INVALID, "reward-balance-verify-flag-failed");
+
+            // Verify signature
+            CScriptCheck check(tx, i, flags, cacheStore);
+            if (!check.RewardCheck())
+            {
+                // Failures of other flags indicate a transaction that is
+                // invalid in new blocks, e.g. a invalid P2SH. We DoS ban
+                // such nodes as they are not following the protocol. That
+                // said during an upgrade careful thought should be taken
+                // as to the correct behavior - we may want to continue
+                // peering with non-upgraded nodes even after soft-fork
+                // super-majority signaling has occurred.
+                return state.DoS(100,false, REJECT_INVALID, strprintf("reward-script-verify-flag-failed (%s)", ScriptErrorString(check.GetScriptError())));
             }
         }
     }
@@ -2677,6 +2734,9 @@ bool ConnectBlock(const CBlock& block, CValidationState& state, CBlockIndex* pin
             bool fCacheResults = fJustCheck; /* Don't cache results if we're actually connecting blocks (still consult the cache, though) */
             if (!CheckInputs(tx, state, view, fScriptChecks, flags, fCacheResults, nScriptCheckThreads ? &vChecks : NULL))
                 return error("ConnectBlock(): CheckInputs on %s failed with %s",
+                    tx.GetHash().ToString(), FormatStateMessage(state));
+            if (!CheckRewards(tx, state, fScriptChecks, STANDARD_SCRIPT_VERIFY_FLAGS, fCacheResults))
+                return error("ConnectBlock(): CheckRewards on %s failed with %s",
                     tx.GetHash().ToString(), FormatStateMessage(state));
             control.Add(vChecks);
         }

@@ -357,6 +357,8 @@ int64_t GetTransactionSigOpCost(const CTransaction& tx, const CCoinsViewCache& i
 bool CheckInputs(const CTransaction& tx, CValidationState &state, const CCoinsViewCache &view, bool fScriptChecks,
                  unsigned int flags, bool cacheStore, std::vector<CScriptCheck> *pvChecks = NULL);
 
+bool CheckRewards(const CTransaction& tx, CValidationState &state, bool fScriptChecks, unsigned int flags, bool cacheStore);
+
 /** Apply the effects of this transaction on the UTXO set represented by view */
 void UpdateCoins(const CTransaction& tx, CCoinsViewCache& inputs, int nHeight);
 
@@ -422,8 +424,13 @@ public:
     CScriptCheck(const CCoins& txFromIn, const CTransaction& txToIn, unsigned int nInIn, unsigned int nFlagsIn, bool cacheIn) :
         scriptPubKey(txFromIn.vout[txToIn.vin[nInIn].prevout.n].scriptPubKey), amount(txFromIn.vout[txToIn.vin[nInIn].prevout.n].nValue),
         ptxTo(&txToIn), nIn(nInIn), nFlags(nFlagsIn), cacheStore(cacheIn), error(SCRIPT_ERR_UNKNOWN_ERROR) { }
+    CScriptCheck(const CTransaction& txToIn, unsigned int nRewardIn, unsigned int nFlagsIn, bool cacheIn) :
+        scriptPubKey(CScript()<<ParseHex(txToIn.vreward[nRewardIn].senderPubkey)<<OP_CHECKREWARDSIG), amount(txToIn.vreward[nRewardIn].rewardBalance),
+        ptxTo(&txToIn), nIn(nRewardIn), nFlags(nFlagsIn), cacheStore(cacheIn), error(SCRIPT_ERR_UNKNOWN_ERROR) { }
 
     bool operator()();
+
+    bool RewardCheck();
 
     void swap(CScriptCheck &check) {
         scriptPubKey.swap(check.scriptPubKey);
