@@ -16,7 +16,4 @@ bool IsAllowForge(const std::string pubKey, int height);
 CAmount GetEffectiveTransaction(const std::string address, int nHeight);
 
 bool isForgeScript(const CScript& script, CBitcoinAddress& addr, int& memCount);
-
-CAmount GetRewardsByPubkey(const std::string &pubkey);
-
 #endif //IMCOIN_STAKE_H

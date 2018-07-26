@@ -15,6 +15,7 @@
 #include "net.h"
 #include "policy/policy.h"
 #include "primitives/transaction.h"
+#include "rewardman.h"
 #include "rpc/server.h"
 #include "rpc/txutils.h"
 #include "script/script.h"
@@ -1073,7 +1074,7 @@ UniValue getbalancebypubkey(const UniValue& params, bool fHelp)
         }
 
         uint64_t rewards = 0;
-        rewards = GetRewardsByPubkey(pubkey);
+        rewards = RewardManager::GetInstance()->GetRewardsByPubkey(pubkey);
 
         UniValue o(UniValue::VOBJ);
         o.push_back(Pair("pubkey", pubkey));

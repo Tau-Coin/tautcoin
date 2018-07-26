@@ -25,6 +25,7 @@
 #include "primitives/block.h"
 #include "primitives/transaction.h"
 #include "random.h"
+#include "rewardman.h"
 #include "script/script.h"
 #include "script/sigcache.h"
 #include "script/standard.h"
@@ -2168,7 +2169,7 @@ bool CheckTxInputs(const CTransaction& tx, CValidationState& state, const CCoins
                 return state.DoS(100, false, REJECT_INVALID, "bad-txns-balance-outofrange");
             }
 
-            CAmount local = GetRewardsByPubkey(reward.senderPubkey);
+            CAmount local = RewardManager::GetInstance()->GetRewardsByPubkey(reward.senderPubkey);
             if (reward.rewardBalance > local)
             {
                 return state.DoS(100, false, REJECT_INVALID, "bad-txns-balance-largethandb");
@@ -2289,7 +2290,7 @@ bool CheckRewards(const CTransaction& tx, CValidationState &state, bool fScriptC
     if (fScriptChecks) {
         for (unsigned int i = 0; i < tx.vreward.size(); i++) {
             const CAmount senderRewardInTx = tx.vreward[i].rewardBalance;
-            const CAmount senderRewardInDB = GetRewardsByPubkey(tx.vreward[i].senderPubkey);
+            const CAmount senderRewardInDB = RewardManager::GetInstance()->GetRewardsByPubkey(tx.vreward[i].senderPubkey);
             if (senderRewardInTx > senderRewardInDB)
                 return state.DoS(100,false, REJECT_INVALID, "reward-balance-verify-flag-failed");
 

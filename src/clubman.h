@@ -12,7 +12,7 @@ class ClubManager
 {
     public:
 
-        ClubManager* GetInstance();
+        static ClubManager* GetInstance();
 
         uint64_t GetHarvestPowerByAddress(std::string& addr);
 

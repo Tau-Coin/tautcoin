@@ -6,6 +6,9 @@
 
 #include "util.h"
 #include "sync.h"
+//#include "tool.h"
+
+extern bool ConvertPubkeyToAddress(const std::string& pubKey, std::string& addrStr);
 
 static CCriticalSection cs_rwdman;
 
@@ -29,6 +32,16 @@ CAmount RewardManager::GetRewardsByAddress(std::string& address)
 	fields.push_back(memFieldBalance);
 	mysqlpp::StoreQueryResult bLocal = backendDb->ISNSqlSelectAA(tableMember, fields, memFieldAddress, address);
 	return bLocal[0]["balance"];
+}
+
+CAmount RewardManager::GetRewardsByPubkey(const std::string &pubkey)
+{
+    std::string addrStr;
+
+    if (!ConvertPubkeyToAddress(pubkey, addrStr))
+        return 0;
+
+    return 10*COIN;//getBalanceByAddress(addrStr);
 }
 
 RewardManager::RewardManager()

@@ -12,9 +12,11 @@ class RewardManager
 {
     public:
 
-        RewardManager* GetInstance();
+        static RewardManager* GetInstance();
 
         CAmount GetRewardsByAddress(std::string& addr);
+
+        CAmount GetRewardsByPubkey(const std::string &pubkey);
 
     protected:
 

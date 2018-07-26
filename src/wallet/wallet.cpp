@@ -26,6 +26,7 @@
 #include "ui_interface.h"
 #include "utilmoneystr.h"
 #include "tool.h"
+#include "rewardman.h"
 #include "stake.h"
 
 #include <assert.h>
@@ -1925,7 +1926,7 @@ void CWallet::AvailableRewards(vector<CTxReward>& vRewards, const CCoinControl *
             CKey key;
             if (pwalletMain->GetKey(keyid, key)) {
                 string strPubkey = HexStr(ToByteVector(key.GetPubKey()));
-                CAmount value = GetRewardsByPubkey(strPubkey);
+                CAmount value = RewardManager::GetInstance()->GetRewardsByPubkey(strPubkey);
                 if (value > 0)
                 {
                     // The rewards spent in mempool is not available
