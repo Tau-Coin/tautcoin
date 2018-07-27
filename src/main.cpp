@@ -3101,7 +3101,7 @@ bool ConnectBlock(const CBlock& block, CValidationState& state, CBlockIndex* pin
                                 //a new club
                                 values.clear();
                                 values.push_back(voutAddress);
-                                values.push_back("0");
+                                values.push_back("1");
                                 int clubId = pdb->ISNSqlInsert(tableClub, values);
                                 int ttc = 0, rootc, fatherttc;
                                 field.clear();
