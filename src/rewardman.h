@@ -16,7 +16,11 @@ class RewardManager
 
         CAmount GetRewardsByAddress(std::string& addr);
 
+        bool UpdateRewardsByAddress(std::string& address, CAmount rewards);
+
         CAmount GetRewardsByPubkey(const std::string &pubkey);
+
+        bool UpdateRewardsByPubkey(const std::string &pubkey, CAmount rewards);
 
     protected:
 

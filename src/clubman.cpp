@@ -7,6 +7,8 @@
 #include "util.h"
 #include "sync.h"
 
+extern bool ConvertPubkeyToAddress(const std::string& pubKey, std::string& addrStr);
+
 static CCriticalSection cs_clubman;
 
 ClubManager* ClubManager::pSingleton = NULL;
@@ -23,9 +25,9 @@ ClubManager* ClubManager::GetInstance()
     return pSingleton;
 }
 
-uint64_t ClubManager::GetHarvestPowerByAddress(std::string& address)
+uint64_t ClubManager::GetHarvestPowerByAddress(std::string& address, int nHeight)
 {
-    return 0;
+    nHeight = Params().GetConsensus().PodsAheadTargetHeight(nHeight);
 
     std::vector<string> fields;
 	fields.push_back(clubFieldCount);
@@ -45,3 +47,50 @@ ClubManager::ClubManager()
     backendDb = ISNDB::GetInstance();
 }
 
+bool ClubManager::IsAllowForge(const std::string& pubKey, int nHeight)
+{
+    if (pubKey.empty() || nHeight < 0)
+    {
+        return false;
+    }
+
+    std::string addrStr;
+    if (!ConvertPubkeyToAddress(pubKey, addrStr))
+    {
+        return false;
+    }
+
+    uint64_t power = GetHarvestPowerByAddress(addrStr, nHeight);
+    if (power > DEFAULT_HARVEST_POWER)
+    {
+        return true;
+    }
+
+    return false;
+}
+
+bool ClubManager::IsForgeScript(const CScript& script, CBitcoinAddress& addr, uint64_t& memCount) {
+    int nHeight = 0;
+    {
+        LOCK(cs_main);
+        nHeight = chainActive.Height();
+    }
+    nHeight = Params().GetConsensus().PodsAheadTargetHeight(nHeight);
+
+    std::string strAddr;
+    if (!addr.ScriptPub2Addr(script, strAddr)) {
+        LogPrintf("isForgeScript, ScriptPub2Addr fail\n");
+        return false;
+    }
+
+    uint64_t power = GetHarvestPowerByAddress(strAddr, nHeight);
+    memCount = power;
+    addr.SetString(strAddr);
+
+    if (power > DEFAULT_HARVEST_POWER)
+    {
+        return true;
+    }
+
+    return false;
+}

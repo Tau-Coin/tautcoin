@@ -24,7 +24,6 @@
 #include "script/sign.h"
 #include "script/standard.h"
 #include "tool.h"
-#include "stake.h"
 #include "txmempool.h"
 #include "uint256.h"
 #include "utilstrencodings.h"

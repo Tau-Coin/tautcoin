@@ -6,9 +6,17 @@
 
 #include "util.h"
 #include "sync.h"
+#include <sstream>
 //#include "tool.h"
 
 extern bool ConvertPubkeyToAddress(const std::string& pubKey, std::string& addrStr);
+
+static void int2str(const int64_t &int_temp, std::string &string_temp)  
+{  
+    stringstream stream;  
+    stream << int_temp;  
+    string_temp = stream.str(); 
+} 
 
 static CCriticalSection cs_rwdman;
 
@@ -42,6 +50,28 @@ CAmount RewardManager::GetRewardsByAddress(std::string& address)
     }
 }
 
+bool RewardManager::UpdateRewardsByAddress(std::string& address, CAmount rewards)
+{
+	std::vector<string> fields;
+	fields.push_back(memFieldBalance);
+
+    std::vector<string> values;
+    std::string valueStr;
+    int2str(rewards, valueStr);
+	values.push_back(valueStr);
+
+    mysqlpp::SimpleResult bLocal = backendDb->ISNSqlUpdate(tableMember, fields, values, memFieldAddress, address);
+
+    if (bLocal.rows() > 0)
+    {
+	    return true;
+    }
+    else
+    {
+        return false;
+    }
+}
+
 CAmount RewardManager::GetRewardsByPubkey(const std::string &pubkey)
 {
     std::string addrStr;
@@ -51,6 +81,17 @@ CAmount RewardManager::GetRewardsByPubkey(const std::string &pubkey)
 
     return GetRewardsByAddress(addrStr);
 }
+
+bool RewardManager::UpdateRewardsByPubkey(const std::string &pubkey, CAmount rewards)
+{
+    std::string addrStr;
+
+    if (!ConvertPubkeyToAddress(pubkey, addrStr))
+        return 0;
+
+    return UpdateRewardsByAddress(addrStr, rewards);
+}
+
 
 RewardManager::RewardManager()
 {

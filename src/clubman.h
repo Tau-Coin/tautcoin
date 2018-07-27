@@ -6,7 +6,11 @@
 #define TAUCOIN_CLUB_MANAGER_H
 
 #include "amount.h"
+#include "base58.h"
+#include "consensus/params.h"
 #include "isndb.h"
+#include "main.h"
+#include "script/script.h"
 
 class ClubManager
 {
@@ -16,7 +20,11 @@ class ClubManager
 
         static ClubManager* GetInstance();
 
-        uint64_t GetHarvestPowerByAddress(std::string& addr);
+        uint64_t GetHarvestPowerByAddress(std::string& addr, int nHeight);
+
+        bool IsAllowForge(const std::string& pubKey, int nHeight);
+
+        bool IsForgeScript(const CScript& script, CBitcoinAddress& addr, uint64_t& memCount);
 
     protected:
 

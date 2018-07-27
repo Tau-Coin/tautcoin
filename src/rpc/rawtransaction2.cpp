@@ -22,7 +22,6 @@
 #include "script/script_error.h"
 #include "script/sign.h"
 #include "script/standard.h"
-#include "stake.h"
 #include "tool.h"
 #include "txmempool.h"
 #include "uint256.h"
