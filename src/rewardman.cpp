@@ -40,9 +40,9 @@ CAmount RewardManager::GetRewardsByAddress(std::string& address)
 	fields.push_back(memFieldBalance);
 	mysqlpp::StoreQueryResult bLocal = backendDb->ISNSqlSelectAA(tableMember, fields, memFieldAddress, address);
 
-    LogPrintf("%s, %s, %d\n", __func__, address, bLocal.num_rows());
     if (bLocal.num_rows() > 0)
     {
+        LogPrintf("%s, %s, %d\n", __func__, address, (CAmount)bLocal[0]["balance"]);
 	    return bLocal[0]["balance"];
     }
     else
