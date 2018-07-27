@@ -97,7 +97,7 @@ RewardManager::RewardManager()
     backendDb = ISNDB::GetInstance();
 }
 
-bool RewardManager::GetMembersByClubID(const uint64_t& clubID, std::vector<std::string> addresses)
+bool RewardManager::GetMembersByClubID(uint64_t clubID, std::vector<std::string>& addresses)
 {
     addresses.clear();
 

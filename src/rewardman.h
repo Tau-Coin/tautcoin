@@ -10,28 +10,30 @@
 
 class RewardManager
 {
-    public:
+public:
 
-        static RewardManager* GetInstance();
+    int currentHeight;// use to update reward to avoid repetition
 
-        CAmount GetRewardsByAddress(std::string& addr);
+    static RewardManager* GetInstance();
 
-        bool UpdateRewardsByAddress(std::string& address, CAmount rewards);
+    CAmount GetRewardsByAddress(std::string& addr);
 
-        CAmount GetRewardsByPubkey(const std::string &pubkey);
+    bool UpdateRewardsByAddress(std::string& address, CAmount rewards);
 
-        bool UpdateRewardsByPubkey(const std::string &pubkey, CAmount rewards);
+    CAmount GetRewardsByPubkey(const std::string &pubkey);
 
-        bool GetMembersByClubID(const uint64_t& clubID, std::vector<std::string> addresses);
+    bool UpdateRewardsByPubkey(const std::string &pubkey, CAmount rewards);
 
-    protected:
+    bool GetMembersByClubID(uint64_t clubID, std::vector<string> &addresses);
 
-        RewardManager();
+protected:
 
-    private:
+    RewardManager();
 
-        static RewardManager* pSingleton;
+private:
 
-        ISNDB* backendDb;
+    static RewardManager* pSingleton;
+
+    ISNDB* backendDb;
 };
 #endif // TAUCOIN_REWARD_MANAGER_H
