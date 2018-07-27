@@ -959,7 +959,7 @@
         <translation>総額</translation>
     </message>
     <message>
-        <source>Enter a Bitcoin address (e.g. %1)</source>
+        <source>Enter a Taucoin address (e.g. %1)</source>
         <translation>Bitcoinアドレスを入力してください (例 %1)</translation>
     </message>
     <message>

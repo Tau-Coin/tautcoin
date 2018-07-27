@@ -9,6 +9,7 @@
 #include "chain.h"
 #include "chainparams.h"
 #include "checkpoints.h"
+#include "clubman.h"
 #include "coins.h"
 #include "consensus/validation.h"
 #include "core_io.h"
@@ -24,7 +25,6 @@
 #include "utilstrencodings.h"
 #include "hash.h"
 #include "tool.h"
-#include "stake.h"
 #include <stdint.h>
 #include <univalue.h>
 #include <boost/thread/thread.hpp> // boost::thread::interrupt
@@ -243,6 +243,10 @@ uint256 GetNextCumulativeDifficulty(const CBlockIndex* pindexLast, uint64_t base
 bool CheckProofOfTransaction(const std::string& prevGenerationSignature, const std::string& currPubKey,
         int nHeight, unsigned int nTime, uint64_t baseTarget, const Consensus::Params& consensusParams, PodsErr& checkErr)
 {
+    static ClubManager* pClubMgr = NULL;
+    if (!pClubMgr)
+        pClubMgr = ClubManager::GetInstance();
+
     checkErr = PODS_NO_ERR;
 
     if (prevGenerationSignature.empty() || currPubKey.empty() || nHeight < 0 || nTime == 0) {
@@ -279,20 +283,20 @@ bool CheckProofOfTransaction(const std::string& prevGenerationSignature, const s
     if (fDebugPODS)
         LogPrintf("CheckProofOfTransaction, strAddr:%s\n", strAddr);
 
-    // get effective balance with nHeight
-    uint64_t effectiveTx =  (uint64_t)GetEffectiveTransaction(strAddr, nHeight);
-    // If effective balance is zero, return false directly.
-    if (effectiveTx == 0) {
-        LogPrintf("CheckProofOfTransaction failed, zero balance\n");
+    // get harverst power with nHeight
+    uint64_t harverstPower = pClubMgr->GetHarvestPowerByAddress(strAddr, nHeight);
+    // If harverst power is one, return false directly.
+    if (harverstPower <= ClubManager::DEFAULT_HARVEST_POWER) {
+        LogPrintf("CheckProofOfTransaction failed, not allow forge\n");
         checkErr = PODS_BALANCE_ERR;
         return false;
     }
 
     arith_uint256 thresold(baseTarget);
     thresold *= arith_uint256((uint64_t)nTime);
-    thresold *= arith_uint256((uint64_t)effectiveTx);
+    thresold *= arith_uint256((uint64_t)harverstPower);
 
-    LogPrintf("CheckProofOfTransaction, effectiveTx:%d\n", effectiveTx);
+    LogPrintf("CheckProofOfTransaction, harverst Power:%d\n", harverstPower);
     LogPrintf("CheckProofOfTransaction, hit     :%s\n", arith_uint256(hit).ToString());
     LogPrintf("CheckProofOfTransaction, thresold:%s\n", thresold.ToString());
     if (thresold.CompareTo(arith_uint256(hit)) > 0) {

@@ -7,6 +7,7 @@
 #include "amount.h"
 #include "chain.h"
 #include "chainparams.h"
+#include "clubman.h"
 #include "consensus/consensus.h"
 #include "consensus/params.h"
 #include "consensus/validation.h"
@@ -24,7 +25,6 @@
 #include "utilstrencodings.h"
 #include "validationinterface.h"
 #include "wallet/wallet.h"
-#include "stake.h"
 
 #include <stdint.h>
 
@@ -247,8 +247,8 @@ UniValue generatetoaddress(const UniValue& params, bool fHelp)
     coinbaseScript->reserveScript = GetScriptForDestination(address.Get());
 
     CBitcoinAddress dummyAddr;
-    int dummyInt = 0;
-    if (!isForgeScript(coinbaseScript->reserveScript, dummyAddr, dummyInt))
+    uint64_t dummyInt = 0;
+    if (!ClubManager::GetInstance()->IsForgeScript(coinbaseScript->reserveScript, dummyAddr, dummyInt))
         throw JSONRPCError(RPC_TYPE_ERROR, "Address not allowed to forge");
 
     CKeyID keyID;

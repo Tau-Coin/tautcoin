@@ -8,6 +8,7 @@
 #include "base58.h"
 #include "checkpoints.h"
 #include "chain.h"
+#include "clubman.h"
 #include "coincontrol.h"
 #include "consensus/consensus.h"
 #include "consensus/validation.h"
@@ -26,7 +27,7 @@
 #include "ui_interface.h"
 #include "utilmoneystr.h"
 #include "tool.h"
-#include "stake.h"
+#include "rewardman.h"
 
 #include <assert.h>
 
@@ -1056,8 +1057,27 @@ void CWallet::SyncTransaction(const CTransaction& tx, const CBlockIndex *pindex,
 
     BOOST_FOREACH(const CTxReward& txReward, tx.vreward)
     {
-        string pubkeystr(txReward.senderPubkey);
-        mapSpentReward.insert(pair<string, bool>(pubkeystr, true));
+        std::map<string, bool>::const_iterator itermap = mapSpentReward.find(txReward.senderPubkey);
+        if (itermap == mapSpentReward.end())
+            mapSpentReward.insert(pair<string, bool>(txReward.senderPubkey, true));
+    }
+}
+
+void CWallet::RemarkToUnspentReward(const std::vector<CTransaction>& vtx)
+{
+    LOCK2(cs_main, cs_wallet);
+
+    BOOST_FOREACH(const CTransaction& tx, vtx)
+    {
+        if (tx.IsCoinBase())
+            continue;
+
+        BOOST_FOREACH(const CTxReward& txReward, tx.vreward)
+        {
+            std::map<string, bool>::const_iterator itermap = mapSpentReward.find(txReward.senderPubkey);
+            if (itermap != mapSpentReward.end())
+                mapSpentReward.erase(itermap);
+        }
     }
 }
 
@@ -1906,7 +1926,7 @@ void CWallet::AvailableRewards(vector<CTxReward>& vRewards, const CCoinControl *
             CKey key;
             if (pwalletMain->GetKey(keyid, key)) {
                 string strPubkey = HexStr(ToByteVector(key.GetPubKey()));
-                CAmount value = GetRewardsByPubkey(strPubkey);
+                CAmount value = RewardManager::GetInstance()->GetRewardsByPubkey(strPubkey);
                 if (value > 0)
                 {
                     // The rewards spent in mempool is not available
@@ -2330,7 +2350,7 @@ bool CWallet::CreateTransaction(const vector<CRecipient>& vecSend, CWalletTx& wt
                 CScript bestChangeDest;
                 bool bestChangeDestGot = false;
                 CBitcoinAddress minerAddr;
-                int nMinerMemCnt = 0;;
+                uint64_t nMinerMemCnt = 0;;
                 CAmount nMaxValue = 0;
                 CScript maxInputScript;
 
@@ -2347,7 +2367,7 @@ bool CWallet::CreateTransaction(const vector<CRecipient>& vecSend, CWalletTx& wt
                         age += 1;
                     dPriority += (double)nCredit * age;
 
-                    if (!bestChangeDestGot && isForgeScript(pcoin.first->vout[pcoin.second].scriptPubKey,
+                    if (!bestChangeDestGot && ClubManager::GetInstance()->IsForgeScript(pcoin.first->vout[pcoin.second].scriptPubKey,
                             minerAddr, nMinerMemCnt) && nMinerMemCnt > 1) {
                         bestChangeDestGot = true;
                     }

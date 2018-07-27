@@ -12,6 +12,7 @@
 #include "chainparams.h"
 #include "checkpoints.h"
 #include "checkqueue.h"
+#include "clubman.h"
 #include "consensus/consensus.h"
 #include "consensus/merkle.h"
 #include "consensus/validation.h"
@@ -25,10 +26,10 @@
 #include "primitives/block.h"
 #include "primitives/transaction.h"
 #include "random.h"
+#include "rewardman.h"
 #include "script/script.h"
 #include "script/sigcache.h"
 #include "script/standard.h"
-#include "stake.h"
 #include "tinyformat.h"
 #include "txdb.h"
 #include "txmempool.h"
@@ -2089,6 +2090,74 @@ void UpdateCoins(const CTransaction& tx, CCoinsViewCache& inputs, int nHeight)
     UpdateCoins(tx, inputs, txundo, nHeight);
 }
 
+bool UpdateRewards(const CTransaction& tx, CAmount blockReward, int nHeight, bool isUndo)
+{
+    if (RewardManager::GetInstance()->currentHeight == nHeight)
+        return true;
+
+    RewardManager* rewardMan = RewardManager::GetInstance();
+    bool ret = true;
+    if (!tx.IsCoinBase())
+    {
+        for(unsigned int i = 0; i < tx.vreward.size(); i++)
+        {
+            CAmount rewardbalance = rewardMan->GetRewardsByPubkey(tx.vreward[i].senderPubkey);
+            if (isUndo)
+                ret = rewardMan->UpdateRewardsByPubkey(tx.vreward[i].senderPubkey,
+                                                       rewardbalance+tx.vreward[i].rewardBalance);
+            else
+                ret = rewardMan->UpdateRewardsByPubkey(tx.vreward[i].senderPubkey, 0);
+        }
+        if (!ret)
+            return ret;
+    }
+    else
+    {
+        assert(tx.vout.size() == 1);
+        ClubManager* clubMan = ClubManager::GetInstance();
+        string clubLeaderAddress;
+        CBitcoinAddress addr;
+        uint64_t clubID;
+        vector<string> members;
+        addr.ScriptPub2Addr(tx.vout[0].scriptPubKey, clubLeaderAddress);
+        ret &= clubMan->GetClubIDByAddress(clubLeaderAddress, clubID);
+        ret &= rewardMan->GetMembersByClubID(clubID, members);
+        if (!ret)
+            return ret;
+
+        if (members.size() > 0)
+        {
+            CAmount eachReward = (blockReward - tx.vout[0].nValue) / members.size();
+            assert(eachReward >= 0);
+            if (eachReward == 0)
+            {
+                CAmount rewardbalance = rewardMan->GetRewardsByAddress(clubLeaderAddress);
+                if (isUndo)
+                    ret = rewardMan->UpdateRewardsByAddress(clubLeaderAddress,
+                                                           rewardbalance-blockReward+tx.vout[0].nValue);
+                else
+                    ret = rewardMan->UpdateRewardsByAddress(clubLeaderAddress,
+                                                           rewardbalance+blockReward-tx.vout[0].nValue);
+            }
+            else
+            {
+                for(unsigned int j = 0; j < members.size(); j++)
+                {
+                    CAmount rewardbalance = rewardMan->GetRewardsByAddress(members[j]);
+                    if (isUndo)
+                        ret = rewardMan->UpdateRewardsByAddress(members[j], rewardbalance-eachReward);
+                    else
+                        ret = rewardMan->UpdateRewardsByAddress(members[j], rewardbalance+eachReward);
+                }
+            }
+        }
+    }
+
+    if (ret)
+        RewardManager::GetInstance()->currentHeight = nHeight;
+    return ret;
+}
+
 bool CScriptCheck::operator()() {
     const CScript &scriptSig = ptxTo->vin[nIn].scriptSig;
     const CScriptWitness *witness = (nIn < ptxTo->wit.vtxinwit.size()) ? &ptxTo->wit.vtxinwit[nIn].scriptWitness : NULL;
@@ -2168,7 +2237,7 @@ bool CheckTxInputs(const CTransaction& tx, CValidationState& state, const CCoins
                 return state.DoS(100, false, REJECT_INVALID, "bad-txns-balance-outofrange");
             }
 
-            CAmount local = GetRewardsByPubkey(reward.senderPubkey);
+            CAmount local = RewardManager::GetInstance()->GetRewardsByPubkey(reward.senderPubkey);
             if (reward.rewardBalance > local)
             {
                 return state.DoS(100, false, REJECT_INVALID, "bad-txns-balance-largethandb");
@@ -2289,7 +2358,7 @@ bool CheckRewards(const CTransaction& tx, CValidationState &state, bool fScriptC
     if (fScriptChecks) {
         for (unsigned int i = 0; i < tx.vreward.size(); i++) {
             const CAmount senderRewardInTx = tx.vreward[i].rewardBalance;
-            const CAmount senderRewardInDB = GetRewardsByPubkey(tx.vreward[i].senderPubkey);
+            const CAmount senderRewardInDB = RewardManager::GetInstance()->GetRewardsByPubkey(tx.vreward[i].senderPubkey);
             if (senderRewardInTx > senderRewardInDB)
                 return state.DoS(100,false, REJECT_INVALID, "reward-balance-verify-flag-failed");
 
@@ -2462,6 +2531,22 @@ bool DisconnectBlock(CBlock& block, CValidationState& state, CBlockIndex* pindex
 
     if (blockUndo.vtxundo.size() + 1 != block.vtx.size())
         return error("DisconnectBlock(): block and undo data inconsistent");
+
+    // restore rewards
+    bool isUndo = true;
+    CAmount nFees = 0;
+    for (int j = block.vtx.size() - 1; j >= 0; j--)
+    {
+        const CTransaction &tx = block.vtx[j];
+        if (!tx.IsCoinBase())
+            nFees += view.GetValueIn(tx)-tx.GetValueOut();
+    }
+    for (int k = block.vtx.size() - 1; k >= 0; k--)
+    {
+        const CTransaction &tx = block.vtx[k];
+        if (!UpdateRewards(tx, nFees, pindex->nHeight-1, isUndo))
+            return error("DisconnectBlock(): UpdateRewards failed");
+    }
 
     // undo transactions in reverse order
     for (int i = block.vtx.size() - 1; i >= 0; i--) {
@@ -3225,6 +3310,8 @@ bool ConnectBlock(const CBlock& block, CValidationState& state, CBlockIndex* pin
             */
         }
         UpdateCoins(tx, view, i == 0 ? undoDummy : blockundo.vtxundo.back(), pindex->nHeight);
+        if (!UpdateRewards(tx, nFees, pindex->nHeight))
+            return error("ConnectBlock(): UpdateRewards failed");
 
         /*for test
         CTxDestination address;
@@ -3696,6 +3783,8 @@ bool static ConnectTip(CValidationState& state, const CChainParams& chainparams,
     BOOST_FOREACH(const CTransaction &tx, pblock->vtx) {
         SyncWithWallets(tx, pindexNew, pblock);
     }
+    // Remark spent reward in wallet to unspent status
+    RemarkRewardInWallets(pblock->vtx);
 
     int64_t nTime6 = GetTimeMicros(); nTimePostConnect += nTime6 - nTime5; nTimeTotal += nTime6 - nTime1;
     LogPrint("bench", "  - Connect postprocess: %.2fms [%.2fs]\n", (nTime6 - nTime5) * 0.001, nTimePostConnect * 0.000001);
@@ -4259,11 +4348,6 @@ bool CheckBlockHeader(const CBlockHeader& block, CValidationState& state, const 
         return state.DoS(90, false, REJECT_INVALID, "mismatch generation signature", false, "proof of stake failed");
     }
 
-
-    // Check proof of work matches claimed amount
-    //if (fCheckPOW && !CheckProofOfWork(block.GetHash(), block.nBits, consensusParams))
-        //return state.DoS(50, false, REJECT_INVALID, "high-hash", false, "proof of work failed");
-
     // Check proof of stake matches claimed amount
     if (fCheckPOW && !CheckProofOfTransaction(block, state, consensusParams, pindexPrev))
         return state.DoS(50, false, REJECT_INVALID, "high-hit", false, "proof of stake failed");
@@ -4415,21 +4499,25 @@ std::vector<unsigned char> GenerateCoinbaseCommitment(CBlock& block, const CBloc
 
 bool ContextualCheckBlockHeader(const CBlockHeader& block, CValidationState& state, const Consensus::Params& consensusParams, CBlockIndex * const pindexPrev, int64_t nAdjustedTime)
 {
+    static ClubManager* clubMgr = NULL;
+    if (!clubMgr)
+        clubMgr = ClubManager::GetInstance();
+
     // Check generation signature
     if (!verifyGenerationSignature(pindexPrev->generationSignature,block.generationSignature, block.pubKeyOfpackager)) {
-        return state.DoS(90, false, REJECT_INVALID, "mismatch generation signature", false, "proof of stake failed");
+        return state.DoS(90, false, REJECT_INVALID, "mismatch generation signature", false, "proof of tx fail");
     }
 
     // Check proof of stake
     if (block.baseTarget != getNextPosRequired(pindexPrev))
-        return state.DoS(50, false, REJECT_INVALID, "bad-basetargetbits", false, "incorrect proof of stake");
+        return state.DoS(50, false, REJECT_INVALID, "bad-basetargetbits", false, "incorrect proof of tx");
 
     if (block.cumulativeDifficulty != GetNextCumulativeDifficulty(pindexPrev, block.baseTarget, consensusParams))
-        return state.DoS(50, false, REJECT_INVALID, "bad-cumuldiffbits", false, "incorrect proof of stake");
+        return state.DoS(50, false, REJECT_INVALID, "bad-cumuldiffbits", false, "incorrect proof of tx");
 
-    // Check proof of work
-    //if (block.nBits != GetNextWorkRequired(pindexPrev, &block, consensusParams))
-        //return state.DoS(100, false, REJECT_INVALID, "bad-diffbits", false, "incorrect proof of work");
+    // Check allowed to forge or not
+    if (!clubMgr->IsAllowForge(block.pubKeyOfpackager, pindexPrev->nHeight + 1))
+        return state.DoS(50, false, REJECT_INVALID, "not allowed to forge", false, "incorrect proof of tx");
 
     // Check timestamp against prev
     if (block.GetBlockTime() <= pindexPrev->GetMedianTimePast())
