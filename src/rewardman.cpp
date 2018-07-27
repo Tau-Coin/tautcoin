@@ -40,6 +40,7 @@ CAmount RewardManager::GetRewardsByAddress(std::string& address)
 	fields.push_back(memFieldBalance);
 	mysqlpp::StoreQueryResult bLocal = backendDb->ISNSqlSelectAA(tableMember, fields, memFieldAddress, address);
 
+    LogPrintf("%s, %s, %d\n", __func__, address, bLocal.num_rows());
     if (bLocal.num_rows() > 0)
     {
 	    return bLocal[0]["balance"];
@@ -61,6 +62,8 @@ bool RewardManager::UpdateRewardsByAddress(std::string& address, CAmount rewards
 	values.push_back(valueStr);
 
     mysqlpp::SimpleResult bLocal = backendDb->ISNSqlUpdate(tableMember, fields, values, memFieldAddress, address);
+
+    LogPrintf("%s, %s, %d, %d\n", __func__, address, rewards, bLocal.rows());
 
     if (bLocal.rows() > 0)
     {
@@ -111,8 +114,11 @@ bool RewardManager::GetMembersByClubID(uint64_t clubID, std::vector<std::string>
 	mysqlpp::StoreQueryResult bLocal = backendDb->ISNSqlSelectAA(tableMember, fields, memFieldClub, clubIDStr);
 
     uint64_t size = (uint64_t)bLocal.num_rows();
+    LogPrintf("%s, %d, %d\n", __func__, clubID, size);
+
     for (uint64_t i = 0; i != size; i++)
     {
+        LogPrintf("%s, db record:%d\n", __func__, (uint64_t)bLocal[i]["club_id"]);
         if (clubID != (uint64_t)bLocal[i]["club_id"])
         {
             addresses.push_back(static_cast<std::string>(bLocal[i]["address"]));

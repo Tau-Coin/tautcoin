@@ -32,6 +32,8 @@ uint64_t ClubManager::GetHarvestPowerByAddress(std::string& address, int nHeight
     std::vector<string> fields;
 	fields.push_back(clubFieldCount);
 	mysqlpp::StoreQueryResult bLocal = backendDb->ISNSqlSelectAA(tableClub, fields, clubFieldAddress, address);
+
+    LogPrintf("%s, %s, %d\n", __func__, address, bLocal.num_rows());
     if (bLocal.num_rows() > 0)
     {
 	    return (uint64_t)bLocal[0]["ttc"];
@@ -100,6 +102,8 @@ bool ClubManager::GetClubIDByAddress(const std::string& address, uint64_t& clubI
     std::vector<string> fields;
 	fields.push_back(clubFieldID);
 	mysqlpp::StoreQueryResult bLocal = backendDb->ISNSqlSelectAA(tableClub, fields, clubFieldAddress, address);
+
+    LogPrintf("%s, %s, %d\n", __func__, address, bLocal.num_rows());
     if (bLocal.num_rows() > 0)
     {
 	    clubID = (uint64_t)bLocal[0]["club_id"];
