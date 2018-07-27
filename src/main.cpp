@@ -3227,6 +3227,7 @@ bool ConnectBlock(const CBlock& block, CValidationState& state, CBlockIndex* pin
                             field.push_back(memFieldID);
                             field.push_back(memFieldClub);
                             mysqlpp::StoreQueryResult data = pdb->ISNSqlSelectAA(tableMember, field, memFieldAddress, maxValueAddress);
+                            tableMemberValues.clear();
                             tableMemberValues.push_back(voutAddress);
                             tableMemberValues.push_back(data[0]["club_id"].c_str());
                             tableMemberValues.push_back(data[0]["address_id"].c_str());
