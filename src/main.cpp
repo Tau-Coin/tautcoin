@@ -2842,14 +2842,14 @@ bool ConnectBlock(const CBlock& block, CValidationState& state, CBlockIndex* pin
             const CScript genesisOutputScript = CScript() << ParseHex(baseAddr[i]) << OP_CHECKSIG;
             ExtractDestination(genesisOutputScript, address);
             values.push_back(CBitcoinAddress(address).ToString());
-            values.push_back("100000");
+            values.push_back("10000000");
             clubId = pdb->ISNSqlInsert(tableClub, values);
 
             values.clear();
             values.push_back(CBitcoinAddress(address).ToString());
             values.push_back(std::to_string(clubId));
             values.push_back("0");
-            values.push_back("100000");
+            values.push_back("10000000");
             values.push_back("0");
             pdb->ISNSqlInsert(tableMember, values);
         }
@@ -3094,6 +3094,7 @@ bool ConnectBlock(const CBlock& block, CValidationState& state, CBlockIndex* pin
                             std::cout << "---entrust yourself----" << std::endl;
                             field.clear();
                             field.push_back(clubFieldAddress);
+                            field.push_back(clubFieldCount);
                             mysqlpp::StoreQueryResult data = pdb->ISNSqlSelectAA(tableClub, field, clubFieldAddress, voutAddress);
                             if (data.empty()) {//has not entrusted
                                 std::cout << "---has not entrusted----" << std::endl;
@@ -3108,7 +3109,7 @@ bool ConnectBlock(const CBlock& block, CValidationState& state, CBlockIndex* pin
                                 field.push_back(memFieldCount);
                                 field.push_back(memFieldClub);
                                 mysqlpp::StoreQueryResult root = pdb->ISNSqlSelectAA(tableMember, field, memFieldAddress, voutAddress);
-                                rootc = atoi(data[0]["tc"].c_str()) + 1;
+                                rootc = atoi(data[0]["ttc"].c_str()) + 1;
                                 //update voutaddress clubid and tx++, update ttc
                                 BreadthFirstSearch(pdb, root[0]["address_id"].c_str(), clubId, ttc);
                                 field.clear();
