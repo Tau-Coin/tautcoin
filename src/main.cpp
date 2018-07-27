@@ -2991,10 +2991,12 @@ bool ConnectBlock(const CBlock& block, CValidationState& state, CBlockIndex* pin
                     ofile << maxValueAddress << "    " << voutAddress << "    " << lastFatherAddress << std::endl;
                     //bEntrustTx = true;
                     if (maxValueAddress == voutAddress) {//entrust youself
+                        std::cout << "---entrust yourself----" << std::endl;
                         field.clear();
                         field.push_back(clubFieldAddress);
                         mysqlpp::StoreQueryResult data = pdb->ISNSqlSelectAA(tableClub, field, clubFieldAddress, voutAddress);
                         if (data.empty()) {//has not entrusted
+                            std::cout << "---has not entrusted----" << std::endl;
                             //a new club
                             values.clear();
                             values.push_back(voutAddress);
@@ -3036,6 +3038,7 @@ bool ConnectBlock(const CBlock& block, CValidationState& state, CBlockIndex* pin
                             values.push_back(std::to_string(rootc));
                             pdb->ISNSqlUpdate(tableMember, field, values, memFieldAddress, voutAddress);
                         } else {//has entrusted
+                            std::cout << "---has entrusted----" << std::endl;
                             field.clear();
                             field.push_back(memFieldCount);
                             pdb->ISNSqlAddOne(tableMember, field, memFieldAddress, voutAddress);
@@ -3047,12 +3050,14 @@ bool ConnectBlock(const CBlock& block, CValidationState& state, CBlockIndex* pin
                         //must entrust a miner
                         field.clear();
                         field.push_back(clubFieldID);
+                        field.push_back(clubFieldCount);
                         mysqlpp::StoreQueryResult data = pdb->ISNSqlSelectAA(tableClub, field, clubFieldAddress, voutAddress);
                         if (!data.empty()) {// it is a miner
+                            std::cout << "-------entrust a miner" << std::endl;
                             //miner data
                             field.clear();
                             field.push_back(memFieldID);
-                            mysqlpp::StoreQueryResult fatherData = pdb->ISNSqlSelectAA(tableMember, field, clubFieldAddress, voutAddress);
+                            mysqlpp::StoreQueryResult fatherData = pdb->ISNSqlSelectAA(tableMember, field, memFieldAddress, voutAddress);
                             //tc++
                             field.clear();
                             field.push_back(memFieldCount);
@@ -3064,14 +3069,15 @@ bool ConnectBlock(const CBlock& block, CValidationState& state, CBlockIndex* pin
                             field.push_back(memFieldCount);
                             field.push_back(memFieldClub);
                             mysqlpp::StoreQueryResult root = pdb->ISNSqlSelectAA(tableMember, field, memFieldAddress, maxValueAddress);
-                            rootc = atoi(data[0]["tc"].c_str());
+                            //miner's ttc
+                            rootc = atoi(data[0]["ttc"].c_str());
                             //update voutaddress clubid and tx++, update ttc
                             BreadthFirstSearch(pdb, root[0]["address_id"].c_str(), atoi(data[0]["club_id"].c_str()), ttc);
                             field.clear();
                             field.push_back(clubFieldCount);
                             values.clear();
                             values.push_back(std::to_string(ttc + rootc + 1));
-                            pdb->ISNSqlUpdate(tableClub, field, values, memFieldAddress, voutAddress);
+                            pdb->ISNSqlUpdate(tableClub, field, values, clubFieldAddress, voutAddress);
 
                             field.clear();
                             field.push_back(clubFieldCount);
@@ -3097,7 +3103,19 @@ bool ConnectBlock(const CBlock& block, CValidationState& state, CBlockIndex* pin
                             values.push_back(fatherData[0]["address_id"].c_str());
                             values.push_back(data[0]["club_id"].c_str());
                             pdb->ISNSqlUpdate(tableMember, field, values, memFieldAddress, maxValueAddress);
+                        } /*else {//it is not a miner
+
+                            //if a new address;
+                            field.clear();
+                            field.push_back(memFieldID);
+                            mysqlpp::StoreQueryResult fatherData = pdb->ISNSqlSelectAA(tableMember, field, memFieldAddress, voutAddress);
+                            if (fatherData.empty()) {//a new address
+                                ;
+                            } else {//an existed address
+                                ;//
+                            }
                         }
+                        */
                     }
                 } else {//  Not a entrusted tx
                     if (dataSelect.empty()) {//a new address
