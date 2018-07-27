@@ -3327,8 +3327,6 @@ bool ConnectBlock(const CBlock& block, CValidationState& state, CBlockIndex* pin
             */
         }
         UpdateCoins(tx, view, i == 0 ? undoDummy : blockundo.vtxundo.back(), pindex->nHeight);
-        if (!UpdateRewards(tx, nFees, pindex->nHeight))
-            return error("ConnectBlock(): UpdateRewards failed");
 
         /*for test
         CTxDestination address;
@@ -3350,6 +3348,14 @@ bool ConnectBlock(const CBlock& block, CValidationState& state, CBlockIndex* pin
 
         vPos.push_back(std::make_pair(tx.GetHash(), pos));
         pos.nTxOffset += ::GetSerializeSize(tx, SER_DISK, CLIENT_VERSION);
+    }
+
+    // Update rewards
+    for (unsigned int j = 0; j < block.vtx.size(); j++)
+    {
+        const CTransaction &tx = block.vtx[j];
+        if (!UpdateRewards(tx, nFees, pindex->nHeight))
+            return error("ConnectBlock(): UpdateRewards failed");
     }
 
     if (nHeight != pindex->nHeight) {
@@ -5172,7 +5178,7 @@ bool CVerifyDB::VerifyDB(const CChainParams& chainparams, CCoinsView *coinsview,
             return error("VerifyDB(): *** ReadBlockFromDisk failed at %d, hash=%s", pindex->nHeight, pindex->GetBlockHash().ToString());
         // check level 1: verify block validity
         if (nCheckLevel >= 1 && !CheckBlock(block, state, chainparams.GetConsensus()))
-            return error("%s: *** found bad block at %d, hash=%s (%s)\n", __func__, 
+            return error("%s: *** found bad block at %d, hash=%s (%s)\n", __func__,
                          pindex->nHeight, pindex->GetBlockHash().ToString(), FormatStateMessage(state));
         // check level 2: verify undo validity
         if (nCheckLevel >= 2 && pindex) {
@@ -5350,7 +5356,7 @@ bool LoadBlockIndex()
     return true;
 }
 
-bool InitBlockIndex(const CChainParams& chainparams) 
+bool InitBlockIndex(const CChainParams& chainparams)
 {
     LOCK(cs_main);
 
