@@ -289,6 +289,8 @@ bool CBitcoinAddress::ScriptPub2Addr(const CScript& scriptPub, std::string& addr
         return false;
     address = CBitcoinAddress(dest).ToString();
 
+    return true;
+
 //    if (!scriptPub.IsPayToScriptHash() && scriptPub.size() > 3 &&
 //            scriptPub[0] == OP_DUP && scriptPub[1] == OP_HASH160)
 //    {
