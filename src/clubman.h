@@ -16,7 +16,7 @@ class ClubManager
 {
     public:
 
-        static const int DEFAULT_HARVEST_POWER = 1;
+        static const int DEFAULT_HARVEST_POWER = 0;
 
         static ClubManager* GetInstance();
 
