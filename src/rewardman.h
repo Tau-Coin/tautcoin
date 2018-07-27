@@ -18,11 +18,11 @@ public:
 
     CAmount GetRewardsByAddress(std::string& addr);
 
-    bool UpdateRewardsByAddress(std::string& address, CAmount rewards);
+    bool UpdateRewardsByAddress(std::string& address, CAmount newRewards, CAmount oldReward);
 
     CAmount GetRewardsByPubkey(const std::string &pubkey);
 
-    bool UpdateRewardsByPubkey(const std::string &pubkey, CAmount rewards);
+    bool UpdateRewardsByPubkey(const std::string &pubkey, CAmount newRewards, CAmount oldReward);
 
     bool GetMembersByClubID(uint64_t clubID, std::vector<string> &addresses);
 
