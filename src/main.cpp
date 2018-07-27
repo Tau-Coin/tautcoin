@@ -2830,7 +2830,7 @@ bool ConnectBlock(const CBlock& block, CValidationState& state, CBlockIndex* pin
             const CScript genesisOutputScript = CScript() << ParseHex(baseAddr[i]) << OP_CHECKSIG;
             ExtractDestination(genesisOutputScript, address);
             values.push_back(CBitcoinAddress(address).ToString());
-            values.push_back("1000");
+            values.push_back("100000");
             clubId = pdb->ISNSqlInsert(tableClub, values);
 
             values.clear();
