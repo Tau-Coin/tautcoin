@@ -12,6 +12,7 @@
 #include "chainparams.h"
 #include "checkpoints.h"
 #include "checkqueue.h"
+#include "clubman.h"
 #include "consensus/consensus.h"
 #include "consensus/merkle.h"
 #include "consensus/validation.h"
@@ -4243,11 +4244,6 @@ bool CheckBlockHeader(const CBlockHeader& block, CValidationState& state, const 
         return state.DoS(90, false, REJECT_INVALID, "mismatch generation signature", false, "proof of stake failed");
     }
 
-
-    // Check proof of work matches claimed amount
-    //if (fCheckPOW && !CheckProofOfWork(block.GetHash(), block.nBits, consensusParams))
-        //return state.DoS(50, false, REJECT_INVALID, "high-hash", false, "proof of work failed");
-
     // Check proof of stake matches claimed amount
     if (fCheckPOW && !CheckProofOfTransaction(block, state, consensusParams, pindexPrev))
         return state.DoS(50, false, REJECT_INVALID, "high-hit", false, "proof of stake failed");
@@ -4399,21 +4395,25 @@ std::vector<unsigned char> GenerateCoinbaseCommitment(CBlock& block, const CBloc
 
 bool ContextualCheckBlockHeader(const CBlockHeader& block, CValidationState& state, const Consensus::Params& consensusParams, CBlockIndex * const pindexPrev, int64_t nAdjustedTime)
 {
+    static ClubManager* clubMgr = NULL;
+    if (!clubMgr)
+        clubMgr = ClubManager::GetInstance();
+
     // Check generation signature
     if (!verifyGenerationSignature(pindexPrev->generationSignature,block.generationSignature, block.pubKeyOfpackager)) {
-        return state.DoS(90, false, REJECT_INVALID, "mismatch generation signature", false, "proof of stake failed");
+        return state.DoS(90, false, REJECT_INVALID, "mismatch generation signature", false, "proof of tx fail");
     }
 
     // Check proof of stake
     if (block.baseTarget != getNextPosRequired(pindexPrev))
-        return state.DoS(50, false, REJECT_INVALID, "bad-basetargetbits", false, "incorrect proof of stake");
+        return state.DoS(50, false, REJECT_INVALID, "bad-basetargetbits", false, "incorrect proof of tx");
 
     if (block.cumulativeDifficulty != GetNextCumulativeDifficulty(pindexPrev, block.baseTarget, consensusParams))
-        return state.DoS(50, false, REJECT_INVALID, "bad-cumuldiffbits", false, "incorrect proof of stake");
+        return state.DoS(50, false, REJECT_INVALID, "bad-cumuldiffbits", false, "incorrect proof of tx");
 
-    // Check proof of work
-    //if (block.nBits != GetNextWorkRequired(pindexPrev, &block, consensusParams))
-        //return state.DoS(100, false, REJECT_INVALID, "bad-diffbits", false, "incorrect proof of work");
+    // Check allowed to forge or not
+    if (!clubMgr->IsAllowForge(block.pubKeyOfpackager, pindexPrev->nHeight + 1))
+        return state.DoS(50, false, REJECT_INVALID, "not allowed to forge", false, "incorrect proof of tx");
 
     // Check timestamp against prev
     if (block.GetBlockTime() <= pindexPrev->GetMedianTimePast())

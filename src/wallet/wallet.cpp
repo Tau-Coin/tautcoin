@@ -8,6 +8,7 @@
 #include "base58.h"
 #include "checkpoints.h"
 #include "chain.h"
+#include "clubman.h"
 #include "coincontrol.h"
 #include "consensus/consensus.h"
 #include "consensus/validation.h"
@@ -27,7 +28,6 @@
 #include "utilmoneystr.h"
 #include "tool.h"
 #include "rewardman.h"
-#include "stake.h"
 
 #include <assert.h>
 
@@ -2350,7 +2350,7 @@ bool CWallet::CreateTransaction(const vector<CRecipient>& vecSend, CWalletTx& wt
                 CScript bestChangeDest;
                 bool bestChangeDestGot = false;
                 CBitcoinAddress minerAddr;
-                int nMinerMemCnt = 0;;
+                uint64_t nMinerMemCnt = 0;;
                 CAmount nMaxValue = 0;
                 CScript maxInputScript;
 
@@ -2367,7 +2367,7 @@ bool CWallet::CreateTransaction(const vector<CRecipient>& vecSend, CWalletTx& wt
                         age += 1;
                     dPriority += (double)nCredit * age;
 
-                    if (!bestChangeDestGot && isForgeScript(pcoin.first->vout[pcoin.second].scriptPubKey,
+                    if (!bestChangeDestGot && ClubManager::GetInstance()->IsForgeScript(pcoin.first->vout[pcoin.second].scriptPubKey,
                             minerAddr, nMinerMemCnt) && nMinerMemCnt > 1) {
                         bestChangeDestGot = true;
                     }
