@@ -125,12 +125,5 @@ bool RewardManager::GetMembersByClubID(uint64_t clubID, std::vector<std::string>
         }
     }
 
-    if (addresses.size() > 0)
-    {
-	    return true;
-    }
-    else
-    {
-        return false;
-    }
+	return true;
 }
