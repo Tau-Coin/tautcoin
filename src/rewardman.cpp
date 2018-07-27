@@ -51,19 +51,22 @@ CAmount RewardManager::GetRewardsByAddress(std::string& address)
     }
 }
 
-bool RewardManager::UpdateRewardsByAddress(std::string& address, CAmount rewards)
+bool RewardManager::UpdateRewardsByAddress(std::string& address, CAmount newRewards, CAmount oldReward)
 {
+    if (newRewards == oldReward)
+        return true;
+
 	std::vector<string> fields;
 	fields.push_back(memFieldBalance);
 
     std::vector<string> values;
     std::string valueStr;
-    int2str(rewards, valueStr);
+    int2str(newRewards, valueStr);
 	values.push_back(valueStr);
 
     mysqlpp::SimpleResult bLocal = backendDb->ISNSqlUpdate(tableMember, fields, values, memFieldAddress, address);
 
-    LogPrintf("%s, %s, %d, %d\n", __func__, address, rewards, bLocal.rows());
+    LogPrintf("%s, %s, %d, %d\n", __func__, address, newRewards, bLocal.rows());
 
     if (bLocal.rows() > 0)
     {
@@ -85,14 +88,14 @@ CAmount RewardManager::GetRewardsByPubkey(const std::string &pubkey)
     return GetRewardsByAddress(addrStr);
 }
 
-bool RewardManager::UpdateRewardsByPubkey(const std::string &pubkey, CAmount rewards)
+bool RewardManager::UpdateRewardsByPubkey(const std::string &pubkey, CAmount newRewards, CAmount oldReward)
 {
     std::string addrStr;
 
     if (!ConvertPubkeyToAddress(pubkey, addrStr))
         return 0;
 
-    return UpdateRewardsByAddress(addrStr, rewards);
+    return UpdateRewardsByAddress(addrStr, newRewards, oldReward);
 }
 
 RewardManager::RewardManager()

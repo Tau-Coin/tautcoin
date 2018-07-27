@@ -2106,9 +2106,10 @@ bool UpdateRewards(const CTransaction& tx, CAmount blockReward, int nHeight, boo
             CAmount rewardbalance = rewardMan->GetRewardsByPubkey(tx.vreward[i].senderPubkey);
             if (isUndo)
                 ret = rewardMan->UpdateRewardsByPubkey(tx.vreward[i].senderPubkey,
-                                                       rewardbalance+tx.vreward[i].rewardBalance);
+                                                       rewardbalance+tx.vreward[i].rewardBalance,
+                                                       rewardbalance);
             else
-                ret = rewardMan->UpdateRewardsByPubkey(tx.vreward[i].senderPubkey, 0);
+                ret = rewardMan->UpdateRewardsByPubkey(tx.vreward[i].senderPubkey, 0, rewardbalance);
         }
         if (!ret)
             return ret;
@@ -2136,10 +2137,12 @@ bool UpdateRewards(const CTransaction& tx, CAmount blockReward, int nHeight, boo
                 CAmount rewardbalance = rewardMan->GetRewardsByAddress(clubLeaderAddress);
                 if (isUndo)
                     ret = rewardMan->UpdateRewardsByAddress(clubLeaderAddress,
-                                                           rewardbalance-blockReward+tx.vout[0].nValue);
+                                                           rewardbalance-blockReward+tx.vout[0].nValue,
+                                                           rewardbalance);
                 else
                     ret = rewardMan->UpdateRewardsByAddress(clubLeaderAddress,
-                                                           rewardbalance+blockReward-tx.vout[0].nValue);
+                                                           rewardbalance+blockReward-tx.vout[0].nValue,
+                                                           rewardbalance);
             }
             else
             {
@@ -2147,9 +2150,11 @@ bool UpdateRewards(const CTransaction& tx, CAmount blockReward, int nHeight, boo
                 {
                     CAmount rewardbalance = rewardMan->GetRewardsByAddress(members[j]);
                     if (isUndo)
-                        ret = rewardMan->UpdateRewardsByAddress(members[j], rewardbalance-eachReward);
+                        ret = rewardMan->UpdateRewardsByAddress(members[j], rewardbalance-eachReward,
+                                                               rewardbalance);
                     else
-                        ret = rewardMan->UpdateRewardsByAddress(members[j], rewardbalance+eachReward);
+                        ret = rewardMan->UpdateRewardsByAddress(members[j], rewardbalance+eachReward,
+                                                               rewardbalance);
                 }
             }
         }
@@ -2158,10 +2163,12 @@ bool UpdateRewards(const CTransaction& tx, CAmount blockReward, int nHeight, boo
             CAmount rewardbalance = rewardMan->GetRewardsByAddress(clubLeaderAddress);
             if (isUndo)
                 ret = rewardMan->UpdateRewardsByAddress(clubLeaderAddress,
-                                                       rewardbalance-blockReward+tx.vout[0].nValue);
+                                                       rewardbalance-blockReward+tx.vout[0].nValue,
+                                                       rewardbalance);
             else
                 ret = rewardMan->UpdateRewardsByAddress(clubLeaderAddress,
-                                                       rewardbalance+blockReward-tx.vout[0].nValue);
+                                                       rewardbalance+blockReward-tx.vout[0].nValue,
+                                                       rewardbalance);
         }
     }
 
