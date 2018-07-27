@@ -94,3 +94,36 @@ bool ClubManager::IsForgeScript(const CScript& script, CBitcoinAddress& addr, ui
 
     return false;
 }
+
+bool ClubManager::GetClubIDByAddress(const std::string& address, uint64_t& clubID)
+{
+    std::vector<string> fields;
+	fields.push_back(clubFieldID);
+	mysqlpp::StoreQueryResult bLocal = backendDb->ISNSqlSelectAA(tableClub, fields, clubFieldAddress, address);
+    if (bLocal.num_rows() > 0)
+    {
+	    clubID = (uint64_t)bLocal[0]["club_id"];
+        return true;
+    }
+    else
+    {
+        return false;
+    }
+}
+
+bool ClubManager::GetClubIDByPubkey(const std::string& pubkey, uint64_t& clubID)
+{
+    if (pubkey.empty())
+    {
+        return false;
+    }
+
+    std::string addrStr;
+    if (!ConvertPubkeyToAddress(pubkey, addrStr))
+    {
+        return false;
+    }
+
+    return GetClubIDByAddress(addrStr, clubID);
+}
+

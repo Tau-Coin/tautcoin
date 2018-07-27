@@ -26,6 +26,10 @@ class ClubManager
 
         bool IsForgeScript(const CScript& script, CBitcoinAddress& addr, uint64_t& memCount);
 
+        bool GetClubIDByAddress(const std::string& address, uint64_t& clubID);
+
+        bool GetClubIDByPubkey(const std::string& pubkey, uint64_t& clubID);
+
     protected:
 
         ClubManager();

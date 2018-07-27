@@ -22,6 +22,8 @@ class RewardManager
 
         bool UpdateRewardsByPubkey(const std::string &pubkey, CAmount rewards);
 
+        bool GetMembersByClubID(const uint64_t& clubID, std::vector<std::string> addresses);
+
     protected:
 
         RewardManager();

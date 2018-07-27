@@ -92,8 +92,39 @@ bool RewardManager::UpdateRewardsByPubkey(const std::string &pubkey, CAmount rew
     return UpdateRewardsByAddress(addrStr, rewards);
 }
 
-
 RewardManager::RewardManager()
 {
     backendDb = ISNDB::GetInstance();
+}
+
+bool RewardManager::GetMembersByClubID(const uint64_t& clubID, std::vector<std::string> addresses)
+{
+    addresses.clear();
+
+	std::vector<string> fields;
+	fields.push_back(memFieldAddress);
+    fields.push_back(memFieldClub);
+
+    std::string clubIDStr;
+    int2str(clubID, clubIDStr);
+
+	mysqlpp::StoreQueryResult bLocal = backendDb->ISNSqlSelectAA(tableMember, fields, memFieldClub, clubIDStr);
+
+    uint64_t size = (uint64_t)bLocal.num_rows();
+    for (uint64_t i = 0; i != size; i++)
+    {
+        if (clubID != (uint64_t)bLocal[i]["club_id"])
+        {
+            addresses.push_back(static_cast<std::string>(bLocal[i]["address"]));
+        }
+    }
+
+    if (addresses.size() > 0)
+    {
+	    return true;
+    }
+    else
+    {
+        return false;
+    }
 }
