@@ -1,8 +1,6 @@
 UNIX BUILD NOTES
 ====================
-Some notes on how to build Bitcoin Core in Unix.
-
-(for OpenBSD specific instructions, see [build-openbsd.md](build-openbsd.md))
+Referenced by building Bitcoin Core in Unix.
 
 Note
 ---------------------
@@ -33,6 +31,7 @@ These dependencies are required:
 
  Library     | Purpose          | Description
  ------------|------------------|----------------------
+ libmysql++  | Reward           | Harvesting club reward distribution
  libssl      | Crypto           | Random Number Generation, Elliptic Curve Cryptography
  libboost    | Utility          | Library for threading, data structures, etc
  libevent    | Networking       | OS independent asynchronous networking
@@ -42,6 +41,7 @@ Optional dependencies:
  Library     | Purpose          | Description
  ------------|------------------|----------------------
  miniupnpc   | UPnP Support     | Firewall-jumping support
+ mysql       | database         | Recording harvest club
  libdb4.8    | Berkeley DB      | Wallet storage (only needed when wallet enabled)
  qt          | GUI              | GUI toolkit (only needed when GUI enabled)
  protobuf    | Payments in GUI  | Data interchange format used for payment protocol (only needed when GUI enabled)
@@ -109,6 +109,10 @@ are installed. Either Qt 5 or Qt 4 are necessary to build the GUI.
 If both Qt 4 and Qt 5 are installed, Qt 5 will be used. Pass `--with-gui=qt4` to configure to choose Qt4.
 To build without GUI pass `--without-gui`.
 
+To build with mysql you need the following:
+
+    sudo apt-get install libqt5gui5 libqt5core5a libqt5dbus5 qttools5-dev qttools5-dev-tools libprotobuf-dev protobuf-compiler
+    
 To build with Qt 5 (recommended) you need the following:
 
     sudo apt-get install libqt5gui5 libqt5core5a libqt5dbus5 qttools5-dev qttools5-dev-tools libprotobuf-dev protobuf-compiler
@@ -123,24 +127,6 @@ libqrencode (optional) can be installed with:
 
 Once these are installed, they will be found by configure and a bitcoin-qt executable will be
 built by default.
-
-Dependency Build Instructions: Fedora
--------------------------------------
-Build requirements:
-
-    sudo dnf install gcc-c++ libtool make autoconf automake openssl-devel libevent-devel boost-devel libdb4-devel libdb4-cxx-devel
-
-Optional:
-
-    sudo dnf install miniupnpc-devel
-
-To build with Qt 5 (recommended) you need the following:
-
-    sudo dnf install qt5-qttools-devel qt5-qtbase-devel protobuf-devel
-
-libqrencode (optional) can be installed with:
-
-    sudo dnf install qrencode-devel
 
 Notes
 -----
@@ -159,7 +145,15 @@ turned off by default.  See the configure options for upnp behavior desired:
 	--disable-upnp-default   (the default) UPnP support turned off by default at runtime
 	--enable-upnp-default    UPnP support turned on by default at runtime
 
+Mysql
+-----
+If you need to build msyql yourself:
 
+	sudo apt-get install mysql-server
+	sudo apt-get install libmysqlclient-dev
+Your need to configure your mysql, create a database to store and update harvest club relationship.In testnet, we create a database named "taureward", has two tables - "clubinfo" and "member info", more details can be seen in taudb.h.
+
+    
 Berkeley DB
 -----------
 It is recommended to use Berkeley DB 4.8. If you have to build it yourself:
