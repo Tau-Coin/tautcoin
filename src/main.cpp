@@ -2151,6 +2151,16 @@ bool UpdateRewards(const CTransaction& tx, CAmount blockReward, int nHeight, boo
                 }
             }
         }
+        else
+        {
+            CAmount rewardbalance = rewardMan->GetRewardsByAddress(clubLeaderAddress);
+            if (isUndo)
+                ret = rewardMan->UpdateRewardsByAddress(clubLeaderAddress,
+                                                       rewardbalance-blockReward+tx.vout[0].nValue);
+            else
+                ret = rewardMan->UpdateRewardsByAddress(clubLeaderAddress,
+                                                       rewardbalance+blockReward-tx.vout[0].nValue);
+        }
     }
 
     if (ret)
