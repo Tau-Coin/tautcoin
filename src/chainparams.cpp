@@ -119,6 +119,109 @@ baseAddr[GENESISCOIN_CNT] = {"04b297c42453abaa7ecbc609a4a12cbea0b033c8a13336e680
                              "044ca7e1a651d6bbad2cd47ab9c0e33aad7bea4163943598bb5cbafd9170e8f35050f589ac8193f990f19b73130b7704fc33d34c8e2f9ef7e14f03557a7a8ba5af"
                             };
 
+std::string
+testAddr[GENESISCOIN_CNT] = {"03ee5724d56eba1451d9b380d8b2bc1f45cc97119e24f0319f940dc6ea98639016",
+                             "03fbfe7f7960e6ed7ad2e22784582f2c9e3aee663e1dd743d24e6280a7e90861cc",
+                             "02278d64abf1b1626f831b837e72f6a78d95650a06b2205fdedb8d0ebc29963e3e",
+                             "03b92e1eabdfdb53605ca7114e286a7dd5222ccb0e3c062bb0a979dc78f7d88097",
+                             "0265bfeb321eb2eb5efebec0cd5f33167dedda9beaccf9e8cb2cfb733ab1b03423",
+                             "027edc34ddbc47acfdeed40525e41fa83498774f7392ba57c8a9b171273d625d1d",
+                             "02c8e5f782eabfd62cd88b78915406b6f18f2ecc0ac2f89241ca8df5e5352fbc60",
+                             "028cdf21160324b3f81bfdb08eab9ce6566d8dc88ab01c62db933a44d5cb3fa49c",
+                             "027320ef8334bfdb31278a0a5ee08f1bed070ec1441d2b871995962ed9e9325b8a",
+                             "0373904dc99328fc204560ecd616eadb5bd602e76929af1dba9110c100ef43fa6c",
+                             "03ea1caca900d1d8a63c14f9405c347a1fdaf88888276dcc811f2af22609558aa1",
+                             "02b6c9773663c521f4b747d8294d8641dbe9b266d4ab6275e54c8fa38b50679fbc",
+                             "030c7f85d944c1b22d19e06b22f00f4f94fa0dfdfc47298014ed44202406598230",
+                             "02513dc435e1cb3f3ad392e7793b7bdba7955906b6c5f589f61c3fc5f642241b8d",
+                             "0310fa011275ecc39e988a023e4f4fd806fede8dc687c8a0d625c2d3153810bbf4",
+                             "03e13794cbb8728c8ba3de2067c24352d9856656b043a9a2a9926d206bcb13d3d5",
+                             "03ad30624cfb8147e28fc7b956bd15e1638df93249061afcfde4de074e5d285a98",
+                             "03fb65039b132956b5d10e978a23d14b7836e778dc6f1ec2279685ddd15ee0831a",
+                             "037941cb953ae8efa3d7bea5ec2f62f320592c71347a144b5e80cb754c7b794987",
+                             "03e96db2d00a32fc331ac05bfa70be75a27f30c5cff5000f6e3e06e5cce603db54",
+                             "025ddc4e81f48eb1b2c16f18add5f630c1157d96de1207f7577c12989c0f08895e",
+                             "02939f0ff7ea202acabe0a747fe0675b1d9c6fe34fc7c2fd63c1855629d3f74186",
+                             "03b6e97fc21ca9f5406566c9ebdb5364a28c4b5732b93468212e7fa2c56238c9dd",
+                             "03b86d77196b9bcaf3d51f1cd02488f0e9fe0659b882f348e5f971136b10043fa1",
+                             "02ac251f9fd9827fa2bf4191e02bc70380335f54fa6cb3de1f21904edec98a9adb",
+                             "03782f5dcd28be241b2563383c4821ac59b849ec9a42df62c4c4464d5eb37d992f",
+                             "03c96e77f18b7c6ab6328cfb3abb7b49e8341cc3bf2d901c5b901f1f696ebb591d",
+                             "02b9e6a5692bc6de07c4bc83307435bd8d12a400b6c12970708301b5eb789c9d20",
+                             "031098697d9ed95634bd14181c437867c4eb24954e9f2c79211e63ff5681b4a8b6",
+                             "03685f8a9fe7fde7c7fa6303aef8ce363df4f26d4212ec92eb290d7ed69bf943c3",
+                             "03c2ce7f5cdcd70406f40b4b368506089f6bfd7c6bafd0e9762c4915bca8e2158e",
+                             "03bc958ffaef5cce399fe57047476edf3eda50936a93aba91f4375d6414eba592c",
+                             "027e098289d1683e1dc20381c5aad302b232638106dbb6879b104902bc49cdfad4",
+                             "03ca1fb7217f60721f8d6c83fadc833971aef0766dd77a0bdea4af93d9d686593a",
+                             "0374d2cb69a05ae54f2af758fbce7e2d661ff08fabbd53a60bcc847c095dc91387",
+                             "0238c2b43b4b4c407e8d18ed4e28c27b5ab657cbf918eba62051dd4cc0e7fa0bce",
+                             "02fd7781c3dba389802f94177a39dc5e8235d8041820c15a060bf79ec2e9cfb2f2",
+                             "02c13813dd515a5325d29b0badf77383561eed75e9972e45ef57b06f6c6dfe8085",
+                             "031d30c9b432a22de964daadc92a8cf661cc72ccb15e5f05281df707b77214e31b",
+                             "030edf8e5b1bb91e4ef58fcc3e06a1ecdc26c64fa8363ce15f1bc2ca950b0d9e44",
+                             "02d74eabff5e213a2bf66d760a5cc48a445fd1045b79dc256ceb7b0ead612242e7",
+                             "039208d1335d66f0efd763d52d3e8cd345881396860416b845dd941f44ea4a85aa",
+                             "031f6c57f987449cae102c0a499c2dd11405fb8c143beb9e7639cbc4a991b4a598",
+                             "02361b367ec7f50230d7a8e604c50dbcfa50c3bbbe1d0038a616fe646fd5d82a83",
+                             "029faeac4805b58eb339c9e8457f00d9cfaf8b0c6c9a771cb6aec8370c047bc3b2",
+                             "02936a8ffbaf8df5d221f337243af497975e35d518e803995d767911e249c31f93",
+                             "03d1c01fda5196f9d632cece5640da10fc8c1f7547df7db1e76fa136165e841cc8",
+                             "028bd8a8032f5d826eb06cab1037e3c146ed61527df891c4c2a54a8823c13fa604",
+                             "03dbd2bef84c65b8b7e637ee57e59e2d8002f775f7f02ef44e1902a104e1c98812",
+                             "027ec41bdabec8f1310f78704163f97a24dc51be37228e97212e7b94e5c17d30c6",
+                             "02cdf31a93efc1ea626683881dd2722457b013852f4c798a2854f7c2d1032dc432",
+                             "03d97a455f234a966b8c2a81c4a3e4dc71f772c73668ff3ee7ae32371c998c7e18",
+                             "02a0b5c7326ed7f43d71ea8a912afeab84ca57c44c84d9b68e3f09e4dd947ca271",
+                             "02721ac84ed12cd2ce7664f266fecdfca7f08cbc1cd765b4b0b2cfa7365642781f",
+                             "0398f72b22549e2da5d18ad5d87da1b11277aea7b661a8113370e12d1cc41b980b",
+                             "02fbf93f9ed1fc1990232d3256f9fa9e9ab445f21ba7a459ec136ca6e2cd9e9a63",
+                             "025511c9b105d0846612271fdb5539c0909d2ca9e7c0ff46ce13c46fbb70876bd2",
+                             "03ba8b97a4fa11cda545ef8423524a868e9441dcc99212b1007bd882aa62788ded",
+                             "029ab53979df68c152be94e9dfbbb0083276485e3de6e2ee92d27ac343ed03edd1",
+                             "027a273b100031af17fd559b589338d4da14a8a721c2d57ba128c2345946c4f53f",
+                             "028a970007c9f3491a176f11dd13b41c250a848ca0de05426c2d3d91a23130379a",
+                             "02dc81f6a73feb6a7d3bc445d2f6bb8fcf4652f7bcc6c104e65cf524ebf103d5e1",
+                             "033a89486b3256797419f193dc8ed4bc10dc3264ded03cf1ececbdeca4b3372ed7",
+                             "037fcdf7a71f9f729c9f3751063063df0bc5b297f46d479c2e3bbd5512562e9090",
+                             "039e39ca033db6e5b60f79ac107f81960b13411c4ab4797b4d02b0e5f14a0bbbed",
+                             "02ba4f918c07168e6ec1f61dbd7ef6b5b9068204518cdf01900a4fdb53623bef73",
+                             "036fa6af607752d4bf6caa6fe1b230f8dc0f1e12b2a8a0cfa7e212311e1d2bc1ef",
+                             "02b3f9c73f875c225668c821de0787012a5e362576225d2976de591384fc294732",
+                             "02f256b60c72ccaa979c202d958e1db33ea312427d6fc8b31c4feeb0870c68deb8",
+                             "02b62bc81a74cc62ae742f385a0839f56165c9a5921ff7d30bc382bd3451367bcc",
+                             "032df278e78ac398596f44949e87c27b31b3ecff24ea94dd549b25307d19fc238b",
+                             "03b2935709041c0fe100e270d9f2076618b7b6510564a85972a81cce72805356a3",
+                             "02b319aed61e1095eb03ca1e5e094b0c9c547265b004c45284cbfb72d75e297378",
+                             "02e3228f297d4c87d0e94fa9a771ce46c53ae0c63f2cfe91eb5682a5540126672f",
+                             "030266926fda0a252c1fb49c7beda1d3458d5dbab7d821b295f2b1e52f60c78354",
+                             "02cda8a446713111f7f5cf08eade9613f450894f1751ff4783697ddf6f99e588aa",
+                             "0358ad73a5e37a8c4fdbb1e6dbc8ec28205cbf0cb4c3c685ffbde8a4f74e997e0c",
+                             "02a9eef3c31715924c2c33b9cc70b4937189577c8d228cc122c2cf60fc7e1da55a",
+                             "0341df38e90f37e7c991624e3062fd84762a3597f435f5a75afdaf7adce3e1405b",
+                             "02789500e835ea274d289d11facf7c497d7e810d921a0fd9dcc6a3d065567c1985",
+                             "02357a2dc49045a2d5f0522a4edb6727134e9f3a6994c4a59d3bb1acf0dd0b87a2",
+                             "034ce96dd45511a47ed7b8e1c2e6ff4bc9340d1f4b3490c3dbc70dcf287b60a43b",
+                             "0311b6c47de6368f691d5c54d19429cf2e9995e220be63aa4d6a5e54b5c0d8341d",
+                             "02b6572e4b9c921a8caccb5f4b49b833e2969b99ad31c9961e616266eab62b8d5a",
+                             "0220c839937f100ac75482475bb07b9ab9e83f9a82bc2f69a3d8696f407432aa35",
+                             "029831f5960b1d94798ff3113367e932c4f6811b8d56b6c0d9cdac59ed9074ceef",
+                             "0225b6a3c1269a40273e0284c21334649b68f1139677e24ccf8800bc4a51d4f10a",
+                             "02a3fd9d5a9bbce2882081905f84ba63eca8b559ab4ef1d700ffd0e131113e016d",
+                             "02adbcad2d437a965295677264ceeb81143b4d597cc23855ad53b26749e55e0fe3",
+                             "038065fbb690080d3cbd80b9f0531ec00fb76b376228c2ef67ba7ee0f638fd908e",
+                             "02ed3a77497630b05c15a94f70da4414e1927840f708f2e92f6ae95dc2f8ed3efc",
+                             "036bc69ff9b2cfa4eca1f73cc837d688656c71bafe14873843e8ce058c21017538",
+                             "02c5f3e53fcdfcc9a7035a874136d5fb4a4855b030422c6ceec8d617f039194c8c",
+                             "02999dd0bf3fcbf260e118f7fefa8ac273958177827c85779a3d6e7f1f1ace7187",
+                             "0223fdb24eec25111abdf8769226ec78fa0e1d9657ea9113ca166120983dae08bb",
+                             "02c1faf1dbee83d7679829de617e2eff27b1cfe6dd5b501f1fb61b33bf43b6291e",
+                             "02123bfa87296cc94d311690fe7309bf2804510c0d57ed34246c0b3977a8a5ed05",
+                             "0296b61f2ee0d4e87c623269e604afb9df9ede9a930c1eac7c20ba5909be484715",
+                             "0307379220ad1f0ace3e6eb08cf21eaadc46df14eba92a08d6f755393a3c0dc468",
+                             "039c78b96daf53369f6b8d6c11979b4ceeb2bdcedf2caeb72de32853a400bb6935"
+                            };
+
 static CBlock CreateGenesisBlock(const CScript& genesisInputScript, const std::vector<CScript>& genesisOutputScript,
                                  uint32_t nTime, uint32_t nNonce, uint32_t nBits, int32_t nVersion,
                                  const std::vector<CAmount>& genesisReward)
@@ -178,7 +281,7 @@ static CBlock CreateGenesisBlock(uint32_t nTime, uint32_t nNonce, uint32_t nBits
 }
 
 /**
- * Build genesis block for testnet.  In Imcoin, it has a changed timestamp
+ * Build genesis block for testnet.  In TAUcoin, it has a changed timestamp
  * and output script (it uses Bitcoin's).
  */
 static CBlock CreateTestnetGenesisBlock(uint32_t nTime, uint32_t nNonce, uint32_t nBits, int32_t nVersion,
@@ -187,16 +290,15 @@ static CBlock CreateTestnetGenesisBlock(uint32_t nTime, uint32_t nNonce, uint32_
     const char* pszTimestamp = "The Times 14/June/2009 2018 FIFA World Cup Russia Starts.";
     const CScript genesisInputScript = CScript() << 0x1d00ffff << CScriptNum(4) << std::vector<unsigned char>((const unsigned char*)pszTimestamp, (const unsigned char*)pszTimestamp + strlen(pszTimestamp));
 
-    const CScript genesisOutputScript0 = CScript() << ParseHex("04568a0f5331da25101fe0fa27903d53d007ce88957754af97e680624d98a16b47b681b012d37f126db95e9e34984e18d455141572cf64a2b7ab078000e7f4f6da") << OP_CHECKSIG;
-    const CScript genesisOutputScript1 = CScript() << ParseHex("04633a310e85a506f2beecfdbdaaaee389969c7a61e9b4a4ec643d1a0eb689f7baa5fe46dca2b008f54b33531340032881753c44867e4bd8787dcc3c7adde7e52c") << OP_CHECKSIG;
-    const CScript genesisOutputScript2 = CScript() << ParseHex("04504d1eba1d002949543a461904701f37a20f81bb14ca6fb1c3be29af320f6f4e5d1dbb73ed31c55719507af59b012b2860452eb951c27f4dec58ab4ac0f0e5ef") << OP_CHECKSIG;
+    std::vector<CScript> genesisOutputScripts;
+    for(uint i = 0; i < GENESISCOIN_CNT; i++)
+    {
+        const CScript genesisOutputScript = CScript() << ParseHex(testAddr[i]) << OP_CHECKSIG;
+        genesisOutputScripts.push_back(genesisOutputScript);
 
-    std::vector<CScript> genesisOutputScript;
-    genesisOutputScript.push_back(genesisOutputScript0);
-    genesisOutputScript.push_back(genesisOutputScript1);
-    genesisOutputScript.push_back(genesisOutputScript2);
+    }
 
-    return CreateGenesisBlock(genesisInputScript, genesisOutputScript, nTime, nNonce, nBits, nVersion, genesisReward);
+    return CreateGenesisBlock(genesisInputScript, genesisOutputScripts, nTime, nNonce, nBits, nVersion, genesisReward);
 }
 
 /**
@@ -264,13 +366,13 @@ public:
         }
         consensus.genesislockCoinHeight = GENESISLOCK_MATURITY;
 
-        genesis = CreateGenesisBlock(1529042124, 95609, 0x1f00ffff, 1, genesisReward);
+        genesis = CreateGenesisBlock(1529042124, 59935, 0x1f00ffff, 1, genesisReward);
         consensus.hashGenesisBlock = genesis.GetHash();
         consensus.hashGenesisTx = genesis.hashMerkleRoot;
         consensus.genesisCumulativeDifficulty = genesis.cumulativeDifficulty;
         consensus.genesisBaseTarget = genesis.baseTarget;
-        assert(consensus.hashGenesisBlock == uint256S("000005068d80c1bdaa176f2d0d7fc2bbef4a45917e7d1924e7329d69e0d21f01"));
-        assert(genesis.hashMerkleRoot == uint256S("772c6eb3628ab6e036763de6236c72f22e5863c6ec2a28c1556a6c4895e3d4b8"));
+        assert(consensus.hashGenesisBlock == uint256S("00006f47672c22dd30121482bfd93ad5b11ae495c53dc8bbf5bf416c3f8d5dc8"));
+        assert(genesis.hashMerkleRoot == uint256S("a9da8df30aa8c4d26d9ca33568a5235b193d65446297cdded39058cbee51d36b"));
 
         vSeeds.push_back(CDNSSeedData("imorpheus.io", "dnsseed.imorpheus.io", true));
 
@@ -345,26 +447,30 @@ public:
         nPruneAfterHeight = 1000;
 
         std::vector<CAmount> genesisReward;
-        genesisReward.push_back(MAX_MONEY / 10 * 2);
-        genesisReward.push_back(MAX_MONEY / 10 * 2);
-        genesisReward.push_back(MAX_MONEY / 10 * 6);
+        for(uint i = 0; i < GENESISCOIN_CNT; i++)
+        {
+            genesisReward.push_back(MAX_MONEY / 100);
+            if (i > GENESISCOIN_CNT - GENESISLOCK_ADDRCNT - 1)
+                consensus.genesislockCoinAddr[i + GENESISLOCK_ADDRCNT - GENESISCOIN_CNT] = testAddr[i];
+        }
+        consensus.genesislockCoinHeight = GENESISLOCK_MATURITY;
 
-        genesis = CreateTestnetGenesisBlock(1529042124, 70242, 0x1f00ffff, 1, genesisReward);
+        genesis = CreateTestnetGenesisBlock(1529042124, 138225, 0x1f00ffff, 1, genesisReward);
         consensus.hashGenesisBlock = genesis.GetHash();
         consensus.hashGenesisTx = genesis.hashMerkleRoot;
         consensus.genesisCumulativeDifficulty = genesis.cumulativeDifficulty;
         consensus.genesisBaseTarget = genesis.baseTarget;
-        //assert(consensus.hashGenesisBlock == uint256S("00007ac2cf86fb52f10a3ac6c9c1586b0dfbf38e710476fcf23b506e6319f831"));
-        //assert(genesis.hashMerkleRoot == uint256S("82b10867bff7b43ed801c987f783af7e57885a485c2b6e243cd187796c7e9dfa"));
+        assert(consensus.hashGenesisBlock == uint256S("00000fab9a1cee423e48aad56581f0480553a3937e32cfca081787fc2c63e89f"));
+        assert(genesis.hashMerkleRoot == uint256S("031b3f6f8c4a8942f981c5b6bcc41cb132f6256ea2301eda579b37a334e7a9c4"));
 
         vFixedSeeds.clear();
         vSeeds.clear();
         // nodes with support for servicebits filtering should be at the top
         // vSeeds.push_back(CDNSSeedData("testnetbitcoin.jonasschnelli.ch", "testnet-seed.bitcoin.jonasschnelli.ch", true));
 
-        base58Prefixes[PUBKEY_ADDRESS] = std::vector<unsigned char>(1,111);
+        base58Prefixes[PUBKEY_ADDRESS] = std::vector<unsigned char>(1,65);
         base58Prefixes[SCRIPT_ADDRESS] = std::vector<unsigned char>(1,196);
-        base58Prefixes[SECRET_KEY] =     std::vector<unsigned char>(1,239);
+        base58Prefixes[SECRET_KEY] =     std::vector<unsigned char>(1,239); //0xEF
         base58Prefixes[EXT_PUBLIC_KEY] = boost::assign::list_of(0x04)(0x35)(0x87)(0xCF).convert_to_container<std::vector<unsigned char> >();
         base58Prefixes[EXT_SECRET_KEY] = boost::assign::list_of(0x04)(0x35)(0x83)(0x94).convert_to_container<std::vector<unsigned char> >();
 
@@ -429,9 +535,13 @@ public:
         nPruneAfterHeight = 1000;
 
         std::vector<CAmount> genesisReward;
-        genesisReward.push_back(MAX_MONEY / 10 * 2);
-        genesisReward.push_back(MAX_MONEY / 10 * 2);
-        genesisReward.push_back(MAX_MONEY / 10 * 6);
+        for(uint i = 0; i < GENESISCOIN_CNT; i++)
+        {
+            genesisReward.push_back(MAX_MONEY / 100);
+            if (i > GENESISCOIN_CNT - GENESISLOCK_ADDRCNT - 1)
+                consensus.genesislockCoinAddr[i + GENESISLOCK_ADDRCNT - GENESISCOIN_CNT] = testAddr[i];
+        }
+        consensus.genesislockCoinHeight = GENESISLOCK_MATURITY;
 
         genesis = CreateTestnetGenesisBlock(1296688602, 2, 0x207fffff, 1, genesisReward);
         consensus.hashGenesisBlock = genesis.GetHash();
