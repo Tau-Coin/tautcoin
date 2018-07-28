@@ -1853,10 +1853,12 @@ bool ReadBlockFromDisk(CBlock& block, const CDiskBlockPos& pos, const Consensus:
     }
 
     // Check the header
+    /*
     CValidationState state;
     if (!CheckProofOfTransaction(block, state, consensusParams, NULL)
             && state.GetRejectReason().find("bad-prevblk") == std::string::npos)
         return error("ReadBlockFromDisk: Errors in block header at %s", pos.ToString());
+     */
 
     return true;
 }
@@ -5043,10 +5045,12 @@ bool static LoadBlockIndexDB()
         // For bitcoin, pow verification is implemented in "LoadBlockIndexGuts".
         // But for pods, we have to do this work after all BlockIndexed are loaded.
         if (pindex->pprev) {
+            /*
             if (!CheckProofOfTransaction(pindex->GetBlockHeader(), dummy, chainparams.GetConsensus(),
                     pindex->pprev)) {
                 return error("LoadBlockIndex(): CheckProofOfTransaction failed: %s", pindex->ToString());
             }
+             */
 
             if (pindex->nChainDiff != pindex->pprev->nChainDiff + GetBlockProof(*pindex))
             {
