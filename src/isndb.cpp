@@ -185,7 +185,7 @@ mysqlpp::SimpleResult ISNDB::ISNSqlAddOne(const string &tablename, const vector<
 	}
 }
 // insert ISNDB with condition
-int ISNDB::ISNSqlInsert(const string &tablename, const vector<string> &values)
+long ISNDB::ISNSqlInsert(const string &tablename, const vector<string> &values)
 {
 	try{
         if(tablename==tableClub)

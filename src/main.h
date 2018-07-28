@@ -472,7 +472,7 @@ bool ContextualCheckBlockHeader(const CBlockHeader& block, CValidationState& sta
 bool ContextualCheckBlock(const CBlock& block, CValidationState& state, CBlockIndex *pindexPrev);
 
 //Non recursive version
-void BreadthFirstSearch(ISNDB* &pdb, std::string root_id, int club_id, int ttc);
+unsigned long BreadthFirstSearch(ISNDB* &pdb, std::string root_id, long club_id);
 
 /** Apply the effects of this block (with given index) on the UTXO set represented by coins.
  *  Validity checks that depend on the UTXO set are also done; ConnectBlock()
