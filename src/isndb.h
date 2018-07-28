@@ -20,7 +20,7 @@ using namespace std;
 const char DBName[32]= "imreward";
 const char hostName[32]= "localhost";
 const char userName[32]= "root";
-const char passWord[32]= "123456";
+const char passWord[32]= "";
 
 //Table info
 const string tableClub= "clubinfo";

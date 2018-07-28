@@ -173,11 +173,6 @@ bool CTransactionUtils::SelectCoinsMinConf(const CAmount& nTargetValue, int nCon
     }
 
     LogPrintf("total lower:%d, target:%d\n", nTotalLower, nTargetValue);
-    if (nTotalLower <= 0)
-    {
-        LogPrintf("no required coins\n");
-        return false;
-    }
 
     if (nTotalLower == nTargetValue)
     {
