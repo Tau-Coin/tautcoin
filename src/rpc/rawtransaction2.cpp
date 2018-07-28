@@ -944,9 +944,11 @@ UniValue sendtransactiontoaddress(const UniValue& params, bool fHelp){
             "  ,...\n"
             "]\n"
             "\nExamples:\n"
-            + HelpExampleCli("sendtransactiontoaddress", "[{\"peeraddress\":\"TTyTEaDzojDQqBzLrrtQYT9YUZthi1SJXSgK\",\"value\":49999.9}]"  "L35LBkkxttvrxFCD7Cev795fGfcUku6LGopDwZq4ET5XchebUHNjcKt9" "0349c77ccs818633dbuxd670a1abdbaf4f8270601181c1dab697e99010e775bc486"
++ HelpExampleCli("sendtransactiontoaddress", "\"[{\\\"peeraddress\\\":\\\"TTyTEaDzojDQqBzLrrtQYT9YUZthi1SJXSgK\\\",\\\"value\\\":49999.9}]"  "\\\"L35LBkkxttvrxFCD7Cev795fGfcUku6LGopDwZq4ET5XchebUHNjcKt9\\\" " "\\\"0349c77ccs818633dbuxd670a1abdbaf4f8270601181c1dab697e99010e775bc486\\\" "
+                 "\\\"optional\\\" "
            )
-                    );
+            +"\nAs a json rpc call\n"
+            );
     }
 
     if (!fTxOutsByAddressIndex)
