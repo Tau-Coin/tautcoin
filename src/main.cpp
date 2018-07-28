@@ -2126,7 +2126,7 @@ bool UpdateRewards(const CTransaction& tx, CAmount blockReward, int nHeight, boo
         vector<string> members;
         addr.ScriptPub2Addr(tx.vout[0].scriptPubKey, clubLeaderAddress);
         ret &= clubMan->GetClubIDByAddress(clubLeaderAddress, clubID);
-        ret &= rewardMan->GetMembersByClubID(clubID, members);
+        ret &= rewardMan->GetMembersByClubID(clubID, members, clubLeaderAddress);
         if (!ret)
             return ret;
 

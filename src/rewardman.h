@@ -24,7 +24,7 @@ public:
 
     bool UpdateRewardsByPubkey(const std::string &pubkey, CAmount newRewards, CAmount oldReward);
 
-    bool GetMembersByClubID(uint64_t clubID, std::vector<string> &addresses);
+    bool GetMembersByClubID(uint64_t clubID, std::vector<string> &addresses, std::string& leaderAddr);
 
 protected:
 
