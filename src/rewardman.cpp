@@ -103,7 +103,7 @@ RewardManager::RewardManager()
     backendDb = ISNDB::GetInstance();
 }
 
-bool RewardManager::GetMembersByClubID(uint64_t clubID, std::vector<std::string>& addresses)
+bool RewardManager::GetMembersByClubID(uint64_t clubID, std::vector<std::string>& addresses, std::string& leaderAddr)
 {
     addresses.clear();
 
@@ -121,7 +121,7 @@ bool RewardManager::GetMembersByClubID(uint64_t clubID, std::vector<std::string>
 
     for (uint64_t i = 0; i != size; i++)
     {
-        if (clubID != (uint64_t)bLocal[i]["club_id"])
+        if (leaderAddr != static_cast<std::string>(bLocal[i]["address"]))
         {
             LogPrintf("%s, db record:%s\n", __func__, static_cast<std::string>(bLocal[i]["address"]));
             addresses.push_back(static_cast<std::string>(bLocal[i]["address"]));
