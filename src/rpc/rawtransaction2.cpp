@@ -916,13 +916,13 @@ UniValue sendrawtransaction(const UniValue& params, bool fHelp)
 
     return hashTx.GetHex();
 }
-//sendtransactiontoaddress  \"JG48yABfHhshb22LU3EWwLyafKe3hU1CFKoeNw2q142PgTW9k5\"  \"\"  \"\" "[{\"peeraddress\":\"1LtvqCaApEdUGFkpKMM4MstjcaL4dKg8SP\",\"value\":8.8}]" 0.3
+//sendtransactiontoaddress  \"JG48yABfHhshb22LU3EWwLyafKe3hU1CFKoeNw2q142PgTW9k5\"  \"\"  \"\" "[{\\\"peeraddress\\\":\"1LtvqCaApEdUGFkpKMM4MstjcaL4dKg8SP\",\"value\":8.8}]" 0.3
 
 
 UniValue sendtransactiontoaddress(const UniValue& params, bool fHelp){
     if(fHelp||params.size() < 2 || params.size() > 5){
         throw runtime_error(
-            "sendtransactiontoaddress ( privatekey pubkey selfaddress [{\"peeraddress\":\"address\",\"value\":v},...] feerate )\n"
+            "sendtransactiontoaddress ([{\"peeraddress\":\"address\",\"value\":v},...] feerate )\n"
             "\nReturn the transaction id of current transaction.\n"
             "Note that passing feerate will override the default feerate.\n"
             "\nArguments:\n"
@@ -944,9 +944,9 @@ UniValue sendtransactiontoaddress(const UniValue& params, bool fHelp){
             "  ,...\n"
             "]\n"
             "\nExamples:\n"
-            + HelpExampleCli("sendtransactiontoaddress", "5JG48yABfHhshb22LU3EWwLyafKe3hU1CFKoeNw2q142PgTW9k5\" \"\" \"\" \"[{\\\"peeraddress\\\":\\\"1LtvqCaApEdUGFkpKMM4MstjcaL4dKg8SP\\\",\\\"value\\\":8.8}]\" 0.3")
-            +"\nAs a json rpc call\n"
-        );
+            + HelpExampleCli("sendtransactiontoaddress", "[{\"peeraddress\":\"TTyTEaDzojDQqBzLrrtQYT9YUZthi1SJXSgK\",\"value\":49999.9}]"  "L35LBkkxttvrxFCD7Cev795fGfcUku6LGopDwZq4ET5XchebUHNjcKt9" "0349c77ccs818633dbuxd670a1abdbaf4f8270601181c1dab697e99010e775bc486"
+           )
+                    );
     }
 
     if (!fTxOutsByAddressIndex)
