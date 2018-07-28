@@ -121,9 +121,9 @@ bool RewardManager::GetMembersByClubID(uint64_t clubID, std::vector<std::string>
 
     for (uint64_t i = 0; i != size; i++)
     {
-        LogPrintf("%s, db record:%d\n", __func__, (uint64_t)bLocal[i]["club_id"]);
         if (clubID != (uint64_t)bLocal[i]["club_id"])
         {
+            LogPrintf("%s, db record:%s\n", __func__, static_cast<std::string>(bLocal[i]["address"]));
             addresses.push_back(static_cast<std::string>(bLocal[i]["address"]));
         }
     }

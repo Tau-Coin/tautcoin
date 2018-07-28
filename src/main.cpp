@@ -2131,6 +2131,8 @@ bool UpdateRewards(const CTransaction& tx, CAmount blockReward, int nHeight, boo
         if (members.size() > 0)
         {
             CAmount eachReward = (blockReward - tx.vout[0].nValue) / members.size();
+            LogPrintf("%s, blkrw:%d, leader rw:%d, eachrw:%d, memcnt:%d\n", __func__,
+                    blockReward, tx.vout[0].nValue, eachReward, members.size());
             assert(eachReward >= 0);
             if (eachReward == 0)
             {
@@ -2149,6 +2151,7 @@ bool UpdateRewards(const CTransaction& tx, CAmount blockReward, int nHeight, boo
                 for(unsigned int j = 0; j < members.size(); j++)
                 {
                     CAmount rewardbalance = rewardMan->GetRewardsByAddress(members[j]);
+                    LogPrintf("%s, member:%s, rw:%d\n", __func__, members[j], rewardbalance);
                     if (isUndo)
                         ret = rewardMan->UpdateRewardsByAddress(members[j], rewardbalance-eachReward,
                                                                rewardbalance);
