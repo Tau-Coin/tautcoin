@@ -22,7 +22,16 @@ Supported Operating Systems
 Resources
 -------------------
 1. [taucoin.io Website](https://www.taucoin.io)
-2. [White Paper](https://www.taucoin.io/whitepaper/whitepaper.pdf)
-3. [RoadMap](https://www.taucoin.io/#RoadMap)
+2. [White Paper - publish soon](https://www.taucoin.io/whitepaper/whitepaper.pdf)
 
 ## Getting Started
+Seen in [build-unix.md](https://github.com/Tau-Coin/taucoin/blob/master/build-unix.md).
+
+## Schedule
+The testnet is published from 2018-08-01 to 2018-09-01.
+
+## Questions
+If you have any question, you can ask [here](https://github.com/Tau-Coin/taucoin/issues).
+
+
+
