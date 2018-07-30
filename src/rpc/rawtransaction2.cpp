@@ -1039,7 +1039,10 @@ UniValue sendtransactiontoaddress(const UniValue& params, bool fHelp){
         throw JSONRPCError(RPC_INVALID_PARAMETER, strFailReason);
     }
 
-    return hashTx.GetHex();
+    UniValue result(UniValue::VOBJ);
+    result.push_back(Pair("txid", hashTx.GetHex()));
+
+    return result;
 }
 
 UniValue getbalancebypubkey(const UniValue& params, bool fHelp)
