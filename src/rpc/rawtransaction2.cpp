@@ -1075,13 +1075,18 @@ UniValue getbalancebypubkey(const UniValue& params, bool fHelp)
     if (!fTxOutsByAddressIndex)
         throw JSONRPCError(RPC_METHOD_NOT_FOUND, "To use this function, you must start isono with the -txoutsbyaddressindex parameter.");
 
-    RPCTypeCheck(params, boost::assign::list_of(UniValue::VARR), true);
+    RPCTypeCheck(params, boost::assign::list_of(UniValue::VSTR), true);
 
     UniValue results(UniValue::VARR);
-    UniValue inputs = params[0].get_array();
+    string inputs = params[0].get_str();
+    vector<string> queries;
+    boost::split(queries, inputs, boost::is_any_of("|"));
 
-    for (unsigned int i = 0; i < inputs.size(); i++) {
-        const std::string pubkey = inputs[i].get_str();
+    if (queries.size() == 0)
+        throw JSONRPCError(RPC_INVALID_ADDRESS_OR_KEY, "Invalid inputs: pubkey1|pubkey2|...|pubkeyn ");
+
+    for (unsigned int i = 0; i < queries.size(); i++) {
+        const std::string pubkey = queries[i];
         if (pubkey.empty())
             continue;
         std::string strAddr;
@@ -1092,7 +1097,7 @@ UniValue getbalancebypubkey(const UniValue& params, bool fHelp)
         if (address.IsValid()) {
             script = GetScriptForDestination(address.Get());
         } else {
-            throw JSONRPCError(RPC_INVALID_ADDRESS_OR_KEY, "Invalid ISONO pubkey: " + pubkey);
+            throw JSONRPCError(RPC_INVALID_ADDRESS_OR_KEY, "Invalid tau pubkey: " + pubkey);
         }
 
         CCoinsByScript coinsByScript;
