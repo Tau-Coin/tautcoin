@@ -1,9 +1,9 @@
-// Copyright (c) 2018- The ISONO Core developers
+// Copyright (c) 2018- The Taucoin Core developers
 // Distributed under the MIT software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
-#ifndef ISONO_TX_UTILS_H
-#define ISONO_TX_UTILS_H
+#ifndef TAUCOIN_TX_UTILS_H
+#define TAUCOIN_TX_UTILS_H
 
 #include "primitives/transaction.h"
 
@@ -29,4 +29,4 @@ class CTransactionUtils
         static bool AvailableRewards(const std::string& pubKey, std::vector<CTxReward>& vRewards);
 };
 
-#endif //ISONO_TX_UTILS_H
+#endif //TAUCOIN_TX_UTILS_H

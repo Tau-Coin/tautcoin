@@ -4,8 +4,8 @@
 // Distributed under the MIT software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
-#ifndef IMCOIN_POS_H
-#define IMCOIN_POS_H
+#ifndef TAUCOIN_POS_H
+#define TAUCOIN_POS_H
 #include "chainparams.h"
 #include "consensus/params.h"
 #include <stdint.h>
@@ -53,4 +53,4 @@ uint256 GetNextCumulativeDifficulty(const CBlockIndex* pindexLast, uint64_t base
 bool CheckProofOfTransaction(const std::string& prevGenerationSignature, const std::string& currPubKey,
         int nHeight, unsigned int nTime, uint64_t baseTarget, const Consensus::Params& consensusParams, PodsErr& checkErr);
 
-#endif // IMCOIN_POS_H
+#endif // TAUCOIN_POS_H

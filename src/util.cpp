@@ -805,8 +805,8 @@ std::string CopyrightHolders(const std::string& strPrefix)
     if (strCopyrightHolders.find("%s") != strCopyrightHolders.npos) {
         strCopyrightHolders = strprintf(strCopyrightHolders, _(COPYRIGHT_HOLDERS_SUBSTITUTION));
     }
-    if (strCopyrightHolders.find("IMcoin Core developers") == strCopyrightHolders.npos) {
-        strCopyrightHolders += "\n" + strPrefix + "The IMcoin Core developers";
+    if (strCopyrightHolders.find("Taucoin Core developers") == strCopyrightHolders.npos) {
+        strCopyrightHolders += "\n" + strPrefix + "The Taucoin Core developers";
     }
     return strCopyrightHolders;
 }

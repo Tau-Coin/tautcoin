@@ -1050,7 +1050,7 @@ UniValue getbalancebypubkey(const UniValue& params, bool fHelp)
             "\nReturns a list of unspent transaction outputs and rewards by pubkey.\n"
             "Note that the result will not include the mempool.\n"
             "The unspent transaction outputs must be confirmed at least 1 time.\n"
-            "\nTo use this function, you must start isono with the -txoutsbyaddressindex parameter.\n"
+            "\nTo use this function, you must start taucoin with the -txoutsbyaddressindex parameter.\n"
             "\nArguments:\n"
             "1. \"pubkeys\"    (string) A json array of bitcoin pubkeys\n"
             "    [\n"
@@ -1073,7 +1073,7 @@ UniValue getbalancebypubkey(const UniValue& params, bool fHelp)
         );
 
     if (!fTxOutsByAddressIndex)
-        throw JSONRPCError(RPC_METHOD_NOT_FOUND, "To use this function, you must start isono with the -txoutsbyaddressindex parameter.");
+        throw JSONRPCError(RPC_METHOD_NOT_FOUND, "To use this function, you must start taucoin with the -txoutsbyaddressindex parameter.");
 
     RPCTypeCheck(params, boost::assign::list_of(UniValue::VSTR), true);
 
