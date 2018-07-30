@@ -33,7 +33,7 @@
 
 #include <univalue.h>
 
-//#define imtest    //it is a debug function switch,if you does not want please turn off it
+//#define tautest    //it is a debug function switch,if you does not want please turn off it
 using namespace std;
 
 UniValue generateBlocks(boost::shared_ptr<CReserveScript> coinbaseScript, int nGenerate, uint64_t nMaxTries, bool keepScript)
@@ -53,21 +53,6 @@ UniValue generateBlocks(boost::shared_ptr<CReserveScript> coinbaseScript, int nG
     UniValue blockHashes(UniValue::VARR);
     while (nHeight < nHeightEnd)
     {
-         #ifdef imtest
-         string geneSignature = getLatestBlockGenerationSignature();
-         LogPrintf( "===========previous generationsignature is ===========%s\n",geneSignature);
-         string pubkey = GetPubKeyForPackage();
-         LogPrintf( "===========packager pubkey is ===========%s\n",pubkey);
-         uint256 geneSignatureHash = getPosHash(geneSignature,pubkey);
-         uint64_t hit = calculateHitOfPOS(geneSignatureHash);
-         LogPrintf( "===========hit is ===========%d\n",hit);
-         string pub1key = "Scientific distribution of wealth to each one";
-         bool pass = verifyGenerationSignature(geneSignature,pub1key);
-         LogPrintf( "===========is pass===========%d\n",pass);
-         int64_t tt = getPastTimeFromLastestBlock();
-         LogPrintf( "===========time pass===========%d\n",tt);
-         #endif
-
         std::unique_ptr<CBlockTemplate> pblocktemplate(BlockAssembler(Params()).CreateNewBlock(coinbaseScript->reserveScript,coinbaseScript->pubkeyString));
         if (!pblocktemplate.get())
             throw JSONRPCError(RPC_INTERNAL_ERROR, "Couldn't create new block");
@@ -100,8 +85,7 @@ UniValue generateBlocks(boost::shared_ptr<CReserveScript> coinbaseScript, int nG
     }
     return blockHashes;
 }
-//pos packaging a block althought it is not completed
-UniValue generateBlocksWithPos(boost::shared_ptr<CReserveScript> coinbaseScript, int nGenerate, uint64_t nMaxTries, bool keepScript)
+UniValue generateBlocksWithPot(boost::shared_ptr<CReserveScript> coinbaseScript, int nGenerate, uint64_t nMaxTries, bool keepScript)
 {
      int nHeightStart = 0;
      int nHeightEnd = 0;
@@ -211,7 +195,7 @@ UniValue generate(const UniValue& params, bool fHelp)
     if (coinbaseScript->reserveScript.empty())
         throw JSONRPCError(RPC_INTERNAL_ERROR, "No coinbase script available (mining requires a wallet)");
 
-    return generateBlocksWithPos(coinbaseScript, nGenerate, nMaxTries, true);
+    return generateBlocksWithPot(coinbaseScript, nGenerate, nMaxTries, true);
 }
 
 UniValue generatetoaddress(const UniValue& params, bool fHelp)
@@ -267,7 +251,7 @@ UniValue generatetoaddress(const UniValue& params, bool fHelp)
     coinbaseScript->Packagerpubkey = pubkey;
     coinbaseScript->pubkeyString = HexStr(ToByteVector(pubkey));
 
-    return generateBlocksWithPos(coinbaseScript, nGenerate, nMaxTries, false);
+    return generateBlocksWithPot(coinbaseScript, nGenerate, nMaxTries, false);
 }
 
 UniValue getmininginfo(const UniValue& params, bool fHelp)

@@ -656,8 +656,8 @@ void IncrementExtraNonce(CBlock* pblock, const CBlockIndex* pindexPrev, unsigned
 bool isPreparedtoPackage(std::string pubkeyString)
 {
    string geneSignature = getLatestBlockGenerationSignature();
-   uint256 geneSignatureHash = getPosHash(geneSignature,pubkeyString);
-   uint64_t hit = calculateHitOfPOS(geneSignatureHash);
+   uint256 geneSignatureHash = getPotHash(geneSignature,pubkeyString);
+   uint64_t hit = calculateHitOfPOT(geneSignatureHash);
    LOCK(cs_main);
    CBlockIndex* pindexPrev = chainActive.Tip();
    uint64_t target = getNextPosRequired(pindexPrev);

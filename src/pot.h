@@ -35,13 +35,13 @@ typedef enum {
 
 UniValue getLatestBlockHash();
 //CPubKey GetPubKeyForPackage();
-uint256 getPosHash( UniValue value);
+uint256 getPotHash( UniValue value);
 uint64_t signatureCompactWithPubkey(const uint256 &phash, std::vector<unsigned char>& vchSig,CPubKey pubkey);
 
 std::string getLatestBlockGenerationSignature();
-uint256 getPosHash(std::string generationSignature,std::string pubKey);
+uint256 getPotHash(std::string generationSignature,std::string pubKey);
 std::string GetPubKeyForPackage();
-uint64_t calculateHitOfPOS(const uint256 &phash);
+uint64_t calculateHitOfPOT(const uint256 &phash);
 std::string raiseGenerationSignature(std::string pukstr);
 bool verifyGenerationSignature(std::string pGS,std::string generationSignature,std::string pukstr);
 int64_t getPastTimeFromLastestBlock();
