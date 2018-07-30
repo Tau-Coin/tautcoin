@@ -234,7 +234,7 @@ CBlockTemplate* BlockAssembler::CreateNewBlock(const CScript& scriptPubKeyIn,std
     pblocktemplate->vTxSigOpsCost[0] = WITNESS_SCALE_FACTOR * GetLegacySigOpCount(pblock->vtx[0]);
 
     // Fill about pos
-    pblock->baseTarget     = getNextPosRequired(pindexPrev); //temporary formula
+    pblock->baseTarget     = getNextPotRequired(pindexPrev); //temporary formula
     pblock->generationSignature = raiseGenerationSignature(pubkeyString);
     pblock->pubKeyOfpackager = pubkeyString;
     pblock->cumulativeDifficulty = GetNextCumulativeDifficulty(pindexPrev, pblock->baseTarget, chainparams.GetConsensus());
@@ -660,7 +660,7 @@ bool isPreparedtoPackage(std::string pubkeyString)
    uint64_t hit = calculateHitOfPOT(geneSignatureHash);
    LOCK(cs_main);
    CBlockIndex* pindexPrev = chainActive.Tip();
-   uint64_t target = getNextPosRequired(pindexPrev);
+   uint64_t target = getNextPotRequired(pindexPrev);
    int64_t S = getPastTimeFromLastestBlock();
    uint64_t Be = 88888;
    return hit < target * S * Be;

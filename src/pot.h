@@ -46,7 +46,7 @@ std::string raiseGenerationSignature(std::string pukstr);
 bool verifyGenerationSignature(std::string pGS,std::string generationSignature,std::string pukstr);
 int64_t getPastTimeFromLastestBlock();
 uint64_t getLatestBlockBaseTarget();
-uint64_t getNextPosRequired(const CBlockIndex* pindexLast);
+uint64_t getNextPotRequired(const CBlockIndex* pindexLast);
 
 uint256 GetNextCumulativeDifficulty(const CBlockIndex* pindexLast, uint64_t baseTarget, const Consensus::Params& consensusParams);
 

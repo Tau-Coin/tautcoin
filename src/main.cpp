@@ -4555,7 +4555,7 @@ bool ContextualCheckBlockHeader(const CBlockHeader& block, CValidationState& sta
     }
 
     // Check proof of stake
-    if (block.baseTarget != getNextPosRequired(pindexPrev))
+    if (block.baseTarget != getNextPotRequired(pindexPrev))
         return state.DoS(50, false, REJECT_INVALID, "bad-basetargetbits", false, "incorrect proof of tx");
 
     if (block.cumulativeDifficulty != GetNextCumulativeDifficulty(pindexPrev, block.baseTarget, consensusParams))

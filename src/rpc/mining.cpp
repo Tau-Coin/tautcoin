@@ -107,7 +107,7 @@ UniValue generateBlocksWithPot(boost::shared_ptr<CReserveScript> coinbaseScript,
              prevIndex = chainActive.Tip();
          }
          int64_t now = GetTime();
-         uint64_t baseTarget = getNextPosRequired(prevIndex);
+         uint64_t baseTarget = getNextPotRequired(prevIndex);
          PotErr error;
 
          if (CheckProofOfTransaction(prevIndex->generationSignature, coinbaseScript->pubkeyString,
