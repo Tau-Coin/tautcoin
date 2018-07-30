@@ -374,7 +374,9 @@ public:
         assert(consensus.hashGenesisBlock == uint256S("00006f47672c22dd30121482bfd93ad5b11ae495c53dc8bbf5bf416c3f8d5dc8"));
         assert(genesis.hashMerkleRoot == uint256S("a9da8df30aa8c4d26d9ca33568a5235b193d65446297cdded39058cbee51d36b"));
 
-        vSeeds.push_back(CDNSSeedData("imorpheus.io", "dnsseed.imorpheus.io", true));
+        vSeeds.push_back(CDNSSeedData("taucoin.io", "dnsseed1.taucoin.io", true));
+        vSeeds.push_back(CDNSSeedData("taucoin.io", "dnsseed2.taucoin.io", true));
+        vSeeds.push_back(CDNSSeedData("taucoin.io", "dnsseed3.taucoin.io", true));
 
         base58Prefixes[PUBKEY_ADDRESS] = std::vector<unsigned char>(1,65);
         base58Prefixes[SCRIPT_ADDRESS] = std::vector<unsigned char>(1,5);
