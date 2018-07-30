@@ -4362,7 +4362,7 @@ bool CheckProofOfTransaction(const CBlockHeader& block, CValidationState& state,
 
     assert(pindexPrev);
 
-    PodsErr error;
+    PotErr error;
     if (!CheckProofOfTransaction(pindexPrev->generationSignature, block.pubKeyOfpackager,
                 pindexPrev->nHeight + 1, block.nTime - pindexPrev->nTime, block.baseTarget, consensusParams, error)) {
         return state.DoS(50, false, REJECT_INVALID, "high-hit", false, "proof of stake failed");

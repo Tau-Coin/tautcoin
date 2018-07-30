@@ -26,12 +26,12 @@ class uint256;
 extern const arith_uint256 Arith256DiffAdjustNumerator;
 
 typedef enum {
-    PODS_NO_ERR,
-    PODS_ARGS_ERR,
-    PODS_ADDR_ERR,
-    PODS_BALANCE_ERR,
-    PODS_ERR_NUMBER
-} PodsErr;
+    POT_NO_ERR,
+    POT_ARGS_ERR,
+    POT_ADDR_ERR,
+    POT_BALANCE_ERR,
+    POT_ERR_NUMBER
+} PotErr;
 
 UniValue getLatestBlockHash();
 //CPubKey GetPubKeyForPackage();
@@ -51,6 +51,6 @@ uint64_t getNextPosRequired(const CBlockIndex* pindexLast);
 uint256 GetNextCumulativeDifficulty(const CBlockIndex* pindexLast, uint64_t baseTarget, const Consensus::Params& consensusParams);
 
 bool CheckProofOfTransaction(const std::string& prevGenerationSignature, const std::string& currPubKey,
-        int nHeight, unsigned int nTime, uint64_t baseTarget, const Consensus::Params& consensusParams, PodsErr& checkErr);
+        int nHeight, unsigned int nTime, uint64_t baseTarget, const Consensus::Params& consensusParams, PotErr& checkErr);
 
 #endif // TAUCOIN_POS_H

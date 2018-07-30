@@ -187,18 +187,18 @@ uint256 GetNextCumulativeDifficulty(const CBlockIndex* pindexLast, uint64_t base
 }
 
 bool CheckProofOfTransaction(const std::string& prevGenerationSignature, const std::string& currPubKey,
-        int nHeight, unsigned int nTime, uint64_t baseTarget, const Consensus::Params& consensusParams, PodsErr& checkErr)
+        int nHeight, unsigned int nTime, uint64_t baseTarget, const Consensus::Params& consensusParams, PotErr& checkErr)
 {
     static ClubManager* pClubMgr = NULL;
     if (!pClubMgr)
         pClubMgr = ClubManager::GetInstance();
 
-    checkErr = PODS_NO_ERR;
+    checkErr = POT_NO_ERR;
 
     if (prevGenerationSignature.empty() || currPubKey.empty() || nHeight < 0 || nTime == 0) {
         LogPrintf("CheckProofOfTransaction failed, incorrect args, signatrue:%s, pubkey:%s, height:%d, time:%d\n",
             prevGenerationSignature, currPubKey, nHeight, nTime);
-        checkErr = PODS_ARGS_ERR;
+        checkErr = POT_ARGS_ERR;
         return false;
     }
 
@@ -223,7 +223,7 @@ bool CheckProofOfTransaction(const std::string& prevGenerationSignature, const s
 
     if (!ConvertPubkeyToAddress(currPubKey, strAddr) || strAddr.empty()) {
         LogPrintf("CheckProofOfTransaction failed, get strAddr fail\n");
-        checkErr = PODS_ADDR_ERR;
+        checkErr = POT_ADDR_ERR;
         return false;
     }
     if (fDebugPODS)
@@ -234,7 +234,7 @@ bool CheckProofOfTransaction(const std::string& prevGenerationSignature, const s
     // If harverst power is one, return false directly.
     if (harverstPower <= ClubManager::DEFAULT_HARVEST_POWER) {
         LogPrintf("CheckProofOfTransaction failed, not allow forge\n");
-        checkErr = PODS_BALANCE_ERR;
+        checkErr = POT_BALANCE_ERR;
         return false;
     }
 

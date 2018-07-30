@@ -108,7 +108,7 @@ UniValue generateBlocksWithPot(boost::shared_ptr<CReserveScript> coinbaseScript,
          }
          int64_t now = GetTime();
          uint64_t baseTarget = getNextPosRequired(prevIndex);
-         PodsErr error;
+         PotErr error;
 
          if (CheckProofOfTransaction(prevIndex->generationSignature, coinbaseScript->pubkeyString,
                  prevIndex->nHeight + 1, now - prevIndex->nTime, baseTarget, Params().GetConsensus(), error))
@@ -147,7 +147,7 @@ UniValue generateBlocksWithPot(boost::shared_ptr<CReserveScript> coinbaseScript,
                  coinbaseScript->KeepScript();
              }
          }else {
-             if (error == PODS_BALANCE_ERR) {
+             if (error == POT_BALANCE_ERR) {
                 throw JSONRPCError(RPC_MISC_ERROR , "address balance is zero");
              }
 
