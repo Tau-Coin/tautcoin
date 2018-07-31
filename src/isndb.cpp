@@ -4,6 +4,7 @@
 
 #include "isndb.h"
 
+#include "util.h"
 #include "sync.h"
 #include "util.h"
 
@@ -39,7 +40,8 @@ ISNDB* ISNDB::GetInstance()
 ISNDB::ISNDB()
 {
 	try{
-		con= mysqlpp::Connection(DBName, hostName, userName, passWord);
+        con= mysqlpp::Connection(GetArg("-mysqldbname", DBName).c_str(), GetArg("-mysqlserver", hostName).c_str(), GetArg("-mysqlusername", userName).c_str(), GetArg("-mysqlpassword", passWord).c_str());
+        //con= mysqlpp::Connection(DBName, hostName, userName, passWord);
 	}
 	catch (const mysqlpp::Exception& er) {
 		// Catch-all for any other MySQL++ exceptions

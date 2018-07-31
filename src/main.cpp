@@ -90,12 +90,6 @@ int64_t nMaxTipAge = DEFAULT_MAX_TIP_AGE;
 bool fEnableReplacement = DEFAULT_ENABLE_REPLACEMENT;
 //CBalanceViewDB *pbalancedbview = NULL;
 
-struct MinerClub
-{
-    std::multimap<std::string, std::string> mapMinerClubs;
-    int nHeight;
-} minerClub;
-
 struct EntrustInfo
 {
     std::string son;
@@ -2728,81 +2722,10 @@ static int64_t nTimeIndex = 0;
 static int64_t nTimeCallbacks = 0;
 static int64_t nTimeTotal = 0;
 
-/*
-bool CheckIfMiner(std::string address, int nHeight)
-{
-    for(std::multimap<std::string, std::string>::iterator iter =  minerClub.mapMinerClubs.begin(); iter != minerClub.mapMinerClubs.end(); ++iter){
-        if(address.compare((*iter).second))
-            return false;
-    }
-    return true;
-}
-*/
-
-std::vector<std::string> GetMinerMembers(std::string address, int nHeight)
-{
-    std::cout << "-------------nHeight:" << nHeight << "----------" << minerClub.nHeight << std::endl;
-    bool bEntrust = false;
-    std::vector<std::string> minerMembers;
-    /*if (nHeight > minerClub.nHeight){
-        return minerMembers;
-    }else */if(nHeight == minerClub.nHeight){
-        for(std::multimap<std::string, std::string>::iterator iter =  minerClub.mapMinerClubs.begin(); iter != minerClub.mapMinerClubs.end(); ++iter){
-            if(!address.compare((*iter).second)){
-                bEntrust = true;
-                minerMembers.clear();
-                break;
-            }
-            if(!address.compare((*iter).first)){
-                minerMembers.push_back((*iter).second);
-            }
-        }
-        if (!bEntrust) {
-            minerMembers.push_back(address);
-        }
-        return minerMembers;
-    }else{
-        minerClub.nHeight = nHeight;
-        minerClub.mapMinerClubs.clear();
-
-        std::ifstream ifile;
-        char fileName[16];
-        std::string toAddress, fromAddress;
-        snprintf(fileName, sizeof(fileName), "%09d.txt", nHeight);
-        boost::filesystem::path path = GetDataDir() / "minerclub" / fileName;
-        //std::cout << path.string() << std::endl;
-        ifile.open(path.string());
-        if(ifile.is_open()){
-            ifile >> toAddress >> fromAddress;
-            while(ifile.good()){
-                minerClub.mapMinerClubs.insert(std::pair<std::string, std::string>(toAddress, fromAddress));
-                if(!address.compare(fromAddress)){
-                    bEntrust = true;
-                    minerMembers.clear();
-                    break;
-                }
-                if(!address.compare(toAddress)){
-                    minerMembers.push_back(fromAddress);
-                }
-                ifile >> toAddress >> fromAddress;
-            }
-        }
-        else {
-            std::cout << "Error opening file!" << std::endl;
-        }
-        ifile.close();
-        if (!bEntrust) {
-            minerMembers.push_back(address);
-        }
-        return minerMembers;
-    }
-}
-
 //Non recursive version
 unsigned long BreadthFirstSearch(ISNDB* &pdb, std::string root_id, long club_id)
 {
     unsigned long ttc = 0;
-    std::cout << "---root id--- " << root_id << std::endl;
     std::queue<std::string> idQueue;
     //idQueue.push(root_id);
     std::string id;
@@ -2822,7 +2745,6 @@ unsigned long BreadthFirstSearch(ISNDB* &pdb, std::string root_id, long club_id)
 
     while (!idQueue.empty()) {
         id = idQueue.front();
-        std::cout << "-----id-----" << id << std::endl;
         idQueue.pop();
         mysqlpp::StoreQueryResult data = pdb->ISNSqlSelectAA(tableMember, fields, memFieldFather, id);
 
@@ -3066,7 +2988,6 @@ bool ConnectBlock(const CBlock& block, CValidationState& state, CBlockIndex* pin
                     if (maxValue < tx.vreward[i].rewardBalance) {
                         std::string address;
                         ConvertPubkeyToAddress(tx.vreward[i].senderPubkey, address);
-                        std::cout << "Balance address:" << address << std::endl;
                         maxValueAddress = address;
                         maxValue = tx.vreward[i].rewardBalance;
                     }
@@ -3092,26 +3013,21 @@ bool ConnectBlock(const CBlock& block, CValidationState& state, CBlockIndex* pin
                 std::string voutAddress, lastFatherAddress;
                 std::vector<std::string> field, tableMemberValues, tableClubValues;
                 //string condition, cvalue;
-                std::cout << "-----------------" << tx.vout.size() << std::endl;
                 for (unsigned int i = 0; i < tx.vout.size(); i++) {
                     ExtractDestinationFromP2PKAndP2PKH(tx.vout[i].scriptPubKey, address);
                     voutAddress = CBitcoinAddress(address).ToString();
-                    std::cout << "----Address:" << voutAddress << std::endl;
                     field.clear();
                     field.push_back(memFieldClub);
                     field.push_back(memFieldFather);
                     mysqlpp::StoreQueryResult dataSelect = pdb->ISNSqlSelectAA(tableMember, field, memFieldAddress, voutAddress);
                     if (0 == tx.vout[i].nValue) {//it's an entrust tx, get the last entrust address
-                        std::cout << "it's an entrust transaction!" << std::endl;
                         ofile << maxValueAddress << "    " << voutAddress << "    " << lastFatherAddress << std::endl;
                         //bEntrustTx = true;
                         if (maxValueAddress == voutAddress) {//entrust youself
-                            std::cout << "---entrust yourself----" << std::endl;
                             field.clear();
                             field.push_back(clubFieldAddress);
                             mysqlpp::StoreQueryResult data = pdb->ISNSqlSelectAA(tableClub, field, clubFieldAddress, voutAddress);
                             if (data.empty()) {//has not entrusted
-                                std::cout << "---has not entrusted----" << std::endl;
                                 //insert a new club
                                 values.clear();
                                 values.push_back(voutAddress);
@@ -3153,7 +3069,6 @@ bool ConnectBlock(const CBlock& block, CValidationState& state, CBlockIndex* pin
                                 values.push_back(std::to_string(rootc));
                                 pdb->ISNSqlUpdate(tableMember, field, values, memFieldAddress, voutAddress);
                             } else {//has entrusted
-                                std::cout << "---has entrusted----" << std::endl;
                                 field.clear();
                                 field.push_back(memFieldCount);
                                 pdb->ISNSqlAddOne(tableMember, field, memFieldAddress, voutAddress);
@@ -3168,7 +3083,6 @@ bool ConnectBlock(const CBlock& block, CValidationState& state, CBlockIndex* pin
                             field.push_back(clubFieldCount);
                             mysqlpp::StoreQueryResult data = pdb->ISNSqlSelectAA(tableClub, field, clubFieldAddress, voutAddress);
                             if (!data.empty()) {// it is a miner
-                                std::cout << "-------entrust a miner" << std::endl;
                                 //miner data
                                 field.clear();
                                 field.push_back(memFieldID);
@@ -3218,23 +3132,25 @@ bool ConnectBlock(const CBlock& block, CValidationState& state, CBlockIndex* pin
                                 values.push_back(fatherData[0]["address_id"].c_str());
                                 values.push_back(data[0]["club_id"].c_str());
                                 pdb->ISNSqlUpdate(tableMember, field, values, memFieldAddress, maxValueAddress);
-                            } /*else {//it is not a miner
-
+                            } else {//it is not a miner
                                 //if a new address;
                                 field.clear();
-                                field.push_back(memFieldID);
+                                field.push_back(memFieldClub);
                                 mysqlpp::StoreQueryResult fatherData = pdb->ISNSqlSelectAA(tableMember, field, memFieldAddress, voutAddress);
-                                if (fatherData.empty()) {//a new address
-                                    ;
-                                } else {//an existed address
-                                    ;//
+                                if (!fatherData.empty()) {//an existed address
+                                    field.clear();
+                                    field.push_back(memFieldCount);
+                                    pdb->ISNSqlAddOne(tableMember, field, memFieldAddress, voutAddress);
+                                    field.clear();
+                                    field.push_back(clubFieldCount);
+                                    pdb->ISNSqlAddOne(tableClub, field, clubFieldID, fatherData[0]["club_id"].c_str());
+                                } else {//a new address
+                                    //do nothing
                                 }
                             }
-                            */
                         }
                     } else {//  Not a entrusted tx
                         if (dataSelect.empty()) {//a new address
-                            std::cout << "aaaaaaaaaaaaaaaa new address!" << std::endl;
                             ofile << voutAddress << "    " << maxValueAddress << "    " << "MAGICCODE" << std::endl;
 
                             field.clear();
@@ -3253,7 +3169,6 @@ bool ConnectBlock(const CBlock& block, CValidationState& state, CBlockIndex* pin
                             field.push_back(clubFieldCount);
                             pdb->ISNSqlAddOne(tableClub, field, clubFieldID, data[0]["club_id"].c_str());
                         } else {// an existed address, do not change the entrust graph
-                            std::cout << "aaaaaaaaaaaaannnnnnnnnn existed address!" << std::endl;
                             //tc++
                             //ttc++
                             field.clear();
@@ -3269,97 +3184,8 @@ bool ConnectBlock(const CBlock& block, CValidationState& state, CBlockIndex* pin
                     }
                 }
             }
-
-            /*
-            if (bEntrustTx) {//Y
-                std::string lastFatherAddress;
-                //get last father address
-                ExtractDestinationFromP2PKAndP2PKH(tx.vout[0].scriptPubKey, entrustAddress);
-                ofile << CBitcoinAddress(vinAddress).ToString() << "    " << lastFatherAddress << "    " << CBitcoinAddress(entrustAddress).ToString()<< std::endl;
-                if (entrustAddress == vinAddress) {//entrust yourself
-                    bool bEntrusted = false;
-                    //check it
-                    if (bEntrusted) {//Y
-
-                    } else {//N
-
-                    }
-                } else {//entrust others
-
-                }
-            } else {//N
-                //check vout
-                BOOST_FOREACH(const CTxOut &txout, tx.vout) {
-                    //if vout a new address
-                    CTxDestination address;
-                    ExtractDestinationFromP2PKAndP2PKH(txout.scriptPubKey, address);
-                    //check address if a new address
-                    bool bFirst;
-                    if (bFirst) {//a new address
-
-                    } else {//an exist address
-
-                    }
-                }
-            }
-            */
-
-            /*
-            //--------------------------------------------------------minerclub--------------------------------------------------------------------
-            BOOST_FOREACH(const CTxOut &txout, tx.vout) {
-                if (txout.nValue == 0){
-                    CTxDestination fromAddress;
-                    CTxDestination toAddress;
-                    CCoins coins;
-                    if (ExtractDestinationFromP2PKAndP2PKH(txout.scriptPubKey, toAddress)){
-                        if(view.GetCoins(tx.vin[0].prevout.hash, coins)){
-                            if (tx.vin[0].prevout.n >= coins.vout.size() || coins.vout[tx.vin[0].prevout.n].IsNull())
-                                assert(false);
-                            if (ExtractDestinationFromP2PKAndP2PKH(coins.vout[tx.vin[0].prevout.n].scriptPubKey, fromAddress)){
-                                std::cout << CBitcoinAddress(fromAddress).ToString() << "--------->" << txout.nValue << "-------->" << CBitcoinAddress(toAddress).ToString() << std::endl;;
-                                //TODO::
-                                //erase yourself from son position
-                                for(std::multimap<std::string, std::string>::iterator iter =  minerClub.mapMinerClubs.begin(); iter != minerClub.mapMinerClubs.end(); ++iter){
-                                    if(!CBitcoinAddress(fromAddress).ToString().compare((*iter).second)){
-                                        minerClub.mapMinerClubs.erase(iter);
-                                        break;
-                                    }
-                                }
-                                if(toAddress == fromAddress){
-                                    //Do not insert into the map!
-                                }
-                                else{
-                                    //add yourself to son position
-                                    minerClub.mapMinerClubs.insert(std::pair<std::string, std::string>(CBitcoinAddress(toAddress).ToString(), CBitcoinAddress(fromAddress).ToString()));
-                                }
-                            }
-                            //temp = tx.vin[0].prevout.hash;
-                            //std::cout << "-----------" << temp.ToString() << std::endl;
-                        }
-                    }
-                }
-            }
-            */
         }
         UpdateCoins(tx, view, i == 0 ? undoDummy : blockundo.vtxundo.back(), pindex->nHeight);
-
-        /*for test
-        CTxDestination address;
-        CCoins coins;
-        if(view.GetCoins(temp, coins)){
-            std::cout << "----------------------------------To find more" << std::endl;
-            if (!(tx.vin[0].prevout.n >= coins.vout.size() || coins.vout[tx.vin[0].prevout.n].IsNull())){
-                std::cout << temp.ToString() << std::endl;
-                if (ExtractDestination(coins.vout[tx.vin[0].prevout.n].scriptPubKey, address)){
-                    std::cout << CBitcoinAddress(address).ToString() << std::endl;
-                }
-            }
-        }
-        else
-        {
-            std::cout << "oooooooop!" << std::endl;
-        }
-        */
 
         vPos.push_back(std::make_pair(tx.GetHash(), pos));
         pos.nTxOffset += ::GetSerializeSize(tx, SER_DISK, CLIENT_VERSION);
@@ -3377,21 +3203,6 @@ bool ConnectBlock(const CBlock& block, CValidationState& state, CBlockIndex* pin
         ofile .close();
     }
     nHeight = pindex->nHeight;
-
-    /*
-    minerClub.nHeight = pindex->nHeight;
-    std::ofstream ofile;
-    char fileName[16];
-    snprintf(fileName, sizeof(fileName), "%09d.txt", minerClub.nHeight);
-    boost::filesystem::path path = GetDataDir() / "minerclub" / fileName;
-    //TryCreateDirectory(path);
-    //std::cout << path.string() << std::endl;
-    ofile.open(path.string());
-    for(std::multimap<std::string, std::string>::iterator iter =  minerClub.mapMinerClubs.begin(); iter != minerClub.mapMinerClubs.end(); ++iter){
-        ofile << (*iter).first << "    " << (*iter).second << std::endl;
-    }
-    ofile.close();
-    */
 
     int64_t nTime3 = GetTimeMicros(); nTimeConnect += nTime3 - nTime2;
     LogPrint("bench", "      - Connect %u transactions: %.2fms (%.3fms/tx, %.3fms/txin) [%.2fs]\n", (unsigned)block.vtx.size(), 0.001 * (nTime3 - nTime2), 0.001 * (nTime3 - nTime2) / block.vtx.size(), nInputs <= 1 ? 0 : 0.001 * (nTime3 - nTime2) / (nInputs-1), nTimeConnect * 0.000001);

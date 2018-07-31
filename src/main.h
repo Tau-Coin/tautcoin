@@ -451,9 +451,6 @@ public:
     ScriptError GetScriptError() const { return error; }
 };
 
-//bool CheckIfMiner(std::string address, int nHeight);
-std::vector<std::string> GetMinerMembers(std::string address, int nHeight);
-
 /** Functions for disk access for blocks */
 bool WriteBlockToDisk(const CBlock& block, CDiskBlockPos& pos, const CMessageHeader::MessageStartChars& messageStart);
 bool ReadBlockFromDisk(CBlock& block, const CDiskBlockPos& pos, const Consensus::Params& consensusParams);
