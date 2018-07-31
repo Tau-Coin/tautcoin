@@ -31,7 +31,10 @@
 #endif
 
 #include <stdint.h>
+#include <string>
+#include <sstream>
 
+#include <boost/algorithm/string.hpp>
 #include <boost/assign/list_of.hpp>
 
 #include <univalue.h>
@@ -916,13 +919,44 @@ UniValue sendrawtransaction(const UniValue& params, bool fHelp)
 
     return hashTx.GetHex();
 }
-//sendtransactiontoaddress  \"JG48yABfHhshb22LU3EWwLyafKe3hU1CFKoeNw2q142PgTW9k5\"  \"\"  \"\" "[{\"peeraddress\":\"1LtvqCaApEdUGFkpKMM4MstjcaL4dKg8SP\",\"value\":8.8}]" 0.3
+//sendtransactiontoaddress  \"JG48yABfHhshb22LU3EWwLyafKe3hU1CFKoeNw2q142PgTW9k5\"  \"\"  \"\" "[{\\\"peeraddress\\\":\"1LtvqCaApEdUGFkpKMM4MstjcaL4dKg8SP\",\"value\":8.8}]" 0.3
 
+static bool parseStringIntoReceivers(const string &rawStr, map<string, CAmount>& receivers)
+{
+    LogPrintf("%s %s\n", __func__, rawStr);
+    if (rawStr.empty())
+        return false;
+
+    receivers.clear();
+    vector<string> vStrInputParts;
+    boost::split(vStrInputParts, rawStr, boost::is_any_of("|"));
+
+    if (vStrInputParts.size() == 0)
+        return false;
+
+    for(vector<string>::iterator it = vStrInputParts.begin(); it != vStrInputParts.end(); it++)
+    {
+        vector<string> fields;
+        boost::split(fields, *it, boost::is_any_of("_"));
+        if (fields.size() != 2)
+            return false;
+
+        string address = fields[0];
+        double amount;
+        stringstream stream(fields[1]);
+        stream>>amount;
+
+        LogPrintf("%s: %s\n", fields[0], fields[1]);
+        receivers.insert(map<string, CAmount>::value_type(address, CAmount(amount * COIN)));
+    }
+
+    return true;
+}
 
 UniValue sendtransactiontoaddress(const UniValue& params, bool fHelp){
     if(fHelp||params.size() < 2 || params.size() > 5){
         throw runtime_error(
-            "sendtransactiontoaddress ( privatekey pubkey selfaddress [{\"peeraddress\":\"address\",\"value\":v},...] feerate )\n"
+            "sendtransactiontoaddress ([{\"peeraddress\":\"address\",\"value\":v},...] feerate )\n"
             "\nReturn the transaction id of current transaction.\n"
             "Note that passing feerate will override the default feerate.\n"
             "\nArguments:\n"
@@ -944,24 +978,30 @@ UniValue sendtransactiontoaddress(const UniValue& params, bool fHelp){
             "  ,...\n"
             "]\n"
             "\nExamples:\n"
-            + HelpExampleCli("sendtransactiontoaddress", "5JG48yABfHhshb22LU3EWwLyafKe3hU1CFKoeNw2q142PgTW9k5\" \"\" \"\" \"[{\\\"peeraddress\\\":\\\"1LtvqCaApEdUGFkpKMM4MstjcaL4dKg8SP\\\",\\\"value\\\":8.8}]\" 0.3")
++ HelpExampleCli("sendtransactiontoaddress", "\"[{\\\"peeraddress\\\":\\\"TTyTEaDzojDQqBzLrrtQYT9YUZthi1SJXSgK\\\",\\\"value\\\":49999.9}]"  "\\\"L35LBkkxttvrxFCD7Cev795fGfcUku6LGopDwZq4ET5XchebUHNjcKt9\\\" " "\\\"0349c77ccs818633dbuxd670a1abdbaf4f8270601181c1dab697e99010e775bc486\\\" "
+                 "\\\"optional\\\" "
+           )
             +"\nAs a json rpc call\n"
-        );
+            );
     }
 
     if (!fTxOutsByAddressIndex)
         throw JSONRPCError(RPC_METHOD_NOT_FOUND, "To use this function, you must start bitcoin with the -txoutsbyaddressindex parameter.");
 
-    RPCTypeCheck(params, boost::assign::list_of(UniValue::VARR)(UniValue::VSTR)(UniValue::VSTR)(UniValue::VSTR)(UniValue::VNUM), true);
+    RPCTypeCheck(params, boost::assign::list_of(UniValue::VSTR)(UniValue::VSTR)(UniValue::VSTR)(UniValue::VSTR)(UniValue::VNUM), true);
 
     UniValue privatekey = params[1];
     UniValue pubkey = params[2];
     UniValue address = params[3];
-    UniValue inputs = params[0].get_array();
+    string inputs = params[0].get_str();
     CAmount feerate = DEFAULT_MIN_RELAY_TX_FEE;
     if(!params[4].isNull())
        feerate = params[4].get_real() * COIN;
     map<string, CAmount> recipientor;
+
+    if (!parseStringIntoReceivers(inputs, recipientor))
+        throw JSONRPCError(RPC_INVALID_PARAMETER, "address_amout parse error");
+    /*
     for(unsigned int idr = 0; idr < inputs.size(); idr++){
         const UniValue& input = inputs[idr];
         const UniValue& o = input.get_obj();
@@ -977,6 +1017,7 @@ UniValue sendtransactiontoaddress(const UniValue& params, bool fHelp){
             throw JSONRPCError(RPC_INVALID_PARAMETER, "Invalid parameter, va must be positive");
         recipientor.insert(map<string, CAmount>::value_type(addressv, CAmount(va * COIN)));
     }
+     */
 
     // Here create transaction
     bool fCreated;
@@ -998,7 +1039,10 @@ UniValue sendtransactiontoaddress(const UniValue& params, bool fHelp){
         throw JSONRPCError(RPC_INVALID_PARAMETER, strFailReason);
     }
 
-    return hashTx.GetHex();
+    UniValue result(UniValue::VOBJ);
+    result.push_back(Pair("txid", hashTx.GetHex()));
+
+    return result;
 }
 
 UniValue getbalancebypubkey(const UniValue& params, bool fHelp)
@@ -1009,7 +1053,7 @@ UniValue getbalancebypubkey(const UniValue& params, bool fHelp)
             "\nReturns a list of unspent transaction outputs and rewards by pubkey.\n"
             "Note that the result will not include the mempool.\n"
             "The unspent transaction outputs must be confirmed at least 1 time.\n"
-            "\nTo use this function, you must start isono with the -txoutsbyaddressindex parameter.\n"
+            "\nTo use this function, you must start taucoin with the -txoutsbyaddressindex parameter.\n"
             "\nArguments:\n"
             "1. \"pubkeys\"    (string) A json array of bitcoin pubkeys\n"
             "    [\n"
@@ -1032,15 +1076,20 @@ UniValue getbalancebypubkey(const UniValue& params, bool fHelp)
         );
 
     if (!fTxOutsByAddressIndex)
-        throw JSONRPCError(RPC_METHOD_NOT_FOUND, "To use this function, you must start isono with the -txoutsbyaddressindex parameter.");
+        throw JSONRPCError(RPC_METHOD_NOT_FOUND, "To use this function, you must start taucoin with the -txoutsbyaddressindex parameter.");
 
-    RPCTypeCheck(params, boost::assign::list_of(UniValue::VARR), true);
+    RPCTypeCheck(params, boost::assign::list_of(UniValue::VSTR), true);
 
     UniValue results(UniValue::VARR);
-    UniValue inputs = params[0].get_array();
+    string inputs = params[0].get_str();
+    vector<string> queries;
+    boost::split(queries, inputs, boost::is_any_of("|"));
 
-    for (unsigned int i = 0; i < inputs.size(); i++) {
-        const std::string pubkey = inputs[i].get_str();
+    if (queries.size() == 0)
+        throw JSONRPCError(RPC_INVALID_ADDRESS_OR_KEY, "Invalid inputs: pubkey1|pubkey2|...|pubkeyn ");
+
+    for (unsigned int i = 0; i < queries.size(); i++) {
+        const std::string pubkey = queries[i];
         if (pubkey.empty())
             continue;
         std::string strAddr;
@@ -1051,7 +1100,7 @@ UniValue getbalancebypubkey(const UniValue& params, bool fHelp)
         if (address.IsValid()) {
             script = GetScriptForDestination(address.Get());
         } else {
-            throw JSONRPCError(RPC_INVALID_ADDRESS_OR_KEY, "Invalid ISONO pubkey: " + pubkey);
+            throw JSONRPCError(RPC_INVALID_ADDRESS_OR_KEY, "Invalid tau pubkey: " + pubkey);
         }
 
         CCoinsByScript coinsByScript;

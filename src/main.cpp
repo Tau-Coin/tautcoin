@@ -1847,10 +1847,12 @@ bool ReadBlockFromDisk(CBlock& block, const CDiskBlockPos& pos, const Consensus:
     }
 
     // Check the header
+    /*
     CValidationState state;
     if (!CheckProofOfTransaction(block, state, consensusParams, NULL)
             && state.GetRejectReason().find("bad-prevblk") == std::string::npos)
         return error("ReadBlockFromDisk: Errors in block header at %s", pos.ToString());
+     */
 
     return true;
 }
@@ -2118,13 +2120,15 @@ bool UpdateRewards(const CTransaction& tx, CAmount blockReward, int nHeight, boo
         vector<string> members;
         addr.ScriptPub2Addr(tx.vout[0].scriptPubKey, clubLeaderAddress);
         ret &= clubMan->GetClubIDByAddress(clubLeaderAddress, clubID);
-        ret &= rewardMan->GetMembersByClubID(clubID, members);
+        ret &= rewardMan->GetMembersByClubID(clubID, members, clubLeaderAddress);
         if (!ret)
             return ret;
 
         if (members.size() > 0)
         {
             CAmount eachReward = (blockReward - tx.vout[0].nValue) / members.size();
+            LogPrintf("%s, blkrw:%d, leader rw:%d, eachrw:%d, memcnt:%d\n", __func__,
+                    blockReward, tx.vout[0].nValue, eachReward, members.size());
             assert(eachReward >= 0);
             if (eachReward == 0)
             {
@@ -2143,6 +2147,7 @@ bool UpdateRewards(const CTransaction& tx, CAmount blockReward, int nHeight, boo
                 for(unsigned int j = 0; j < members.size(); j++)
                 {
                     CAmount rewardbalance = rewardMan->GetRewardsByAddress(members[j]);
+                    LogPrintf("%s, member:%s, rw:%d\n", __func__, members[j], rewardbalance);
                     if (isUndo)
                         ret = rewardMan->UpdateRewardsByAddress(members[j], rewardbalance-eachReward,
                                                                rewardbalance);
@@ -4168,7 +4173,7 @@ bool CheckProofOfTransaction(const CBlockHeader& block, CValidationState& state,
 
     assert(pindexPrev);
 
-    PodsErr error;
+    PotErr error;
     if (!CheckProofOfTransaction(pindexPrev->generationSignature, block.pubKeyOfpackager,
                 pindexPrev->nHeight + 1, block.nTime - pindexPrev->nTime, block.baseTarget, consensusParams, error)) {
         return state.DoS(50, false, REJECT_INVALID, "high-hit", false, "proof of stake failed");
@@ -4361,7 +4366,7 @@ bool ContextualCheckBlockHeader(const CBlockHeader& block, CValidationState& sta
     }
 
     // Check proof of stake
-    if (block.baseTarget != getNextPosRequired(pindexPrev))
+    if (block.baseTarget != getNextPotRequired(pindexPrev))
         return state.DoS(50, false, REJECT_INVALID, "bad-basetargetbits", false, "incorrect proof of tx");
 
     if (block.cumulativeDifficulty != GetNextCumulativeDifficulty(pindexPrev, block.baseTarget, consensusParams))
@@ -4851,10 +4856,12 @@ bool static LoadBlockIndexDB()
         // For bitcoin, pow verification is implemented in "LoadBlockIndexGuts".
         // But for pods, we have to do this work after all BlockIndexed are loaded.
         if (pindex->pprev) {
+            /*
             if (!CheckProofOfTransaction(pindex->GetBlockHeader(), dummy, chainparams.GetConsensus(),
                     pindex->pprev)) {
                 return error("LoadBlockIndex(): CheckProofOfTransaction failed: %s", pindex->ToString());
             }
+             */
 
             if (pindex->nChainDiff != pindex->pprev->nChainDiff + GetBlockProof(*pindex))
             {

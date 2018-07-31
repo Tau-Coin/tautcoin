@@ -45,60 +45,6 @@ const arith_uint256 Arith256DiffAdjustNumeratorHalf = UintToArith256(DiffAdjustN
 
 const static bool fDebugPODS = true;
 
-#if 0
-UniValue getLatestBlockHash(){
-    LOCK(cs_main);
-    uint32_t nHeight = chainActive.Height();
-    std::cout<<"current main chain height is "<<nHeight<<std::endl;
-    CBlockIndex* pblockindex = chainActive[nHeight];
-    std::cout <<"hex is as follows "<<std::hex <<pblockindex->GetBlockHash().GetHex() <<std::endl;
-    return pblockindex->GetBlockHash().GetHex();
-}
-uint256 getPosHash( UniValue value){
-    std::string str1 = value.get_str();
-    CHashWriter ss(SER_GETHASH, 0);
-    ss << strMessageMagic;
-    ss << str1;
-    return ss.GetHash();
-}
-
-CPubKey GetPubKeyForPackage(){
-    boost::shared_ptr<CReserveScript> coinbaseScript;
-    GetMainSignals().ScriptForMining(coinbaseScript);
-
-    // If the keypool is exhausted, no script is returned at all.  Catch this.
-    if (!coinbaseScript || coinbaseScript->reserveScript.empty()){
-        std::cout<<" error please check your wallet"<<std::endl;
-    }
-    CPubKey pubkey;
-    coinbaseScript->GetReservedKey(pubkey);
-    std::vector<unsigned char> ret = ToByteVector(pubkey);
-    std::string pukstr = HexStr(ret);
-    std::cout<<"publick key string is like " << pukstr<<std::endl;
-    return pubkey;
-}
-uint64_t signatureCompactWithPubkey(const uint256 &phash, std::vector<unsigned char>& vchSig,CPubKey pubkey){
-    vchSig.resize(65);
-
-    int rec = -1;
-    secp256k1_ecdsa_recoverable_signature sig;
-    static secp256k1_context* secp256k1_context_sign = secp256k1_context_create(SECP256K1_CONTEXT_SIGN | SECP256K1_CONTEXT_VERIFY);
-    //std::vector<unsigned char>  pubkey1 = ToByteVector(pubkey);
-    int ret = secp256k1_ecdsa_sign_recoverable(secp256k1_context_sign, &sig, phash.begin(), pubkey.begin()+1, secp256k1_nonce_function_rfc6979, NULL);
-    assert(ret);
-    secp256k1_ecdsa_recoverable_signature_serialize_compact(secp256k1_context_sign, (unsigned char*)&vchSig[1], &rec, &sig);
-    assert(ret);
-    assert(rec != -1);
-    vchSig[0] = 27 + rec + (true ? 4 : 0);
-    std::cout <<"sizeof vchSig is "<<vchSig.size() <<" vchSig[0] "<<std::dec<<(int)vchSig[0]<<" "<<(int)vchSig[1]<<std::endl;
-    //EncodeBase64(&vchSig[0], 8);
-    uint64_t hit=0;
-    memcpy(&hit,&vchSig[0],8);
-    return hit;
-}
-
-#endif
-
 #if 1
 std::string getLatestBlockGenerationSignature(){
     //LOCK(cs_main);
@@ -124,7 +70,7 @@ uint64_t getLatestBlockBaseTarget(){
     return pblockindex->GetBlockBaseTarget();
 }
 
-uint256 getPosHash(std::string generationSignature,std::string pubKey){
+uint256 getPotHash(std::string generationSignature,std::string pubKey){
     uint256 ret = Hash(generationSignature.begin(),generationSignature.end(),pubKey.begin(),pubKey.end());
     return ret;
 }
@@ -172,7 +118,7 @@ std::string GetPubKeyForPackage(){
     }
     return pukstr;
 }
-uint64_t calculateHitOfPOS(const uint256 &phash){
+uint64_t calculateHitOfPOT(const uint256 &phash){
     LogPrintf("Generation Signature Hash is %s\n",HexStr(phash));
     uint64_t hit=0;
     memcpy(&hit,phash.begin(),8);
@@ -184,7 +130,7 @@ uint64_t calculateHitOfPOS(const uint256 &phash){
     return ArithToUint256(arihit).GetUint64(0);
 }
 //watch out that CblockHeader is parent of Cblock
-uint64_t getNextPosRequired(const CBlockIndex* pindexLast){
+uint64_t getNextPotRequired(const CBlockIndex* pindexLast){
    uint64_t baseTargetLimt = 153722867; //genesis block base target
    const CBlockIndex* ancestor = NULL;
    if(pindexLast -> nHeight < 3){
@@ -241,18 +187,18 @@ uint256 GetNextCumulativeDifficulty(const CBlockIndex* pindexLast, uint64_t base
 }
 
 bool CheckProofOfTransaction(const std::string& prevGenerationSignature, const std::string& currPubKey,
-        int nHeight, unsigned int nTime, uint64_t baseTarget, const Consensus::Params& consensusParams, PodsErr& checkErr)
+        int nHeight, unsigned int nTime, uint64_t baseTarget, const Consensus::Params& consensusParams, PotErr& checkErr)
 {
     static ClubManager* pClubMgr = NULL;
     if (!pClubMgr)
         pClubMgr = ClubManager::GetInstance();
 
-    checkErr = PODS_NO_ERR;
+    checkErr = POT_NO_ERR;
 
     if (prevGenerationSignature.empty() || currPubKey.empty() || nHeight < 0 || nTime == 0) {
         LogPrintf("CheckProofOfTransaction failed, incorrect args, signatrue:%s, pubkey:%s, height:%d, time:%d\n",
             prevGenerationSignature, currPubKey, nHeight, nTime);
-        checkErr = PODS_ARGS_ERR;
+        checkErr = POT_ARGS_ERR;
         return false;
     }
 
@@ -271,13 +217,13 @@ bool CheckProofOfTransaction(const std::string& prevGenerationSignature, const s
         strPubKey = currPubKey;
     }
 
-    uint256 geneSignatureHash = getPosHash(prevGenerationSignature, strPubKey);
-    uint64_t hit = calculateHitOfPOS(geneSignatureHash);
+    uint256 geneSignatureHash = getPotHash(prevGenerationSignature, strPubKey);
+    uint64_t hit = calculateHitOfPOT(geneSignatureHash);
     std::string strAddr;
 
     if (!ConvertPubkeyToAddress(currPubKey, strAddr) || strAddr.empty()) {
         LogPrintf("CheckProofOfTransaction failed, get strAddr fail\n");
-        checkErr = PODS_ADDR_ERR;
+        checkErr = POT_ADDR_ERR;
         return false;
     }
     if (fDebugPODS)
@@ -288,7 +234,7 @@ bool CheckProofOfTransaction(const std::string& prevGenerationSignature, const s
     // If harverst power is one, return false directly.
     if (harverstPower <= ClubManager::DEFAULT_HARVEST_POWER) {
         LogPrintf("CheckProofOfTransaction failed, not allow forge\n");
-        checkErr = PODS_BALANCE_ERR;
+        checkErr = POT_BALANCE_ERR;
         return false;
     }
 

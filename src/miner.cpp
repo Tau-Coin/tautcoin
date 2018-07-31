@@ -12,12 +12,14 @@
 #include "consensus/consensus.h"
 #include "consensus/merkle.h"
 #include "consensus/validation.h"
+#include "clubman.h"
 #include "hash.h"
 #include "main.h"
 #include "net.h"
 #include "policy/policy.h"
 #include "pow.h"
 #include "primitives/transaction.h"
+#include "rewardman.h"
 #include "script/standard.h"
 #include "timedata.h"
 #include "txmempool.h"
@@ -172,16 +174,45 @@ CBlockTemplate* BlockAssembler::CreateNewBlock(const CScript& scriptPubKeyIn,std
     nLastBlockWeight = nBlockWeight;
     LogPrintf("CreateNewBlock(): total size %u txs: %u fees: %ld sigops %d\n", nBlockSize, nBlockTx, nFees, nBlockSigOpsCost);
 
-    // Recompute nFees
-    if (mapArgs.count("-leaderreward") && mapMultiArgs["-leaderreward"].size() > 0)
-    {
-        string ratiostr = mapMultiArgs["-leaderreward"][0];
-        double ratio = atof(ratiostr.c_str());
-        if (ratio > 0 && ratio < 1)
-            nFees = CAmount(nFees * ratio);
+    std::string strAddr;
+    CBitcoinAddress addr;
+    uint64_t clubID;
+    std::vector<string> members;
+    bool ret = true;
+    static ClubManager * clubMan = NULL;
+    static RewardManager * rewardMan = NULL;
+
+    if (!clubMan)
+        clubMan = ClubManager::GetInstance();
+    if (!rewardMan)
+        rewardMan = RewardManager::GetInstance();
+
+    if (!addr.ScriptPub2Addr(scriptPubKeyIn, strAddr)) {
+        LogPrintf("%s, ScriptPub2Addr fail\n", __func__);
+        return NULL;
     }
-    else
-        nFees = CAmount(nFees * DEFAULT_CLUB_LEADER_REWARD_RATIO);
+
+    ret &= clubMan->GetClubIDByAddress(strAddr, clubID);
+    ret &= rewardMan->GetMembersByClubID(clubID, members, strAddr);
+    if (!ret)
+    {
+        LogPrintf("%s, GetClubIDByAddress or GetMembersByClubID fail\n", __func__);
+        return NULL;
+    }
+
+    // Recompute nFees
+    if (members.size() > 0)
+    {
+        if (mapArgs.count("-leaderreward") && mapMultiArgs["-leaderreward"].size() > 0)
+        {
+            string ratiostr = mapMultiArgs["-leaderreward"][0];
+            double ratio = atof(ratiostr.c_str());
+            if (ratio > 0 && ratio < 1)
+                nFees = CAmount(nFees * ratio);
+        }
+        else
+            nFees = CAmount(nFees * DEFAULT_CLUB_LEADER_REWARD_RATIO);
+    }
 
     // Create coinbase transaction.
     CMutableTransaction coinbaseTx;
@@ -203,7 +234,7 @@ CBlockTemplate* BlockAssembler::CreateNewBlock(const CScript& scriptPubKeyIn,std
     pblocktemplate->vTxSigOpsCost[0] = WITNESS_SCALE_FACTOR * GetLegacySigOpCount(pblock->vtx[0]);
 
     // Fill about pos
-    pblock->baseTarget     = getNextPosRequired(pindexPrev); //temporary formula
+    pblock->baseTarget     = getNextPotRequired(pindexPrev); //temporary formula
     pblock->generationSignature = raiseGenerationSignature(pubkeyString);
     pblock->pubKeyOfpackager = pubkeyString;
     pblock->cumulativeDifficulty = GetNextCumulativeDifficulty(pindexPrev, pblock->baseTarget, chainparams.GetConsensus());
@@ -625,11 +656,11 @@ void IncrementExtraNonce(CBlock* pblock, const CBlockIndex* pindexPrev, unsigned
 bool isPreparedtoPackage(std::string pubkeyString)
 {
    string geneSignature = getLatestBlockGenerationSignature();
-   uint256 geneSignatureHash = getPosHash(geneSignature,pubkeyString);
-   uint64_t hit = calculateHitOfPOS(geneSignatureHash);
+   uint256 geneSignatureHash = getPotHash(geneSignature,pubkeyString);
+   uint64_t hit = calculateHitOfPOT(geneSignatureHash);
    LOCK(cs_main);
    CBlockIndex* pindexPrev = chainActive.Tip();
-   uint64_t target = getNextPosRequired(pindexPrev);
+   uint64_t target = getNextPotRequired(pindexPrev);
    int64_t S = getPastTimeFromLastestBlock();
    uint64_t Be = 88888;
    return hit < target * S * Be;

@@ -4,8 +4,8 @@
 // Distributed under the MIT software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
-#ifndef IMCOIN_POS_H
-#define IMCOIN_POS_H
+#ifndef TAUCOIN_POS_H
+#define TAUCOIN_POS_H
 #include "chainparams.h"
 #include "consensus/params.h"
 #include <stdint.h>
@@ -26,31 +26,31 @@ class uint256;
 extern const arith_uint256 Arith256DiffAdjustNumerator;
 
 typedef enum {
-    PODS_NO_ERR,
-    PODS_ARGS_ERR,
-    PODS_ADDR_ERR,
-    PODS_BALANCE_ERR,
-    PODS_ERR_NUMBER
-} PodsErr;
+    POT_NO_ERR,
+    POT_ARGS_ERR,
+    POT_ADDR_ERR,
+    POT_BALANCE_ERR,
+    POT_ERR_NUMBER
+} PotErr;
 
 UniValue getLatestBlockHash();
 //CPubKey GetPubKeyForPackage();
-uint256 getPosHash( UniValue value);
+uint256 getPotHash( UniValue value);
 uint64_t signatureCompactWithPubkey(const uint256 &phash, std::vector<unsigned char>& vchSig,CPubKey pubkey);
 
 std::string getLatestBlockGenerationSignature();
-uint256 getPosHash(std::string generationSignature,std::string pubKey);
+uint256 getPotHash(std::string generationSignature,std::string pubKey);
 std::string GetPubKeyForPackage();
-uint64_t calculateHitOfPOS(const uint256 &phash);
+uint64_t calculateHitOfPOT(const uint256 &phash);
 std::string raiseGenerationSignature(std::string pukstr);
 bool verifyGenerationSignature(std::string pGS,std::string generationSignature,std::string pukstr);
 int64_t getPastTimeFromLastestBlock();
 uint64_t getLatestBlockBaseTarget();
-uint64_t getNextPosRequired(const CBlockIndex* pindexLast);
+uint64_t getNextPotRequired(const CBlockIndex* pindexLast);
 
 uint256 GetNextCumulativeDifficulty(const CBlockIndex* pindexLast, uint64_t baseTarget, const Consensus::Params& consensusParams);
 
 bool CheckProofOfTransaction(const std::string& prevGenerationSignature, const std::string& currPubKey,
-        int nHeight, unsigned int nTime, uint64_t baseTarget, const Consensus::Params& consensusParams, PodsErr& checkErr);
+        int nHeight, unsigned int nTime, uint64_t baseTarget, const Consensus::Params& consensusParams, PotErr& checkErr);
 
-#endif // IMCOIN_POS_H
+#endif // TAUCOIN_POS_H

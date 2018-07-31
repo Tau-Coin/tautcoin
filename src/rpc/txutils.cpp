@@ -1,4 +1,4 @@
-// Copyright (c) 2018- The ISONO Core developers
+// Copyright (c) 2018- The Taucoin Core developers
 // Distributed under the MIT software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
@@ -173,11 +173,6 @@ bool CTransactionUtils::SelectCoinsMinConf(const CAmount& nTargetValue, int nCon
     }
 
     LogPrintf("total lower:%d, target:%d\n", nTotalLower, nTargetValue);
-    if (nTotalLower <= 0)
-    {
-        LogPrintf("no required coins\n");
-        return false;
-    }
 
     if (nTotalLower == nTargetValue)
     {

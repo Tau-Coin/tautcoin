@@ -49,19 +49,17 @@ Optional dependencies:
  univalue    | Utility          | JSON parsing and encoding (bundled version will be used unless --with-system-univalue passed to configure)
  libzmq3     | ZMQ notification | Optional, allows generating ZMQ notifications (requires ZMQ version >= 4.x)
 
-For the versions used in the release, see [release-process.md](release-process.md) under *Fetch and build inputs*.
-
 Memory Requirements
 --------------------
 
-C++ compilers are memory-hungry. It is recommended to have at least 1.5 GB of
+C++ compilers are memory-hungry. It is recommended to have at least 2 GB of
 memory available when compiling Bitcoin Core. On systems with less, gcc can be
 tuned to conserve memory with additional CXXFLAGS:
 
 
     ./configure CXXFLAGS="--param ggc-min-expand=1 --param ggc-min-heapsize=32768"
 
-Dependency Build Instructions: Ubuntu & Debian
+Dependency Build Instructions: Ubuntu
 ----------------------------------------------
 Build requirements:
 
@@ -69,11 +67,11 @@ Build requirements:
 
 Options when installing required Boost library files:
 
-1. On at least Ubuntu 14.04+ and Debian 7+ there are generic names for the
+1. On at least Ubuntu 14.04+ there are generic names for the
 individual boost development packages, so the following can be used to only
 install necessary parts of boost:
 
-        sudo apt-get install libboost-system-dev libboost-filesystem-dev libboost-chrono-dev libboost-program-options-dev libboost-test-dev libboost-thread-dev
+		sudo apt-get install libboost-system-dev libboost-filesystem-dev libboost-chrono-dev libboost-program-options-dev libboost-test-dev libboost-thread-dev
 
 2. If that doesn't work, you can install all boost development packages with:
 
@@ -86,7 +84,7 @@ You can add the repository and install using the following commands:
     sudo apt-get update
     sudo apt-get install libdb4.8-dev libdb4.8++-dev
 
-Ubuntu and Debian have their own libdb-dev and libdb++-dev packages, but these will install
+Ubuntu has their own libdb-dev and libdb++-dev packages, but these will install
 BerkeleyDB 5.1 or later, which break binary wallet compatibility with the distributed executables which
 are based on BerkeleyDB 4.8. If you do not care about wallet compatibility,
 pass `--with-incompatible-bdb` to configure.
@@ -100,18 +98,69 @@ Optional:
 ZMQ dependencies:
 
     sudo apt-get install libzmq3-dev (provides ZMQ API 4.x)
+    
+Database for harvest club: Ubuntu
+-----------------------------------------
+### MySQL
 
-Dependencies for the GUI: Ubuntu & Debian
+If you need to build mysql yourself:
+
+	sudo apt-get install mysql-server
+	sudo apt-get install libmysqlclient-dev
+
+We have prepared the tables for harvest club.
+	
+    wget https://www.taucoin.io/download/taureward.sql
+
+enter database by root:
+	
+    mysql> create database taureward;
+    mysql> use taureward;
+    mysql> source taureward.sql;
+
+create an user for taucoin harvest club relationship.
+
+	mysql> CREATE USER 'username'@'localhost' IDENTIFIED BY 'password';
+    mysql> GRANT SELECT,UPDATE,INSERT,DELETE on taureward.* to 'username'@'localhost';
+
+After these, we have created a database named "taureward", has two tables - "clubinfo" and "memberinfo", more details can be seen in src/isndb.h.
+	
+     //Database info
+     const char DBName[32]= "taureward";
+     const char hostName[32]= "localhost";
+     const char userName[32]= "username";
+     const char passWord[32]= "password";
+
+
+### MySQL++
+
+If you need to build mysql++ yourself:
+
+	wget https://www.taucoin.io/download/mysql++_3.2.2.tar.gz
+	tar -zvxf mysql++_3.2.2.tar.gz
+	cd mysql++_3.2.2
+
+ubuntu 14.04, follow these steps:
+
+	cat "/usr/share/libtool/config/ltmain.sh" > ltmain.sh
+	./configure --with-mysql-lib=/usr/lib/x86_64-linux-gnu/
+	make
+	sudo make install
+
+ubuntu 16.04, should follow thest steps:
+
+	cat "/usr/share/libtool/build-aux/ltmain.sh" > ltmain.sh
+	./configure --with-mysql-lib=/usr/lib/x86_64-linux-gnu/
+	make
+	sudo make install
+
+Dependencies for the GUI: Ubuntu
 -----------------------------------------
 
 If you want to build Bitcoin-Qt, make sure that the required packages for Qt development
 are installed. Either Qt 5 or Qt 4 are necessary to build the GUI.
 If both Qt 4 and Qt 5 are installed, Qt 5 will be used. Pass `--with-gui=qt4` to configure to choose Qt4.
 To build without GUI pass `--without-gui`.
-
-To build with mysql you need the following:
-
-    sudo apt-get install libqt5gui5 libqt5core5a libqt5dbus5 qttools5-dev qttools5-dev-tools libprotobuf-dev protobuf-compiler
     
 To build with Qt 5 (recommended) you need the following:
 
@@ -144,14 +193,6 @@ turned off by default.  See the configure options for upnp behavior desired:
 	--without-miniupnpc      No UPnP support miniupnp not required
 	--disable-upnp-default   (the default) UPnP support turned off by default at runtime
 	--enable-upnp-default    UPnP support turned on by default at runtime
-
-Mysql
------
-If you need to build msyql yourself:
-
-	sudo apt-get install mysql-server
-	sudo apt-get install libmysqlclient-dev
-Your need to configure your mysql, create a database to store and update harvest club relationship.In testnet, we create a database named "taureward", has two tables - "clubinfo" and "member info", more details can be seen in taudb.h.
 
     
 Berkeley DB

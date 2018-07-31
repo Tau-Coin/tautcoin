@@ -15,7 +15,7 @@
 
 //! These need to be macros, as clientversion.cpp's and bitcoin*-res.rc's voodoo requires it
 #define CLIENT_VERSION_MAJOR 0
-#define CLIENT_VERSION_MINOR 13
+#define CLIENT_VERSION_MINOR 1
 #define CLIENT_VERSION_REVISION 0
 #define CLIENT_VERSION_BUILD 0
 
@@ -23,10 +23,10 @@
 #define CLIENT_VERSION_IS_RELEASE true
 
 /**
- * Copyright year (2009-this)
+ * Copyright year (2018-this)
  * Todo: update this when changing our copyright comments in the source
  */
-#define COPYRIGHT_YEAR 2016
+#define COPYRIGHT_YEAR 2018
 
 #endif //HAVE_CONFIG_H
 
@@ -51,9 +51,11 @@
 #include <string>
 #include <vector>
 
+static const int BITCOIN_FORK_BASE_VERSION_MINOR = 13;
+
 static const int CLIENT_VERSION =
                            1000000 * CLIENT_VERSION_MAJOR
-                         +   10000 * CLIENT_VERSION_MINOR
+                         +   10000 * (CLIENT_VERSION_MINOR + BITCOIN_FORK_BASE_VERSION_MINOR - 1)
                          +     100 * CLIENT_VERSION_REVISION
                          +       1 * CLIENT_VERSION_BUILD;
 
