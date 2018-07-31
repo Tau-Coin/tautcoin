@@ -40,6 +40,7 @@ ISNDB* ISNDB::GetInstance()
 ISNDB::ISNDB()
 {
 	try{
+        LOCK(cs_isndb);
         con= mysqlpp::Connection(GetArg("-mysqldbname", DBName).c_str(), GetArg("-mysqlserver", hostName).c_str(), GetArg("-mysqlusername", userName).c_str(), GetArg("-mysqlpassword", passWord).c_str());
         //con= mysqlpp::Connection(DBName, hostName, userName, passWord);
 	}
@@ -64,7 +65,7 @@ mysqlpp::StoreQueryResult ISNDB::ISNSqlSelectAA(const string &tablename, const v
     mysqlpp::StoreQueryResult dataTmp;
 
 	try{
-
+        LOCK(cs_isndb);
 		mysqlpp::Query query= con.query();
 		//according tablename in different way
 		if(fieldSize == 1)
@@ -118,7 +119,7 @@ mysqlpp::SimpleResult ISNDB::ISNSqlUpdate(const string &tablename, const vector<
     mysqlpp::SimpleResult dataTmp;
 
 	try{
-
+        LOCK(cs_isndb);
 		mysqlpp::Query query= con.query();
 		//according tablename in different way
 		if(fieldSize == 1)
@@ -165,7 +166,7 @@ mysqlpp::SimpleResult ISNDB::ISNSqlUpdate(const string &tablename, const vector<
 mysqlpp::SimpleResult ISNDB::ISNSqlAddOne(const string &tablename, const vector<string> &field, const string &condition, const string &cvalue)
 {
 	try{
-
+        LOCK(cs_isndb);
 		mysqlpp::Query query= con.query();
 		//according tablename in different way
 		query<< "update %0"" set %1""=%1""+ 1 where %2""= %3q";
@@ -190,6 +191,7 @@ mysqlpp::SimpleResult ISNDB::ISNSqlAddOne(const string &tablename, const vector<
 long ISNDB::ISNSqlInsert(const string &tablename, const vector<string> &values)
 {
 	try{
+        LOCK(cs_isndb);
         if(tablename==tableClub)
 		{
 			mysqlpp::Query query= con.query();
@@ -227,7 +229,7 @@ long ISNDB::ISNSqlInsert(const string &tablename, const vector<string> &values)
 bool ISNDB::ISNSqlDelete(const string &tablename, const string &condition, const string &value)
 {
 	try{
-
+        LOCK(cs_isndb);
 		mysqlpp::Query query= con.query();
 		//according tablename in different way
 		query<< "delete from %0"" where %1"" = %2q";
