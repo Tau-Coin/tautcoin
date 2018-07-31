@@ -20,6 +20,7 @@
 #include "pow.h"
 #include "pot.h"
 #include "rpc/server.h"
+#include "timedata.h"
 #include "txmempool.h"
 #include "util.h"
 #include "utilstrencodings.h"
@@ -106,7 +107,7 @@ UniValue generateBlocksWithPot(boost::shared_ptr<CReserveScript> coinbaseScript,
              LOCK(cs_main);
              prevIndex = chainActive.Tip();
          }
-         int64_t now = GetTime();
+         int64_t now = GetAdjustedTime();
          uint64_t baseTarget = getNextPotRequired(prevIndex);
          PotErr error;
 
