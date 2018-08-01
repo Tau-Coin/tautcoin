@@ -2118,57 +2118,53 @@ bool UpdateRewards(const CTransaction& tx, CAmount blockReward, int nHeight, boo
         CBitcoinAddress addr;
         uint64_t clubID;
         vector<string> members;
+        map<string, uint64_t> addrToTC;
         addr.ScriptPub2Addr(tx.vout[0].scriptPubKey, clubLeaderAddress);
+        arith_uint256 totalTXCnt = clubMan->GetHarvestPowerByAddress(clubLeaderAddress, 0);
+        if (totalTXCnt.getdouble() == 0)
+        {
+            LogPrintf("Error: The club's harvest power is 0, which is not allowed to forge\n");
+            return false;
+        }
+
         ret &= clubMan->GetClubIDByAddress(clubLeaderAddress, clubID);
-        ret &= rewardMan->GetMembersByClubID(clubID, members, clubLeaderAddress);
+        ret &= rewardMan->GetMembersTxCountByClubID(clubID, addrToTC, clubLeaderAddress);
         if (!ret)
             return ret;
 
-        if (members.size() > 0)
+        CAmount totalRewards = blockReward-tx.vout[0].nValue;
+        CAmount distributedRewards = 0;
+        for(std::map<string, uint64_t>::const_iterator it = addrToTC.begin(); it != addrToTC.end(); it++)
         {
-            CAmount eachReward = (blockReward - tx.vout[0].nValue) / members.size();
-            LogPrintf("%s, blkrw:%d, leader rw:%d, eachrw:%d, memcnt:%d\n", __func__,
-                    blockReward, tx.vout[0].nValue, eachReward, members.size());
-            assert(eachReward >= 0);
-            if (eachReward == 0)
+            arith_uint256 TXCnt = it->second;
+            string member = it->first;
+            CAmount memberReward = TXCnt.getdouble() / totalTXCnt.getdouble() * totalRewards;
+            if (memberReward > 0)
             {
-                CAmount rewardbalance = rewardMan->GetRewardsByAddress(clubLeaderAddress);
+                CAmount rewardbalance_old = rewardMan->GetRewardsByAddress(member);
+                LogPrintf("%s, member:%s, rw:%d\n", __func__, member, rewardbalance_old);
                 if (isUndo)
-                    ret = rewardMan->UpdateRewardsByAddress(clubLeaderAddress,
-                                                           rewardbalance-blockReward+tx.vout[0].nValue,
-                                                           rewardbalance);
+                    ret &= rewardMan->UpdateRewardsByAddress(member, rewardbalance_old-memberReward,
+                                                             rewardbalance_old);
                 else
-                    ret = rewardMan->UpdateRewardsByAddress(clubLeaderAddress,
-                                                           rewardbalance+blockReward-tx.vout[0].nValue,
-                                                           rewardbalance);
-            }
-            else
-            {
-                for(unsigned int j = 0; j < members.size(); j++)
-                {
-                    CAmount rewardbalance = rewardMan->GetRewardsByAddress(members[j]);
-                    LogPrintf("%s, member:%s, rw:%d\n", __func__, members[j], rewardbalance);
-                    if (isUndo)
-                        ret = rewardMan->UpdateRewardsByAddress(members[j], rewardbalance-eachReward,
-                                                               rewardbalance);
-                    else
-                        ret = rewardMan->UpdateRewardsByAddress(members[j], rewardbalance+eachReward,
-                                                               rewardbalance);
-                }
+                    ret &= rewardMan->UpdateRewardsByAddress(member, rewardbalance_old+memberReward,
+                                                             rewardbalance_old);
+                distributedRewards += memberReward;
             }
         }
+
+        // Return remained rewards back to club leader
+        CAmount rewardbalance = rewardMan->GetRewardsByAddress(clubLeaderAddress);
+        CAmount remainedReward = totalRewards - distributedRewards;
+        assert(remainedReward >= 0);
+        if (isUndo)
+            ret &= rewardMan->UpdateRewardsByAddress(clubLeaderAddress,
+                                                     rewardbalance-remainedReward,
+                                                     rewardbalance);
         else
-        {
-            CAmount rewardbalance = rewardMan->GetRewardsByAddress(clubLeaderAddress);
-            if (isUndo)
-                ret = rewardMan->UpdateRewardsByAddress(clubLeaderAddress,
-                                                       rewardbalance-blockReward+tx.vout[0].nValue,
-                                                       rewardbalance);
-            else
-                ret = rewardMan->UpdateRewardsByAddress(clubLeaderAddress,
-                                                       rewardbalance+blockReward-tx.vout[0].nValue,
-                                                       rewardbalance);
-        }
+            ret &= rewardMan->UpdateRewardsByAddress(clubLeaderAddress,
+                                                     rewardbalance+remainedReward,
+                                                     rewardbalance);
     }
 
     if (ret)
