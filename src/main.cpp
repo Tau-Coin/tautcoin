@@ -4171,7 +4171,7 @@ bool CheckProofOfTransaction(const CBlockHeader& block, CValidationState& state,
     PotErr error;
     if (!CheckProofOfTransaction(pindexPrev->generationSignature, block.pubKeyOfpackager,
                 pindexPrev->nHeight + 1, block.nTime - pindexPrev->nTime, block.baseTarget, consensusParams, error)) {
-        return state.DoS(50, false, REJECT_INVALID, "high-hit", false, "proof of stake failed");
+        return state.DoS(50, false, REJECT_INVALID, "high-hit", false, "proof of tx failed");
     }
 
     return true;
@@ -4197,12 +4197,12 @@ bool CheckBlockHeader(const CBlockHeader& block, CValidationState& state, const 
      }
     // Check generation signature
     if (!verifyGenerationSignature(pindexPrev->generationSignature,block.generationSignature, block.pubKeyOfpackager)) {
-        return state.DoS(90, false, REJECT_INVALID, "mismatch generation signature", false, "proof of stake failed");
+        return state.DoS(90, false, REJECT_INVALID, "mismatch generation signature", false, "proof of tx failed");
     }
 
     // Check proof of stake matches claimed amount
     if (fCheckPOW && !CheckProofOfTransaction(block, state, consensusParams, pindexPrev))
-        return state.DoS(50, false, REJECT_INVALID, "high-hit", false, "proof of stake failed");
+        return state.DoS(50, false, REJECT_INVALID, "high-hit", false, "proof of tx failed");
 
     return true;
 }

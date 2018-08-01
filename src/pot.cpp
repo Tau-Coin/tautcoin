@@ -43,7 +43,7 @@ const uint256 DiffAdjustNumeratorHalf = uint256S("0x0100000000");
 const uint256 DiffAdjustNumeratorfor55 = uint256S("0x80000000000000");
 const arith_uint256 Arith256DiffAdjustNumeratorHalf = UintToArith256(DiffAdjustNumeratorHalf);
 
-const static bool fDebugPODS = true;
+const static bool fDebugPODS = false;
 
 #if 1
 std::string getLatestBlockGenerationSignature(){
@@ -242,7 +242,7 @@ bool CheckProofOfTransaction(const std::string& prevGenerationSignature, const s
     thresold *= arith_uint256((uint64_t)nTime);
     thresold *= arith_uint256((uint64_t)harverstPower);
 
-    LogPrintf("CheckProofOfTransaction, harverst Power:%d\n", harverstPower);
+    LogPrintf("CheckProofOfTransaction, harvest Power:%d\n", harverstPower);
     LogPrintf("CheckProofOfTransaction, hit     :%s\n", arith_uint256(hit).ToString());
     LogPrintf("CheckProofOfTransaction, thresold:%s\n", thresold.ToString());
     if (thresold.CompareTo(arith_uint256(hit)) > 0) {
