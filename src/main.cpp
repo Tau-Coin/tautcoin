@@ -4368,8 +4368,9 @@ bool ContextualCheckBlockHeader(const CBlockHeader& block, CValidationState& sta
         return state.DoS(50, false, REJECT_INVALID, "bad-cumuldiffbits", false, "incorrect proof of tx");
 
     // Check allowed to forge or not
-    if (!clubMgr->IsAllowForge(block.pubKeyOfpackager, pindexPrev->nHeight + 1))
-        return state.DoS(50, false, REJECT_INVALID, "not allowed to forge", false, "incorrect proof of tx");
+    // TODO: move this component into ContextualCheckBlock
+    //if (!clubMgr->IsAllowForge(block.pubKeyOfpackager, pindexPrev->nHeight + 1))
+        //return state.DoS(50, false, REJECT_INVALID, "not allowed to forge", false, "incorrect proof of tx");
 
     // Check timestamp against prev
     if (block.GetBlockTime() <= pindexPrev->GetMedianTimePast())
