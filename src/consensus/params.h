@@ -46,6 +46,7 @@ struct Params {
     uint256 genesisCumulativeDifficulty;
     int64_t genesisBaseTarget;
     std::string genesislockCoinAddr[GENESISLOCK_ADDRCNT];
+    std::string genesisAddr[GENESISCOIN_CNT];
     int genesislockCoinHeight;
     int nSubsidyHalvingInterval;
     /** Used to check majorities for block version upgrade */

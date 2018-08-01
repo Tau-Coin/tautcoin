@@ -360,6 +360,7 @@ public:
         std::vector<CAmount> genesisReward;
         for(uint i = 0; i < GENESISCOIN_CNT; i++)
         {
+            consensus.genesisAddr[i] = baseAddr[i];
             genesisReward.push_back(MAX_MONEY / 100);
             if (i > GENESISCOIN_CNT - GENESISLOCK_ADDRCNT - 1)
                 consensus.genesislockCoinAddr[i + GENESISLOCK_ADDRCNT - GENESISCOIN_CNT] = baseAddr[i];
@@ -451,6 +452,7 @@ public:
         std::vector<CAmount> genesisReward;
         for(uint i = 0; i < GENESISCOIN_CNT; i++)
         {
+            consensus.genesisAddr[i] = testAddr[i];
             genesisReward.push_back(MAX_MONEY / 100);
             if (i > GENESISCOIN_CNT - GENESISLOCK_ADDRCNT - 1)
                 consensus.genesislockCoinAddr[i + GENESISLOCK_ADDRCNT - GENESISCOIN_CNT] = testAddr[i];
