@@ -130,3 +130,33 @@ bool RewardManager::GetMembersByClubID(uint64_t clubID, std::vector<std::string>
 
 	return true;
 }
+
+bool RewardManager::GetMembersTxCountByClubID(uint64_t clubID, std::map<std::string, uint64_t>& addrToTC, std::string& leaderAddr)
+{
+    addrToTC.clear();
+
+    std::vector<string> fields;
+    fields.push_back(memFieldAddress);
+    fields.push_back(memFieldCount);
+    fields.push_back(memFieldClub);
+
+    std::string clubIDStr;
+    int2str(clubID, clubIDStr);
+
+    mysqlpp::StoreQueryResult bLocal = backendDb->ISNSqlSelectAA(tableMember, fields, memFieldClub, clubIDStr);
+
+    uint64_t size = (uint64_t)bLocal.num_rows();
+    LogPrintf("%s, %d, %d\n", __func__, clubID, size);
+
+    for (uint64_t i = 0; i != size; i++)
+    {
+        std::string address = static_cast<std::string>(bLocal[i]["address"]);
+        uint64_t txCnt = (uint64_t)bLocal[i]["tc"];
+        if (leaderAddr != address)
+        {
+            addrToTC.insert(std::map<std::string, uint64_t>::value_type(address, txCnt));
+        }
+    }
+
+	return true;
+}

@@ -26,6 +26,8 @@ public:
 
     bool GetMembersByClubID(uint64_t clubID, std::vector<string> &addresses, std::string& leaderAddr);
 
+    bool GetMembersTxCountByClubID(uint64_t clubID, std::map<std::string, uint64_t>& addrToTC, std::string& leaderAddr);
+
 protected:
 
     RewardManager();
