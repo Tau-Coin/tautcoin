@@ -131,7 +131,7 @@ uint64_t calculateHitOfPOT(const uint256 &phash){
 }
 //watch out that CblockHeader is parent of Cblock
 uint64_t getNextPotRequired(const CBlockIndex* pindexLast){
-   uint64_t baseTargetLimt = 153722867; //genesis block base target
+   uint64_t baseTargetLimt = 0x369D0369D036978; //genesis block base target
    const CBlockIndex* ancestor = NULL;
    if(pindexLast -> nHeight < 3){
        return baseTargetLimt;

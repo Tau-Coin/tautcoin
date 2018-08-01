@@ -2779,14 +2779,14 @@ bool ConnectBlock(const CBlock& block, CValidationState& state, CBlockIndex* pin
             const CScript genesisOutputScript = CScript() << ParseHex(baseAddr[i]) << OP_CHECKSIG;
             ExtractDestination(genesisOutputScript, address);
             values.push_back(CBitcoinAddress(address).ToString());
-            values.push_back("10000000");
+            values.push_back("1");
             clubId = pdb->ISNSqlInsert(tableClub, values);
 
             values.clear();
             values.push_back(CBitcoinAddress(address).ToString());
             values.push_back(std::to_string(clubId));
             values.push_back("0");
-            values.push_back("10000000");
+            values.push_back("1");
             values.push_back("0");
             pdb->ISNSqlInsert(tableMember, values);
         }
@@ -5187,7 +5187,6 @@ bool LoadBlockIndex()
 bool InitBlockIndex(const CChainParams& chainparams)
 {
     LOCK(cs_main);
-
     // Initialize global variables that cannot be constructed at startup.
     recentRejects.reset(new CRollingBloomFilter(120000, 0.000001));
 

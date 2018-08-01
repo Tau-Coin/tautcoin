@@ -1,4 +1,4 @@
-// Copyright (c) 2010 Satoshi Nakamoto
+﻿// Copyright (c) 2010 Satoshi Nakamoto
 // Copyright (c) 2009-2015 The Bitcoin Core developers
 // Distributed under the MIT software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
@@ -250,7 +250,7 @@ static CBlock CreateGenesisBlock(const CScript& genesisInputScript, const std::v
 
     //add 4 points about pos to genesis block
     genesis.generationSignature = std::string("442c29a4d18f192164006030640fb54c8b9ffd4f5750d2f6dca192dc653c52ad");
-    genesis.baseTarget = 153722867;
+    genesis.baseTarget = 0x369D0369D036978;
     genesis.pubKeyOfpackager = std::string("Scientific distribution of wealth to each one");
     genesis.cumulativeDifficulty = uint256();
 
@@ -366,12 +366,12 @@ public:
         }
         consensus.genesislockCoinHeight = GENESISLOCK_MATURITY;
 
-        genesis = CreateGenesisBlock(1529042124, 59935, 0x1f00ffff, 1, genesisReward);
+        genesis = CreateGenesisBlock(1529042124, 34932, 0x1f00ffff, 1, genesisReward);
         consensus.hashGenesisBlock = genesis.GetHash();
         consensus.hashGenesisTx = genesis.hashMerkleRoot;
         consensus.genesisCumulativeDifficulty = genesis.cumulativeDifficulty;
         consensus.genesisBaseTarget = genesis.baseTarget;
-        assert(consensus.hashGenesisBlock == uint256S("00006f47672c22dd30121482bfd93ad5b11ae495c53dc8bbf5bf416c3f8d5dc8"));
+        assert(consensus.hashGenesisBlock == uint256S("0000d1c99848875f4508fe8d7f132734e3aa961571eeadb772b316bc9d5931a2"));
         assert(genesis.hashMerkleRoot == uint256S("a9da8df30aa8c4d26d9ca33568a5235b193d65446297cdded39058cbee51d36b"));
 
         vSeeds.push_back(CDNSSeedData("taucoin.io", "dnsseed1.taucoin.io", true));
@@ -394,7 +394,7 @@ public:
 
         checkpointData = (CCheckpointData) {
                 boost::assign::map_list_of
-                ( 0, uint256S("000005068d80c1bdaa176f2d0d7fc2bbef4a45917e7d1924e7329d69e0d21f01")),
+                ( 0, uint256S("0000d1c99848875f4508fe8d7f132734e3aa961571eeadb772b316bc9d5931a2")),
                 1529042124, // * UNIX timestamp of last checkpoint block
                 1441814,   // * total number of transactions between genesis and last checkpoint
                 //   (the tx=... number in the SetBestChain debug.log lines)
@@ -457,13 +457,13 @@ public:
         }
         consensus.genesislockCoinHeight = GENESISLOCK_MATURITY;
 
-        genesis = CreateTestnetGenesisBlock(1529042124, 138225, 0x1f00ffff, 1, genesisReward);
+        genesis = CreateTestnetGenesisBlock(1529042124, 34932, 0x1f00ffff, 1, genesisReward);
         consensus.hashGenesisBlock = genesis.GetHash();
         consensus.hashGenesisTx = genesis.hashMerkleRoot;
         consensus.genesisCumulativeDifficulty = genesis.cumulativeDifficulty;
         consensus.genesisBaseTarget = genesis.baseTarget;
-        assert(consensus.hashGenesisBlock == uint256S("00000fab9a1cee423e48aad56581f0480553a3937e32cfca081787fc2c63e89f"));
-        assert(genesis.hashMerkleRoot == uint256S("031b3f6f8c4a8942f981c5b6bcc41cb132f6256ea2301eda579b37a334e7a9c4"));
+      //  assert(consensus.hashGenesisBlock == uint256S("0000d1c99848875f4508fe8d7f132734e3aa961571eeadb772b316bc9d5931a2"));
+      //  assert(genesis.hashMerkleRoot == uint256S("a9da8df30aa8c4d26d9ca33568a5235b193d65446297cdded39058cbee51d36b"));
 
         vFixedSeeds.clear();
         vSeeds.clear();
@@ -486,7 +486,7 @@ public:
 
         checkpointData = (CCheckpointData) {
                 boost::assign::map_list_of
-                ( 546, uint256S("000000002a936ca763904c3c35fce2f3556c559c0214345d31b1bcebf76acb70")),
+                ( 546, uint256S("0000d1c99848875f4508fe8d7f132734e3aa961571eeadb772b316bc9d5931a2")),
                 1337966069,
                 1488,
                 300
