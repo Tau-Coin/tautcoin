@@ -970,8 +970,7 @@ UniValue sendtransactiontoaddress(const UniValue& params, bool fHelp){
             "    ]\n"
             "2. privatekey       (string,requried) privatekey of sender\n"
             "3. pubkey           (string,optional) publickey of sender\n"
-            "4. selfaddress      (string,optional) address of sender\n"
-            "5. feerate            (numeric, optional, default=0.34IM/KB) The number of fee per KB transaction data\n"
+            "4. feerate            (numeric, optional, default=0.34IM/KB) The number of fee per KB transaction data\n"
             "\nResult\n"
             "[ (array of txid)\n"
             "    \"txid\" : \"txid\",          (string)  The transaction id \n"
@@ -992,11 +991,10 @@ UniValue sendtransactiontoaddress(const UniValue& params, bool fHelp){
 
     UniValue privatekey = params[1];
     UniValue pubkey = params[2];
-    UniValue address = params[3];
     string inputs = params[0].get_str();
     CAmount feerate = DEFAULT_MIN_RELAY_TX_FEE;
-    if(!params[4].isNull())
-       feerate = params[4].get_real() * COIN;
+    if(!params[3].isNull())
+       feerate = (CAmount)params[3].get_int64();
     map<string, CAmount> recipientor;
 
     if (!parseStringIntoReceivers(inputs, recipientor))
@@ -1041,6 +1039,7 @@ UniValue sendtransactiontoaddress(const UniValue& params, bool fHelp){
 
     UniValue result(UniValue::VOBJ);
     result.push_back(Pair("txid", hashTx.GetHex()));
+    result.push_back(Pair("fee", nFeeRet));
 
     return result;
 }
