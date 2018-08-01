@@ -2117,7 +2117,6 @@ bool UpdateRewards(const CTransaction& tx, CAmount blockReward, int nHeight, boo
         string clubLeaderAddress;
         CBitcoinAddress addr;
         uint64_t clubID;
-        vector<string> members;
         map<string, uint64_t> addrToTC;
         addr.ScriptPub2Addr(tx.vout[0].scriptPubKey, clubLeaderAddress);
         arith_uint256 totalTXCnt = clubMan->GetHarvestPowerByAddress(clubLeaderAddress, 0);
