@@ -84,6 +84,7 @@ UniValue blockheaderToJSON(const CBlockIndex* blockindex)
     result.push_back(Pair("difficulty", GetDifficulty(blockindex)));
     result.push_back(Pair("chaindiff", blockindex->nChainDiff.GetHex()));
     result.push_back(Pair("basetarget", blockindex->baseTarget));
+    result.push_back(Pair("harvestPower", blockindex->harvestPower));
     result.push_back(Pair("generationsignature", blockindex->generationSignature));
     result.push_back(Pair("pubkeyofpackager", blockindex->pubKeyOfpackager));
     result.push_back(Pair("cumulativedifficulty", blockindex->cumulativeDifficulty.GetHex()));
@@ -137,8 +138,9 @@ UniValue blockToJSON(const CBlock& block, const CBlockIndex* blockindex, bool tx
     CBlockIndex *pnext = chainActive.Next(blockindex);
     if (pnext)
         result.push_back(Pair("nextblockhash", pnext->GetBlockHash().GetHex()));
-    //get 4 points about pos 
+    //get 4 points about pot
     result.push_back(Pair("baseTarget", block.baseTarget));
+    result.push_back(Pair("harvestPower", block.harvestPower));
     result.push_back(Pair("generationSignature",(std::string)block.generationSignature));
     result.push_back(Pair("pubKeyOfpackager", (std::string)block.pubKeyOfpackager));
     result.push_back(Pair("cumulativeDifficulty", block.cumulativeDifficulty.ToString()));

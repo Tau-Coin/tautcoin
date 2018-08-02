@@ -45,6 +45,7 @@ struct Params {
     uint256 hashGenesisTx;
     uint256 genesisCumulativeDifficulty;
     int64_t genesisBaseTarget;
+    int64_t genesisharvestPower;
     std::string genesislockCoinAddr[GENESISLOCK_ADDRCNT];
     std::string genesisAddr[GENESISCOIN_CNT];
     int genesislockCoinHeight;

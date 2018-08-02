@@ -251,6 +251,7 @@ static CBlock CreateGenesisBlock(const CScript& genesisInputScript, const std::v
     //add 4 points about pos to genesis block
     genesis.generationSignature = std::string("442c29a4d18f192164006030640fb54c8b9ffd4f5750d2f6dca192dc653c52ad");
     genesis.baseTarget = 0x369D0369D036978;
+    genesis.harvestPower = 1;
     genesis.pubKeyOfpackager = std::string("Scientific distribution of wealth to each one");
     genesis.cumulativeDifficulty = uint256();
 
@@ -367,12 +368,13 @@ public:
         }
         consensus.genesislockCoinHeight = GENESISLOCK_MATURITY;
 
-        genesis = CreateGenesisBlock(1529042124, 34932, 0x1f00ffff, 1, genesisReward);
+        genesis = CreateGenesisBlock(1529042124, 225044, 0x1f00ffff, 1, genesisReward);
         consensus.hashGenesisBlock = genesis.GetHash();
         consensus.hashGenesisTx = genesis.hashMerkleRoot;
         consensus.genesisCumulativeDifficulty = genesis.cumulativeDifficulty;
         consensus.genesisBaseTarget = genesis.baseTarget;
-        assert(consensus.hashGenesisBlock == uint256S("0000d1c99848875f4508fe8d7f132734e3aa961571eeadb772b316bc9d5931a2"));
+        consensus.genesisharvestPower = genesis.harvestPower;
+        assert(consensus.hashGenesisBlock == uint256S("0000033f7b82eb64ccb231fce50fe214476a41cf8e7c38b17e1366531afafe78"));
         assert(genesis.hashMerkleRoot == uint256S("a9da8df30aa8c4d26d9ca33568a5235b193d65446297cdded39058cbee51d36b"));
 
         vSeeds.push_back(CDNSSeedData("taucoin.io", "dnsseed1.taucoin.io", true));
@@ -395,7 +397,7 @@ public:
 
         checkpointData = (CCheckpointData) {
                 boost::assign::map_list_of
-                ( 0, uint256S("0000d1c99848875f4508fe8d7f132734e3aa961571eeadb772b316bc9d5931a2")),
+                ( 0, uint256S("0000033f7b82eb64ccb231fce50fe214476a41cf8e7c38b17e1366531afafe78")),
                 1529042124, // * UNIX timestamp of last checkpoint block
                 1441814,   // * total number of transactions between genesis and last checkpoint
                 //   (the tx=... number in the SetBestChain debug.log lines)
@@ -462,8 +464,10 @@ public:
         genesis = CreateTestnetGenesisBlock(1529042124, 34932, 0x1f00ffff, 1, genesisReward);
         consensus.hashGenesisBlock = genesis.GetHash();
         consensus.hashGenesisTx = genesis.hashMerkleRoot;
+
         consensus.genesisCumulativeDifficulty = genesis.cumulativeDifficulty;
         consensus.genesisBaseTarget = genesis.baseTarget;
+        consensus.genesisharvestPower = genesis.harvestPower;
       //  assert(consensus.hashGenesisBlock == uint256S("0000d1c99848875f4508fe8d7f132734e3aa961571eeadb772b316bc9d5931a2"));
       //  assert(genesis.hashMerkleRoot == uint256S("a9da8df30aa8c4d26d9ca33568a5235b193d65446297cdded39058cbee51d36b"));
 
@@ -551,6 +555,7 @@ public:
         consensus.hashGenesisBlock = genesis.GetHash();
         consensus.genesisCumulativeDifficulty = genesis.cumulativeDifficulty;
         consensus.genesisBaseTarget = genesis.baseTarget;
+        consensus.genesisharvestPower = genesis.harvestPower;
         //assert(consensus.hashGenesisBlock == uint256S("0x0f9188f13cb7b2c71f2a335e3a4fc328bf5beb436012afca590b1a11466e2206"));
         //assert(genesis.hashMerkleRoot == uint256S("0x4a5e1e4baab89f3a32518a88c31bc87f618f76673e2cc77ab2127b7afdeda33b"));
 

@@ -32,6 +32,7 @@
 #include <boost/tuple/tuple.hpp>
 #include <queue>
 #include "pot.h"
+#include "tool.h"
 
 using namespace std;
 
@@ -233,8 +234,11 @@ CBlockTemplate* BlockAssembler::CreateNewBlock(const CScript& scriptPubKeyIn,std
     pblock->nNonce         = 0;
     pblocktemplate->vTxSigOpsCost[0] = WITNESS_SCALE_FACTOR * GetLegacySigOpCount(pblock->vtx[0]);
 
-    // Fill about pos
+    // Fill about pot
     pblock->baseTarget     = getNextPotRequired(pindexPrev); //temporary formula
+    std::string addrStr;
+    assert(ConvertPubkeyToAddress(pubkeyString,addrStr));
+    pblock->harvestPower   = ClubManager::GetInstance()->GetHarvestPowerByAddress(addrStr, 0);
     pblock->generationSignature = raiseGenerationSignature(pubkeyString);
     pblock->pubKeyOfpackager = pubkeyString;
     pblock->cumulativeDifficulty = GetNextCumulativeDifficulty(pindexPrev, pblock->baseTarget, chainparams.GetConsensus());

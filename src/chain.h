@@ -201,6 +201,7 @@ public:
 
     // add some data structure associated pos
     uint64_t baseTarget;
+    uint64_t harvestPower;
     std::string generationSignature;
     std::string pubKeyOfpackager;
     uint256 cumulativeDifficulty;
@@ -230,6 +231,7 @@ public:
         nNonce         = 0;
 
         baseTarget     = 0;
+        harvestPower   = 0;
         cumulativeDifficulty = uint256();
     }
 
@@ -249,6 +251,7 @@ public:
         nNonce         = block.nNonce;
         //here maybe some conflict when verify a accepted block,but it in header not in cblock
         baseTarget     = block.baseTarget;
+        harvestPower   = block.harvestPower;
         generationSignature = block.generationSignature;
         pubKeyOfpackager = block.pubKeyOfpackager;
         cumulativeDifficulty = block.cumulativeDifficulty;
@@ -283,6 +286,7 @@ public:
         block.nBits          = nBits;
         block.nNonce         = nNonce;
         block.baseTarget           = baseTarget;
+        block.harvestPower         = harvestPower;
         block.generationSignature  = generationSignature;
         block.pubKeyOfpackager     = pubKeyOfpackager;
         block.cumulativeDifficulty = cumulativeDifficulty;
@@ -293,13 +297,16 @@ public:
     {
         return *phashBlock;
     }
-    //interface about pos
+    //interface about pot
     std::string GetBlockGenerationSignature() const {
        return generationSignature;
     }
 
     uint64_t GetBlockBaseTarget() const{
        return baseTarget;
+    }
+    uint64_t GetBlockHarvestPower() const{
+       return harvestPower;
     }
     //reference time of block generated
     int64_t GetBlockTime() const
@@ -406,6 +413,7 @@ public:
         READWRITE(nNonce);
 
         READWRITE(baseTarget);
+        READWRITE(harvestPower);
         READWRITE(generationSignature);
         READWRITE(pubKeyOfpackager);
         READWRITE(cumulativeDifficulty);
@@ -422,6 +430,7 @@ public:
         block.nNonce          = nNonce;
 
         block.baseTarget           = baseTarget;
+        block.harvestPower         = harvestPower;
         block.generationSignature  = generationSignature;
         block.pubKeyOfpackager     = pubKeyOfpackager;
         block.cumulativeDifficulty = cumulativeDifficulty;

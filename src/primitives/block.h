@@ -28,8 +28,9 @@ public:
     uint32_t nBits;
     uint32_t nNonce;
     
-    // add some data structure associated pos, wheather this safety?
+    // add some data structure associated pot, wheather this safety?
     uint64_t baseTarget;
+    uint64_t harvestPower;
     std::string generationSignature;
     std::string pubKeyOfpackager;
     uint256 cumulativeDifficulty;
@@ -49,8 +50,9 @@ public:
         READWRITE(nTime);
         READWRITE(nBits);
         READWRITE(nNonce);
-        //serialization pos data
+        //serialization pot data
         READWRITE(baseTarget);
+        READWRITE(harvestPower);
         READWRITE(generationSignature);
         READWRITE(pubKeyOfpackager);
         READWRITE(cumulativeDifficulty);
@@ -125,6 +127,7 @@ public:
         block.nBits          = nBits;
         block.nNonce         = nNonce;
         block.baseTarget     = baseTarget;
+        block.harvestPower   = harvestPower;
         block.generationSignature  = generationSignature;
         block.pubKeyOfpackager     = pubKeyOfpackager;
         block.cumulativeDifficulty = cumulativeDifficulty;
