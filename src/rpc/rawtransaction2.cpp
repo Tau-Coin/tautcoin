@@ -987,7 +987,7 @@ UniValue sendtransactiontoaddress(const UniValue& params, bool fHelp){
     if (!fTxOutsByAddressIndex)
         throw JSONRPCError(RPC_METHOD_NOT_FOUND, "To use this function, you must start bitcoin with the -txoutsbyaddressindex parameter.");
 
-    RPCTypeCheck(params, boost::assign::list_of(UniValue::VSTR)(UniValue::VSTR)(UniValue::VSTR)(UniValue::VSTR)(UniValue::VNUM), true);
+    RPCTypeCheck(params, boost::assign::list_of(UniValue::VSTR)(UniValue::VSTR)(UniValue::VSTR)(UniValue::VNUM), true);
 
     UniValue privatekey = params[1];
     UniValue pubkey = params[2];
