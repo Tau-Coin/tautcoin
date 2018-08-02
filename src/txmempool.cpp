@@ -442,6 +442,9 @@ bool CTxMemPool::addUnchecked(const uint256& hash, const CTxMemPoolEntry &entry,
     // In that case, our disconnect block logic will call UpdateTransactionsFromBlock
     // to clean up the mess we're leaving here.
 
+    for (unsigned int j = 0; j < tx.vreward.size(); j++)
+        mapMemReward.insert(std::make_pair(&tx.vreward[j].senderPubkey, tx.vreward[j].rewardBalance));
+
     // Update ancestors with information about this tx
     BOOST_FOREACH (const uint256 &phash, setParentTransactions) {
         txiter pit = mapTx.find(phash);
@@ -472,6 +475,8 @@ void CTxMemPool::removeUnchecked(txiter it)
     const uint256 hash = it->GetTx().GetHash();
     BOOST_FOREACH(const CTxIn& txin, it->GetTx().vin)
         mapNextTx.erase(txin.prevout);
+    BOOST_FOREACH(const CTxReward &txReward, it->GetTx().vreward)
+        mapMemReward.erase(txReward.senderPubkey);
 
     if (vTxHashes.size() > 1) {
         vTxHashes[it->vTxHashesIdx] = std::move(vTxHashes.back());

@@ -1232,7 +1232,13 @@ bool AcceptToMemoryPoolWorker(CTxMemPool& pool, CValidationState& state, const C
     // Check for conflicts with in-memory transactions
     set<uint256> setConflicts;
     {
-    LOCK(pool.cs); // protect pool.mapNextTx
+    LOCK(pool.cs); // protect pool.mapNextTx && pool.mapRewardTx
+    BOOST_FOREACH(const CTxReward &txReward, tx.vreward)
+    {
+        auto itConflictReward = pool.mapMemReward.find(txReward.senderPubkey);
+        if (itConflictReward != pool.mapMemReward.end())
+            return state.Invalid(false, REJECT_CONFLICT, "txn-mempool-reward-conflict");
+    }
     BOOST_FOREACH(const CTxIn &txin, tx.vin)
     {
         auto itConflicting = pool.mapNextTx.find(txin.prevout);

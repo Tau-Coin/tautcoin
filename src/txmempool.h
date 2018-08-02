@@ -495,6 +495,7 @@ private:
 
 public:
     indirectmap<COutPoint, const CTransaction*> mapNextTx;
+    indirectmap<std::string, CAmount> mapMemReward;
     std::map<uint256, std::pair<double, CAmount> > mapDeltas;
 
     /** Create a new CTxMemPool.
