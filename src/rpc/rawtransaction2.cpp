@@ -1040,7 +1040,7 @@ UniValue sendtransactiontoaddress(const UniValue& params, bool fHelp){
 
     UniValue result(UniValue::VOBJ);
     result.push_back(Pair("txid", hashTx.GetHex()));
-    result.push_back(Pair("fee", ValueFromAmount(nFeeRet));
+    result.push_back(Pair("fee", ValueFromAmount(nFeeRet)));
 
     return result;
 }
