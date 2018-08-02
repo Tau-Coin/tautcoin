@@ -6,6 +6,7 @@
 #define TAUCOIN_TX_UTILS_H
 
 #include "primitives/transaction.h"
+#include "txmempool.h"
 
 class CTransactionUtils
 {
@@ -27,6 +28,8 @@ class CTransactionUtils
         static bool SelectRewards(std::vector<CTxReward>& vAvailableRewards, const CAmount& nTargetValue, std::vector<CTxReward>& setRewardsRet, CAmount& nValueRet);
 
         static bool AvailableRewards(const std::string& pubKey, std::vector<CTxReward>& vRewards);
+
+        static CAmount GetMinimumFee(unsigned int nTxBytes, unsigned int nConfirmTarget, const CTxMemPool& pool);
 };
 
 #endif //TAUCOIN_TX_UTILS_H

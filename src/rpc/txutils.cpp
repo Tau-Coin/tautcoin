@@ -326,6 +326,22 @@ bool CTransactionUtils::AvailableRewards(const std::string& pubKey, std::vector<
     return true;
 }
 
+CAmount CTransactionUtils::GetMinimumFee(unsigned int nTxBytes, unsigned int nConfirmTarget, const CTxMemPool& pool)
+{
+    CAmount nFeeNeeded = 0;
+    // use -txconfirmtarget to estimate...
+    int estimateFoundTarget = nConfirmTarget;
+    nFeeNeeded = pool.estimateSmartFee(nConfirmTarget, &estimateFoundTarget).GetFee(nTxBytes);
+
+    // prevent user from paying a fee below minRelayTxFees
+    nFeeNeeded = std::max(nFeeNeeded, ::minRelayTxFee.GetFee(nTxBytes));
+    // But always obey the maximum
+    if (nFeeNeeded > DEFAULT_TRANSACTION_MAXFEE)
+        nFeeNeeded = DEFAULT_TRANSACTION_MAXFEE;
+
+    return nFeeNeeded;
+}
+
 bool CTransactionUtils::CreateTransaction(std::map<std::string, CAmount>& receipts, const std::string& pubKey,
         const std::string& prvKey, CFeeRate& userFee, CMutableTransaction& tx, CAmount& nFeeRet, std::string& strFailReason)
 {
@@ -627,6 +643,8 @@ bool CTransactionUtils::CreateTransaction(std::map<std::string, CAmount>& receip
 
         unsigned int nBytes = GetVirtualTransactionSize(tx);
 
+        //LogPrintf("%s %d bytes\n", __func__, nBytes);
+
         // Limit size
         if (GetTransactionWeight(tx) >= MAX_STANDARD_TX_WEIGHT)
         {
@@ -637,10 +655,12 @@ bool CTransactionUtils::CreateTransaction(std::map<std::string, CAmount>& receip
         CAmount nFeeNeeded;
         {
             LOCK(cs_main);
-            nFeeNeeded = CWallet::GetMinimumFee(nBytes, nTxConfirmTarget, mempool);
+            nFeeNeeded = GetMinimumFee(nBytes, nTxConfirmTarget, mempool);
         }
 
         CAmount nUserFee = userFee.GetFee(nBytes);
+
+        //LogPrintf("%s user fee:%d, need fee:%d\n", __func__, nUserFee, nFeeNeeded);
 
         if (nUserFee > nFeeNeeded) {
             nFeeNeeded = nUserFee;
@@ -652,7 +672,10 @@ bool CTransactionUtils::CreateTransaction(std::map<std::string, CAmount>& receip
         }
 
         if (nFeeRet >= nFeeNeeded)
+        {
+            //LogPrintf("%s return fee:%d, need fee:%d\n", __func__, nFeeRet, nFeeNeeded);
             break; // Done, enough fee included.
+        }
 
         // Include more fee and try again.
         nFeeRet = nFeeNeeded;
