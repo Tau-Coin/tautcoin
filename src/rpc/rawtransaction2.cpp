@@ -993,8 +993,9 @@ UniValue sendtransactiontoaddress(const UniValue& params, bool fHelp){
     UniValue pubkey = params[2];
     string inputs = params[0].get_str();
     CAmount feerate = DEFAULT_MIN_RELAY_TX_FEE;
+    // Here feerate has uint of Tau
     if(!params[3].isNull())
-       feerate = (CAmount)params[3].get_int64();
+       feerate = params[3].get_real() * COIN;
     map<string, CAmount> recipientor;
 
     if (!parseStringIntoReceivers(inputs, recipientor))
