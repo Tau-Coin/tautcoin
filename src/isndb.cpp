@@ -43,6 +43,9 @@ ISNDB::ISNDB()
         LOCK(cs_isndb);
         con= mysqlpp::Connection(GetArg("-mysqldbname", DBName).c_str(), GetArg("-mysqlserver", hostName).c_str(), GetArg("-mysqlusername", userName).c_str(), GetArg("-mysqlpassword", passWord).c_str());
         //con= mysqlpp::Connection(DBName, hostName, userName, passWord);
+
+        poption = new mysqlpp::ReconnectOption(true);
+        con.set_option(poption);
 	}
 	catch (const mysqlpp::Exception& er) {
 		// Catch-all for any other MySQL++ exceptions
@@ -55,6 +58,7 @@ ISNDB::~ISNDB()
 {
     // Disconnect db connection
     con.disconnect();
+    delete(poption);
 }
 
 // select from ISNDB according to address

@@ -11,6 +11,7 @@
 
 #include <cmdline.h>
 #include <mysql++.h>
+#include <options.h>
 #include <ssqls.h>
 #include "amount.h"
 
@@ -66,7 +67,9 @@ public:
     static void StopISNDBService();
 
 private:
-	mysqlpp::Connection con;
+    mysqlpp::Connection con;
+
+    mysqlpp::Option* poption;
 
     static ISNDB* pIsnDBSingleton;
 
