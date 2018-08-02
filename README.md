@@ -30,8 +30,8 @@ Seen in [build-unix.md](https://github.com/Tau-Coin/taucoin/blob/master/build-un
 ## Schedule
 The testnet is published from 2018-08-01 to 2018-09-01.
 
+## Get Free Token
+Seen in [GET FREE TOKENS](https://www.taucoin.io)
+
 ## Questions
 If you have any question, you can ask [here](https://github.com/Tau-Coin/taucoin/issues).
-
-
-
