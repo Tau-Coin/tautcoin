@@ -5,6 +5,7 @@
 #ifndef TAUCOIN_TX_UTILS_H
 #define TAUCOIN_TX_UTILS_H
 
+#include "coins.h"
 #include "primitives/transaction.h"
 #include "txmempool.h"
 
@@ -30,6 +31,10 @@ class CTransactionUtils
         static bool AvailableRewards(const std::string& pubKey, std::vector<CTxReward>& vRewards);
 
         static CAmount GetMinimumFee(unsigned int nTxBytes, unsigned int nConfirmTarget, const CTxMemPool& pool);
+
+        static int GetDepthInMainChain(CCoins& coins);
+
+        static int GetBlocksToMaturity(CCoins& coins);
 };
 
 #endif //TAUCOIN_TX_UTILS_H

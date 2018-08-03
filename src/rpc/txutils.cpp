@@ -114,6 +114,19 @@ static void DumpUTXOs(std::set<COutPoint>& setCoins)
     LogPrintf("end dumping utxos\n");
 }
 
+int CTransactionUtils::GetDepthInMainChain(CCoins& coins)
+{
+    LOCK(cs_main);
+    return chainActive.Height() - coins.nHeight + 1;
+}
+
+int CTransactionUtils::GetBlocksToMaturity(CCoins& coins)
+{
+    if (!coins.IsCoinBase())
+        return 0;
+    return max(0, (COINBASE_MATURITY + 1) - GetDepthInMainChain(coins));
+}
+
 bool CTransactionUtils::SelectCoinsMinConf(const CAmount& nTargetValue, int nConf, std::vector<COutPoint>& vCoins,
         std::set<COutPoint>& setCoinsRet, CAmount& nValueRet)
 {
@@ -282,7 +295,11 @@ bool CTransactionUtils::AvailableCoins(const std::string& pubKey, std::vector<CO
             continue;
         }
 
-        if (outpoint.n < coins.vout.size() && !coins.vout[outpoint.n].IsNull() && !coins.vout[outpoint.n].scriptPubKey.IsUnspendable())
+        if (coins.IsCoinBase() && GetBlocksToMaturity(coins) > 0)
+            continue;
+
+        if (outpoint.n < coins.vout.size() && !coins.vout[outpoint.n].IsNull()
+                && coins.vout[outpoint.n].nValue > 0 && !coins.vout[outpoint.n].scriptPubKey.IsUnspendable())
         {
             vCoins.push_back(COutPoint(outpoint.hash, outpoint.n));
         }
