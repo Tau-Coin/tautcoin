@@ -187,24 +187,21 @@ uint256 GetNextCumulativeDifficulty(const CBlockIndex* pindexLast, uint64_t base
 }
 
 bool CheckProofOfTransaction(const std::string& prevGenerationSignature, const std::string& currPubKey,
-        int nHeight, unsigned int nTime, uint64_t baseTarget, const Consensus::Params& consensusParams, PotErr& checkErr)
+        int nHeight, unsigned int nTime, uint64_t baseTarget, uint64_t harverstPower, const Consensus::Params& consensusParams, PotErr& checkErr)
 {
-    static ClubManager* pClubMgr = NULL;
-    if (!pClubMgr)
-        pClubMgr = ClubManager::GetInstance();
-
     checkErr = POT_NO_ERR;
 
-    if (prevGenerationSignature.empty() || currPubKey.empty() || nHeight < 0 || nTime == 0) {
-        LogPrintf("CheckProofOfTransaction failed, incorrect args, signatrue:%s, pubkey:%s, height:%d, time:%d\n",
+    if (prevGenerationSignature.empty() || currPubKey.empty() || nHeight < 0 || nTime == 0
+            || harverstPower == 0) {
+        LogPrintf("POT failed, incorrect args, signatrue:%s, pubkey:%s, height:%d, time:%d\n",
             prevGenerationSignature, currPubKey, nHeight, nTime);
         checkErr = POT_ARGS_ERR;
         return false;
     }
 
     if (fDebugPODS) {
-        LogPrintf("CheckProofOfTransaction, signature:%s, pubkey:%s\n", prevGenerationSignature, currPubKey);
-        LogPrintf("CheckProofOfTransaction, height:%d, time:%d, baseTarget:%d\n", nHeight, nTime, baseTarget);
+        LogPrintf("POT, signature:%s, pubkey:%s\n", prevGenerationSignature, currPubKey);
+        LogPrintf("POT, height:%d, time:%d, baseTarget:%d\n", nHeight, nTime, baseTarget);
     }
 
     // Note: in block header public key is compressed, but get hit value with uncompressed
@@ -219,37 +216,18 @@ bool CheckProofOfTransaction(const std::string& prevGenerationSignature, const s
 
     uint256 geneSignatureHash = getPotHash(prevGenerationSignature, strPubKey);
     uint64_t hit = calculateHitOfPOT(geneSignatureHash);
-    std::string strAddr;
-
-    if (!ConvertPubkeyToAddress(currPubKey, strAddr) || strAddr.empty()) {
-        LogPrintf("CheckProofOfTransaction failed, get strAddr fail\n");
-        checkErr = POT_ADDR_ERR;
-        return false;
-    }
-    if (fDebugPODS)
-        LogPrintf("CheckProofOfTransaction, strAddr:%s\n", strAddr);
-
-    // get harverst power with nHeight
-    uint64_t harverstPower = pClubMgr->GetHarvestPowerByAddress(strAddr, nHeight);
-    // If harverst power is one, return false directly.
-    if (harverstPower <= ClubManager::DEFAULT_HARVEST_POWER) {
-        LogPrintf("CheckProofOfTransaction failed, not allow forge\n");
-        checkErr = POT_BALANCE_ERR;
-        return false;
-    }
 
     arith_uint256 thresold(baseTarget);
     thresold *= arith_uint256((uint64_t)nTime);
     thresold *= arith_uint256((uint64_t)harverstPower);
 
-    LogPrintf("CheckProofOfTransaction, harvest Power:%d\n", harverstPower);
-    LogPrintf("CheckProofOfTransaction, hit     :%s\n", arith_uint256(hit).ToString());
-    LogPrintf("CheckProofOfTransaction, thresold:%s\n", thresold.ToString());
+    LogPrintf("POT, harvest Power:%d\n", harverstPower);
+    LogPrintf("POT, hit     :%s\n", arith_uint256(hit).ToString());
+    LogPrintf("POT, thresold:%s\n", thresold.ToString());
     if (thresold.CompareTo(arith_uint256(hit)) > 0) {
         return true;
     }
 
     return false;
 }
-
 #endif

@@ -21,6 +21,7 @@
 #include "pot.h"
 #include "rpc/server.h"
 #include "timedata.h"
+#include "tool.h"
 #include "txmempool.h"
 #include "util.h"
 #include "utilstrencodings.h"
@@ -100,6 +101,28 @@ UniValue generateBlocksWithPot(boost::shared_ptr<CReserveScript> coinbaseScript,
      }
      UniValue blockHashes(UniValue::VARR);
 
+     static ClubManager* pClubMgr = NULL;
+     if (!pClubMgr)
+         pClubMgr = ClubManager::GetInstance();
+
+     std::string currPubKey = coinbaseScript->pubkeyString;
+     CPubKey pubkey(currPubKey.begin(), currPubKey.end());
+     std::string strPubKey;
+     std::string strAddr;
+
+     if (pubkey.IsCompressed() && pubkey.Decompress()) {
+         strPubKey = HexStr(ToByteVector(pubkey));
+     } else if (!pubkey.IsCompressed()) {
+         strPubKey = currPubKey;
+     }
+
+     if (!ConvertPubkeyToAddress(currPubKey, strAddr) || strAddr.empty()) {
+         LogPrintf("%s get strAddr fail\n", __func__);
+         throw JSONRPCError(RPC_INTERNAL_ERROR, "fail to convert pubkey to address");
+     }
+
+    uint64_t harverstPower = ClubManager::DEFAULT_HARVEST_POWER;
+
      while (nHeight < nHeightEnd)
      {
          CBlockIndex *prevIndex = NULL;
@@ -111,8 +134,15 @@ UniValue generateBlocksWithPot(boost::shared_ptr<CReserveScript> coinbaseScript,
          uint64_t baseTarget = getNextPotRequired(prevIndex);
          PotErr error;
 
+         harverstPower = pClubMgr->GetHarvestPowerByAddress(strAddr, nHeight);
+         if (harverstPower <= ClubManager::DEFAULT_HARVEST_POWER)
+         {
+             LogPrintf("%s harvest power:%d not support mining, stop mining\n", __func__, harverstPower);
+             break;
+         }
+
          if (CheckProofOfTransaction(prevIndex->generationSignature, coinbaseScript->pubkeyString,
-                 prevIndex->nHeight + 1, now - prevIndex->nTime, baseTarget, Params().GetConsensus(), error))
+                 prevIndex->nHeight + 1, now - prevIndex->nTime, baseTarget, harverstPower, Params().GetConsensus(), error))
          {
               std::unique_ptr<CBlockTemplate> pblocktemplate(BlockAssembler(Params()).CreateNewBlock(coinbaseScript->reserveScript,coinbaseScript->pubkeyString));
               if (!pblocktemplate.get())

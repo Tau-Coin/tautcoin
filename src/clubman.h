@@ -22,7 +22,7 @@ class ClubManager
 
         uint64_t GetHarvestPowerByAddress(std::string& addr, int nHeight);
 
-        bool IsAllowForge(const std::string& pubKey, int nHeight);
+        bool IsAllowForge(const std::string& pubKey, int nHeight, uint64_t &harvestPower);
 
         bool IsForgeScript(const CScript& script, CBitcoinAddress& addr, uint64_t& memCount);
 

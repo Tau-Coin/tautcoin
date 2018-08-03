@@ -49,7 +49,7 @@ ClubManager::ClubManager()
     backendDb = ISNDB::GetInstance();
 }
 
-bool ClubManager::IsAllowForge(const std::string& pubKey, int nHeight)
+bool ClubManager::IsAllowForge(const std::string& pubKey, int nHeight, uint64_t &harvestPower)
 {
     if (pubKey.empty() || nHeight < 0)
     {
@@ -62,8 +62,8 @@ bool ClubManager::IsAllowForge(const std::string& pubKey, int nHeight)
         return false;
     }
 
-    uint64_t power = GetHarvestPowerByAddress(addrStr, nHeight);
-    if (power > DEFAULT_HARVEST_POWER)
+    harvestPower = GetHarvestPowerByAddress(addrStr, nHeight);
+    if (harvestPower > DEFAULT_HARVEST_POWER)
     {
         return true;
     }
@@ -130,4 +130,3 @@ bool ClubManager::GetClubIDByPubkey(const std::string& pubkey, uint64_t& clubID)
 
     return GetClubIDByAddress(addrStr, clubID);
 }
-

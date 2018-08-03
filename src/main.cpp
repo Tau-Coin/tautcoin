@@ -1750,12 +1750,10 @@ bool ReadBlockFromDisk(CBlock& block, const CDiskBlockPos& pos, const Consensus:
     }
 
     // Check the header
-    /*
     CValidationState state;
     if (!CheckProofOfTransaction(block, state, consensusParams, NULL)
             && state.GetRejectReason().find("bad-prevblk") == std::string::npos)
         return error("ReadBlockFromDisk: Errors in block header at %s", pos.ToString());
-     */
 
     return true;
 }
@@ -4073,53 +4071,54 @@ bool CheckProofOfTransaction(const CBlockHeader& block, CValidationState& state,
 
     PotErr error;
     if (!CheckProofOfTransaction(pindexPrev->generationSignature, block.pubKeyOfpackager,
-                pindexPrev->nHeight + 1, block.nTime - pindexPrev->nTime, block.baseTarget, consensusParams, error)) {
+                pindexPrev->nHeight + 1, block.nTime - pindexPrev->nTime, block.baseTarget,
+                block.harvestPower, consensusParams, error)) {
         return state.DoS(50, false, REJECT_INVALID, "high-hit", false, "proof of tx failed");
     }
 
     return true;
 }
 
-bool CheckBlockHeader(const CBlockHeader& block, CValidationState& state, const Consensus::Params& consensusParams, bool fCheckPOW,
+bool CheckBlockHeader(const CBlockHeader& block, CValidationState& state, const Consensus::Params& consensusParams, bool fCheckPOT,
         CBlockIndex* pindexPrev)
 {
 
     {
-     LOCK(cs_main);
-    // Firstly if pindexLast equals NULL, get it from mapBlockIndex.
-    // If not exist, return error.
-    if (!pindexPrev) {
+         LOCK(cs_main);
+        // Firstly if pindexLast equals NULL, get it from mapBlockIndex.
+        // If not exist, return error.
+        if (!pindexPrev) {
             BlockMap::iterator mi = mapBlockIndex.find(block.hashPrevBlock);
             if (mi == mapBlockIndex.end())
                 return state.DoS(10, error("%s: prev block not found", __func__), 0, "bad-prevblk");
             pindexPrev = (*mi).second;
             if (pindexPrev->nStatus & BLOCK_FAILED_MASK)
                 return state.DoS(100, error("%s: prev block invalid", __func__), REJECT_INVALID, "bad-prevblk");
-     }
-     assert(pindexPrev);
-     }
-    // Check generation signature
-    if (!verifyGenerationSignature(pindexPrev->generationSignature,block.generationSignature, block.pubKeyOfpackager)) {
-        return state.DoS(90, false, REJECT_INVALID, "mismatch generation signature", false, "proof of tx failed");
+        }
+        assert(pindexPrev);
     }
 
     // Check proof of stake matches claimed amount
-    if (fCheckPOW && !CheckProofOfTransaction(block, state, consensusParams, pindexPrev))
+    if (fCheckPOT && !CheckProofOfTransaction(block, state, consensusParams, pindexPrev))
         return state.DoS(50, false, REJECT_INVALID, "high-hit", false, "proof of tx failed");
 
     return true;
 }
 
-bool CheckBlock(const CBlock& block, CValidationState& state, const Consensus::Params& consensusParams, bool fCheckPOW, bool fCheckMerkleRoot)
+bool CheckBlock(const CBlock& block, CValidationState& state, const Consensus::Params& consensusParams, bool fCheckPOT, bool fCheckMerkleRoot)
 {
+    static ClubManager* clubMgr = NULL;
+    if (!clubMgr)
+        clubMgr = ClubManager::GetInstance();
+
     // These are checks that are independent of context.
 
     if (block.fChecked)
         return true;
 
-    // Check that the header is valid (particularly PoW).  This is mostly
+    // Check that the header is valid (particularly PoT).  This is mostly
     // redundant with the call in AcceptBlockHeader.
-    if (!CheckBlockHeader(block, state, consensusParams, fCheckPOW, NULL))
+    if (!CheckBlockHeader(block, state, consensusParams, fCheckPOT, NULL))
         return false;
 
     // Check the merkle root.
@@ -4134,6 +4133,23 @@ bool CheckBlock(const CBlock& block, CValidationState& state, const Consensus::P
         // while still invalidating it.
         if (mutated)
             return state.DoS(100, false, REJECT_INVALID, "bad-txns-duplicate", true, "duplicate transaction");
+    }
+
+    // Check whether allowed to forge or not. And check whether harverst power
+    // is consistent with data base.
+    // The reason why we check harvest power in "Check Block" is as follows:
+    //     only when block received can harverst power be updated.
+    if (fCheckPOT)
+    {
+        uint64_t harvestPower;
+        if (!clubMgr->IsAllowForge(block.pubKeyOfpackager, 0, harvestPower))
+            return state.DoS(100, false, REJECT_INVALID, "not allowed to forge", false, "bad forger");
+
+        if (block.harvestPower != harvestPower)
+        {
+            LogPrintf("%s block hp %d not consistent with db %d\n", __func__, block.harvestPower, harvestPower);
+            return state.DoS(100, false, REJECT_INVALID, "harvest power mismatch", false, "bad forger");
+        }
     }
 
     // All potential-corruption validation must be done before we do any
@@ -4167,7 +4183,7 @@ bool CheckBlock(const CBlock& block, CValidationState& state, const Consensus::P
     if (nSigOps * WITNESS_SCALE_FACTOR > MAX_BLOCK_SIGOPS_COST)
         return state.DoS(100, false, REJECT_INVALID, "bad-blk-sigops", false, "out-of-bounds SigOpCount");
 
-    if (fCheckPOW && fCheckMerkleRoot)
+    if (fCheckPOT && fCheckMerkleRoot)
         block.fChecked = true;
 
     return true;
@@ -4254,10 +4270,6 @@ std::vector<unsigned char> GenerateCoinbaseCommitment(CBlock& block, const CBloc
 
 bool ContextualCheckBlockHeader(const CBlockHeader& block, CValidationState& state, const Consensus::Params& consensusParams, CBlockIndex * const pindexPrev, int64_t nAdjustedTime)
 {
-    static ClubManager* clubMgr = NULL;
-    if (!clubMgr)
-        clubMgr = ClubManager::GetInstance();
-
     // Check generation signature
     if (!verifyGenerationSignature(pindexPrev->generationSignature,block.generationSignature, block.pubKeyOfpackager)) {
         return state.DoS(90, false, REJECT_INVALID, "mismatch generation signature", false, "proof of tx fail");
@@ -4269,11 +4281,6 @@ bool ContextualCheckBlockHeader(const CBlockHeader& block, CValidationState& sta
 
     if (block.cumulativeDifficulty != GetNextCumulativeDifficulty(pindexPrev, block.baseTarget, consensusParams))
         return state.DoS(50, false, REJECT_INVALID, "bad-cumuldiffbits", false, "incorrect proof of tx");
-
-    // Check allowed to forge or not
-    // TODO: move this component into ContextualCheckBlock
-    //if (!clubMgr->IsAllowForge(block.pubKeyOfpackager, pindexPrev->nHeight + 1))
-        //return state.DoS(50, false, REJECT_INVALID, "not allowed to forge", false, "incorrect proof of tx");
 
     // Check timestamp against prev
     if (block.GetBlockTime() <= pindexPrev->GetMedianTimePast())
@@ -4407,7 +4414,7 @@ static bool AcceptBlockHeader(const CBlockHeader& block, CValidationState& state
         if (fCheckpointsEnabled && !CheckIndexAgainstCheckpoint(pindexPrev, state, chainparams, hash))
             return error("%s: CheckIndexAgainstCheckpoint(): %s", __func__, state.GetRejectReason().c_str());
 
-        if (!CheckBlockHeader(block, state, chainparams.GetConsensus(), false, pindexPrev))
+        if (!CheckBlockHeader(block, state, chainparams.GetConsensus(), true, pindexPrev))
             return error("%s: Consensus::CheckBlockHeader: %s, %s", __func__, hash.ToString(), FormatStateMessage(state));
 
         if (!ContextualCheckBlockHeader(block, state, chainparams.GetConsensus(), pindexPrev, GetAdjustedTime()))
@@ -4530,7 +4537,7 @@ bool ProcessNewBlock(CValidationState& state, const CChainParams& chainparams, C
     return true;
 }
 
-bool TestBlockValidity(CValidationState& state, const CChainParams& chainparams, const CBlock& block, CBlockIndex* pindexPrev, bool fCheckPOW, bool fCheckMerkleRoot)
+bool TestBlockValidity(CValidationState& state, const CChainParams& chainparams, const CBlock& block, CBlockIndex* pindexPrev, bool fCheckPOT, bool fCheckMerkleRoot)
 {
     AssertLockHeld(cs_main);
     assert(pindexPrev && pindexPrev == chainActive.Tip());
@@ -4545,7 +4552,7 @@ bool TestBlockValidity(CValidationState& state, const CChainParams& chainparams,
     // NOTE: CheckBlockHeader is called by CheckBlock
     if (!ContextualCheckBlockHeader(block, state, chainparams.GetConsensus(), pindexPrev, GetAdjustedTime()))
         return error("%s: Consensus::ContextualCheckBlockHeader: %s", __func__, FormatStateMessage(state));
-    if (!CheckBlock(block, state, chainparams.GetConsensus(), fCheckPOW, fCheckMerkleRoot))
+    if (!CheckBlock(block, state, chainparams.GetConsensus(), fCheckPOT, fCheckMerkleRoot))
         return error("%s: Consensus::CheckBlock: %s", __func__, FormatStateMessage(state));
     if (!ContextualCheckBlock(block, state, pindexPrev))
         return error("%s: Consensus::ContextualCheckBlock: %s", __func__, FormatStateMessage(state));
@@ -4755,12 +4762,10 @@ bool static LoadBlockIndexDB()
         // For bitcoin, pow verification is implemented in "LoadBlockIndexGuts".
         // But for pods, we have to do this work after all BlockIndexed are loaded.
         if (pindex->pprev) {
-            /*
             if (!CheckProofOfTransaction(pindex->GetBlockHeader(), dummy, chainparams.GetConsensus(),
                     pindex->pprev)) {
                 return error("LoadBlockIndex(): CheckProofOfTransaction failed: %s", pindex->ToString());
             }
-             */
 
             if (pindex->nChainDiff != pindex->pprev->nChainDiff + GetBlockProof(*pindex))
             {
@@ -4909,7 +4914,7 @@ bool CVerifyDB::VerifyDB(const CChainParams& chainparams, CCoinsView *coinsview,
         if (!ReadBlockFromDisk(block, pindex, chainparams.GetConsensus()))
             return error("VerifyDB(): *** ReadBlockFromDisk failed at %d, hash=%s", pindex->nHeight, pindex->GetBlockHash().ToString());
         // check level 1: verify block validity
-        if (nCheckLevel >= 1 && !CheckBlock(block, state, chainparams.GetConsensus()))
+        if (nCheckLevel >= 1 && !CheckBlock(block, state, chainparams.GetConsensus(), false))
             return error("%s: *** found bad block at %d, hash=%s (%s)\n", __func__,
                          pindex->nHeight, pindex->GetBlockHash().ToString(), FormatStateMessage(state));
         // check level 2: verify undo validity
