@@ -435,7 +435,6 @@ bool CBlockTreeDB::LoadBlockIndexGuts(boost::function<CBlockIndex*(const uint256
                 pindexNew->nTx            = diskindex.nTx;
 
                 pindexNew->baseTarget                  = diskindex.baseTarget;
-                pindexNew->harvestPower                = diskindex.harvestPower;
                 pindexNew->generationSignature         = diskindex.generationSignature;
                 pindexNew->pubKeyOfpackager            = diskindex.pubKeyOfpackager;
                 pindexNew->cumulativeDifficulty        = diskindex.cumulativeDifficulty;
@@ -604,6 +603,84 @@ bool CBalanceViewDB::UpdateBalance(const CTransaction& tx, const CCoinsViewCache
                 return false;
         }
     }
+
+    return true;
+}
+
+bool CRewardRateViewDB::WriteDB(int nHeight, std::string address, double value)
+{
+    std::stringstream ssVal;
+    ssVal << value;
+    std::string strValue;
+    ssVal >> strValue;
+
+    std::stringstream ssHeight;
+    std::string strHeight;
+    ssHeight << nHeight;
+    ssHeight >> strHeight;
+
+    leveldb::Status status = pdb->Put(leveldb::WriteOptions(), strHeight, address+"_"+strValue);
+    if(!status.ok())
+    {
+        LogPrintf("LevelDB write failure in reward rate module: %s\n", status.ToString());
+        dbwrapper_private::HandleError(status);
+        return false;
+    }
+
+    return true;
+}
+
+bool CRewardRateViewDB::ReadDB(int nHeight, std::string& address_value)
+{
+    std::stringstream ssHeight;
+    std::string strHeight;
+    ssHeight << nHeight;
+    ssHeight >> strHeight;
+
+    leveldb::Status status = pdb->Get(leveldb::ReadOptions(), strHeight, &address_value);
+    if(!status.ok())
+    {
+        LogPrintf("LevelDB read failure in reward rate module: %s\n", status.ToString());
+        dbwrapper_private::HandleError(status);
+        return false;
+    }
+
+    return true;
+}
+
+CRewardRateViewDB::CRewardRateViewDB()
+{
+    options.create_if_missing = true;
+
+    std::string db_path = GetDataDir(true).string() + std::string("/rewardrate");
+    LogPrintf("Opening LevelDB in %s\n", db_path);
+
+    leveldb::Status status = leveldb::DB::Open(options, db_path, &pdb);
+    dbwrapper_private::HandleError(status);
+    assert(status.ok());
+    LogPrintf("Opened LevelDB successfully\n");
+}
+
+CRewardRateViewDB::~CRewardRateViewDB()
+{
+    delete pdb;
+    pdb = NULL;
+}
+
+bool CRewardRateViewDB::GetRewardRate(int nHeight, string& addr_rate)
+{
+    if (!ReadDB(nHeight, addr_rate))
+        return false;
+
+    return true;
+}
+
+bool CRewardRateViewDB::UpdateRewardRate(std::string leaderAddress, double val, int nHeight)
+{
+    if ((val < 0 || val > 1.0) && val != -1)
+        return false;
+    if (!WriteDB(nHeight, leaderAddress, val))
+        return false;
 
     return true;
 }

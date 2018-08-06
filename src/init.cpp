@@ -230,6 +230,8 @@ void Shutdown()
         pblocktree = NULL;
         //delete pbalancedbview;
         //pbalancedbview = NULL;
+        delete prewardratedbview;
+        prewardratedbview = NULL;
     }
 #ifdef ENABLE_WALLET
     if (pwalletMain)
@@ -1262,12 +1264,19 @@ bool AppInit2(boost::thread_group& threadGroup, CScheduler& scheduler)
                 delete pcoinscatcher;
                 delete pblocktree;
                 //delete pbalancedbview;
+                delete prewardratedbview;
 
                 pblocktree = new CBlockTreeDB(nBlockTreeDBCache, false, fReindex);
                 pcoinsdbview = new CCoinsViewDB(nCoinDBCache, false, fReindex || fReindexChainState);
                 pcoinscatcher = new CCoinsViewErrorCatcher(pcoinsdbview);
                 pcoinsTip = new CCoinsViewCache(pcoinscatcher);
                 //pbalancedbview = new CBalanceViewDB();
+                if (mapArgs.count("-updaterewardrate") && mapMultiArgs["-updaterewardrate"].size() > 0)
+                {
+                    string flag = mapMultiArgs["-updaterewardrate"][0];
+                    if (flag.compare("true") == 0)
+                        prewardratedbview = new CRewardRateViewDB();
+                }
 
                 if (fReindex) {
                     pblocktree->WriteReindexing(true);
