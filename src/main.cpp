@@ -97,8 +97,6 @@ struct EntrustInfo
     std::string father;
 };
 
-static int nHeight = 0;
-
 CFeeRate minRelayTxFee = CFeeRate(DEFAULT_MIN_RELAY_TX_FEE);
 CAmount maxTxFee = DEFAULT_TRANSACTION_MAXFEE;
 
@@ -2669,27 +2667,28 @@ bool ConnectBlock(const CBlock& block, CValidationState& state, CBlockIndex* pin
 
     // Special case for the genesis block
     if (block.GetHash() == chainparams.GetConsensus().hashGenesisBlock) {
-        if (!fJustCheck)
+        if (!fJustCheck) {
             view.SetBestBlock(pindex->GetBlockHash());
 
-        long clubId;
-        for(uint i = 0; i < GENESISCOIN_CNT; i++)
-        {
-            CTxDestination address;
-            std::vector<std::string> values;
-            const CScript genesisOutputScript = CScript() << ParseHex(chainparams.GetConsensus().genesisAddr[i]) << OP_CHECKSIG;
-            ExtractDestination(genesisOutputScript, address);
-            values.push_back(CBitcoinAddress(address).ToString());
-            values.push_back("1");
-            clubId = pdb->ISNSqlInsert(tableClub, values);
+            long clubId;
+            for(uint i = 0; i < GENESISCOIN_CNT; i++)
+            {
+                CTxDestination address;
+                std::vector<std::string> values;
+                const CScript genesisOutputScript = CScript() << ParseHex(chainparams.GetConsensus().genesisAddr[i]) << OP_CHECKSIG;
+                ExtractDestination(genesisOutputScript, address);
+                values.push_back(CBitcoinAddress(address).ToString());
+                values.push_back("1");
+                clubId = pdb->ISNSqlInsert(tableClub, values);
 
-            values.clear();
-            values.push_back(CBitcoinAddress(address).ToString());
-            values.push_back(std::to_string(clubId));
-            values.push_back("0");
-            values.push_back("1");
-            values.push_back("0");
-            pdb->ISNSqlInsert(tableMember, values);
+                values.clear();
+                values.push_back(CBitcoinAddress(address).ToString());
+                values.push_back(std::to_string(clubId));
+                values.push_back("0");
+                values.push_back("1");
+                values.push_back("0");
+                pdb->ISNSqlInsert(tableMember, values);
+            }
         }
 
         UpdateCoins(block.vtx[0], view, 0);
@@ -2802,7 +2801,7 @@ bool ConnectBlock(const CBlock& block, CValidationState& state, CBlockIndex* pin
     blockundo.vtxundo.reserve(block.vtx.size() - 1);
 
     std::ofstream ofile;
-    if (nHeight != pindex->nHeight) {
+    if (!fJustCheck) {
         char fileName[16];
         snprintf(fileName, sizeof(fileName), "%09d.txt", pindex->nHeight);
         boost::filesystem::path path = GetDataDir() / "minerclub" / fileName;
@@ -2879,7 +2878,7 @@ bool ConnectBlock(const CBlock& block, CValidationState& state, CBlockIndex* pin
         if (i > 0) {
             blockundo.vtxundo.push_back(CTxUndo());
 
-            if (nHeight != pindex->nHeight) {
+            if (!fJustCheck) {
                 //entrust graph, only deal with special tx
                 //extract vin's Address(which offer the most money)
                 //CTxDestination vinAddress;
@@ -3100,7 +3099,7 @@ bool ConnectBlock(const CBlock& block, CValidationState& state, CBlockIndex* pin
             return error("ConnectBlock(): UpdateRewards failed");
     }
 
-    if (nHeight != pindex->nHeight) {
+    if (!fJustCheck) {
         ofile .close();
     }
     nHeight = pindex->nHeight;
