@@ -193,8 +193,8 @@ bool CheckProofOfTransaction(const std::string& prevGenerationSignature, const s
 
     if (prevGenerationSignature.empty() || currPubKey.empty() || nHeight < 0 || nTime == 0
             || harverstPower == 0) {
-        LogPrintf("POT failed, incorrect args, signatrue:%s, pubkey:%s, height:%d, time:%d\n",
-            prevGenerationSignature, currPubKey, nHeight, nTime);
+        LogPrintf("POT failed, incorrect args, signatrue:%s, pubkey:%s, height:%d, time:%d, hp:%d\n",
+            prevGenerationSignature, currPubKey, nHeight, nTime, harverstPower);
         checkErr = POT_ARGS_ERR;
         return false;
     }

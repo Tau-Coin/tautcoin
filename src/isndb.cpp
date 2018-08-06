@@ -45,6 +45,9 @@ ISNDB::ISNDB()
         //con= mysqlpp::Connection(DBName, hostName, userName, passWord);
 
         poption = new mysqlpp::ReconnectOption(true);
+        // Objects passed to "Objects passed to this method and successfully set will be released
+        // when this Connection object is destroyed.
+        // So there is no need to obviously destroy "poption".
         con.set_option(poption);
 	}
 	catch (const mysqlpp::Exception& er) {
@@ -58,7 +61,6 @@ ISNDB::~ISNDB()
 {
     // Disconnect db connection
     con.disconnect();
-    delete(poption);
 }
 
 // select from ISNDB according to address

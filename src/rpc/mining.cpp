@@ -121,7 +121,7 @@ UniValue generateBlocksWithPot(boost::shared_ptr<CReserveScript> coinbaseScript,
          throw JSONRPCError(RPC_INTERNAL_ERROR, "fail to convert pubkey to address");
      }
 
-    uint64_t harverstPower = ClubManager::DEFAULT_HARVEST_POWER;
+     uint64_t harverstPower = ClubManager::DEFAULT_HARVEST_POWER;
 
      while (nHeight < nHeightEnd)
      {
