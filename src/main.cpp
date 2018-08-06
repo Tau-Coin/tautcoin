@@ -4072,6 +4072,11 @@ bool FindUndoPos(CValidationState &state, int nFile, CDiskBlockPos &pos, unsigne
 bool CheckProofOfTransaction(const CBlockHeader& block, CValidationState& state,
         const Consensus::Params& consensusParams, const CBlockIndex* pindexPrev)
 {
+    if (block.GetHash() == consensusParams.hashGenesisBlock)
+    {
+        return true;
+    }
+
     LOCK(cs_main);
 
     // Firstly if pindexLast equals NULL, get it from mapBlockIndex.
@@ -4100,6 +4105,10 @@ bool CheckProofOfTransaction(const CBlockHeader& block, CValidationState& state,
 bool CheckBlockHeader(const CBlockHeader& block, CValidationState& state, const Consensus::Params& consensusParams, bool fCheckPOT,
         CBlockIndex* pindexPrev)
 {
+    if (block.GetHash() == consensusParams.hashGenesisBlock)
+    {
+        return true;
+    }
 
     {
         LOCK(cs_main);
