@@ -169,4 +169,32 @@ public:
     bool UpdateBalance(const CTransaction& tx, const CCoinsViewCache& inputs, int nHeight);
 };
 
+/** View on the open reward rate dataset. */
+class CRewardRateViewDB
+{
+private:
+    //! the database itself
+    leveldb::DB* pdb;
+
+    //! database options used
+    leveldb::Options options;
+
+    bool WriteDB(int nHeight, std::string address, double value);
+
+    bool ReadDB(int nHeight, std::string& address_value);
+
+public:
+    //! Constructor
+    CRewardRateViewDB();
+
+    //! Destructor
+    ~CRewardRateViewDB();
+
+    //! Retrieve the reward rate for a given address
+    bool GetRewardRate(int nHeight, std::string& addr_rate);
+
+    //! Update the reward rate dataset represented by view
+    bool UpdateRewardRate(std::string leaderAddress, double val, int nHeight);
+};
+
 #endif // BITCOIN_TXDB_H

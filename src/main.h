@@ -191,6 +191,7 @@ extern CBlockIndex *pindexBestHeader;
 static const uint64_t nMinDiskSpace = 52428800;
 
 //extern CBalanceViewDB *pbalancedbview;
+extern CRewardRateViewDB *prewardratedbview;
 
 /** Pruning-related variables and constants */
 /** True if any block files have ever been pruned. */
@@ -460,7 +461,7 @@ bool ReadBlockFromDisk(CBlock& block, const CBlockIndex* pindex, const Consensus
 
 /** Context-independent validity checks */
 bool CheckBlockHeader(const CBlockHeader& block, CValidationState& state, const Consensus::Params& consensusParams, bool fCheckPOW = true, CBlockIndex* pindexPrev = NULL);
-bool CheckBlock(const CBlock& block, CValidationState& state, const Consensus::Params& consensusParams, bool fCheckPOT = true, bool fCheckMerkleRoot = true);
+bool CheckBlock(const CBlock& block, CValidationState& state, const Consensus::Params& consensusParams, bool fCheckPOW = true, bool fCheckMerkleRoot = true);
 
 /** Context-dependent validity checks.
  *  By "context", we mean only the previous block headers, but not the UTXO
