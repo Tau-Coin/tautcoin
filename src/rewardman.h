@@ -28,6 +28,8 @@ public:
 
     bool GetMembersTxCountByClubID(uint64_t clubID, std::map<std::string, uint64_t>& addrToTC, std::string& leaderAddr);
 
+    uint64_t GetTxCountByAddress(std::string& address);
+
 protected:
 
     RewardManager();
