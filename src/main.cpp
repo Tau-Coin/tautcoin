@@ -4209,7 +4209,7 @@ bool CheckBlock(const CBlock& block, CValidationState& state, const Consensus::P
     // is consistent with data base.
     // The reason why we check harvest power in "Check Block" is as follows:
     //     only when block received can harverst power be updated.
-    if (fCheckPOT)
+    if (fCheckPOT && block.GetHash() != consensusParams.hashGenesisBlock)
     {
         uint64_t harvestPower;
         if (!clubMgr->IsAllowForge(block.pubKeyOfpackager, 0, harvestPower))
@@ -4829,8 +4829,8 @@ bool static LoadBlockIndexDB()
         CBlockIndex* pindex = item.second;
 
         // Here, we have to check proof of dry stake.
-        // For bitcoin, pot verification is implemented in "LoadBlockIndexGuts".
-        // But for pods, we have to do this work after all BlockIndexed are loaded.
+        // For bitcoin, pow verification is implemented in "LoadBlockIndexGuts".
+        // But for pot, we have to do this work after all BlockIndexed are loaded.
         if (pindex->pprev) {
             if (!CheckProofOfTransaction(pindex->GetBlockHeader(), dummy, chainparams.GetConsensus(),
                     pindex->pprev)) {
