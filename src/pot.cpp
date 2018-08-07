@@ -51,7 +51,6 @@ std::string getLatestBlockGenerationSignature(){
     uint32_t nHeight = chainActive.Height();
     //std::cout<<"current main chain height is "<<nHeight<<std::endl;
     CBlockIndex* pblockindex = chainActive[nHeight];
-    std::cout <<"hex is as follows "<<std::hex <<pblockindex->GetBlockGenerationSignature()<<std::endl;
     return pblockindex->GetBlockGenerationSignature();
 }
 int64_t getPastTimeFromLastestBlock(){
