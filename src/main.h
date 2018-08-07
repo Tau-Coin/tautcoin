@@ -368,6 +368,11 @@ void UpdateCoins(const CTransaction& tx, CCoinsViewCache& inputs, int nHeight);
 
 /** Apply the rewards of this transaction on the reward database set */
 bool UpdateRewards(const CTransaction& tx, CAmount blockReward, int nHeight, bool isUndo=false);
+bool RewardChangeUpdateByPubkey(CAmount rewardChange, string pubkey, bool isUndo);
+bool RewardChangeUpdate(CAmount rewardChange, string address, bool isUndo);
+bool RewardRateUpdate(CAmount blockReward, CAmount distributedRewards, string clubLeaderAddress, int nHeight, bool isUndo);
+bool InitRewardsDist(CAmount memberTotalRewards, const CScript& scriptPubKey, map<string, uint64_t>& addrToTC,
+                     string& clubLeaderAddress, CAmount& distributedRewards, arith_uint256& totalmemberTXCnt);
 
 /** Context-independent validity checks */
 bool CheckTransaction(const CTransaction& tx, CValidationState& state);

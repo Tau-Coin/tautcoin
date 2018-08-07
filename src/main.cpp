@@ -1982,108 +1982,143 @@ void UpdateCoins(const CTransaction& tx, CCoinsViewCache& inputs, int nHeight)
     UpdateCoins(tx, inputs, txundo, nHeight);
 }
 
-bool UpdateRewards(const CTransaction& tx, CAmount blockReward, int nHeight, bool isUndo)
+bool RewardChangeUpdate(CAmount rewardChange, string address, bool isUndo)
 {
-    if (RewardManager::GetInstance()->currentHeight == nHeight)
-        return true;
-
-    RewardManager* rewardMan = RewardManager::GetInstance();
     bool ret = true;
-    if (!tx.IsCoinBase())
-    {
-        for(unsigned int i = 0; i < tx.vreward.size(); i++)
-        {
-            CAmount rewardbalance = rewardMan->GetRewardsByPubkey(tx.vreward[i].senderPubkey);
-            if (isUndo)
-                ret = rewardMan->UpdateRewardsByPubkey(tx.vreward[i].senderPubkey,
-                                                       rewardbalance+tx.vreward[i].rewardBalance,
-                                                       rewardbalance);
-            else
-                ret = rewardMan->UpdateRewardsByPubkey(tx.vreward[i].senderPubkey, 0, rewardbalance);
-        }
-        if (!ret)
-            return ret;
-    }
+    RewardManager* rewardMan = RewardManager::GetInstance();
+    CAmount rewardbalance_old = rewardMan->GetRewardsByAddress(address);
+    //LogPrintf("%s, member:%s, rw:%d\n", __func__, member, rewardbalance_old);
+    if (isUndo)
+        ret &= rewardMan->UpdateRewardsByAddress(address, rewardbalance_old-rewardChange,
+                                                 rewardbalance_old);
     else
-    {
-        assert(tx.vout.size() == 1);
-        ClubManager* clubMan = ClubManager::GetInstance();
-        string clubLeaderAddress;
-        CBitcoinAddress addr;
-        uint64_t clubID;
-        map<string, uint64_t> addrToTC;
-        addr.ScriptPub2Addr(tx.vout[0].scriptPubKey, clubLeaderAddress);
-        arith_uint256 totalTXCnt = clubMan->GetHarvestPowerByAddress(clubLeaderAddress, 0);
-        if (totalTXCnt.getdouble() == 0)
-        {
-            LogPrintf("Error: The club's harvest power is 0, which is not allowed to forge\n");
-            return false;
-        }
+        ret &= rewardMan->UpdateRewardsByAddress(address, rewardbalance_old+rewardChange,
+                                                 rewardbalance_old);
+    return ret;
+}
 
+bool RewardChangeUpdateByPubkey(CAmount rewardChange, string pubkey, bool isUndo)
+{
+    bool ret = true;
+    string address;
+    ret &= ConvertPubkeyToAddress(pubkey, address);
+    if (ret)
+        ret &= RewardChangeUpdate(rewardChange, address, isUndo);
+
+    return ret;
+}
+
+bool RewardRateUpdate(CAmount blockReward, CAmount distributedRewards, string clubLeaderAddress, int nHeight, bool isUndo)
+{
+    bool updateRewardRate = false;
+    if (mapArgs.count("-updaterewardrate") && mapMultiArgs["-updaterewardrate"].size() > 0)
+    {
+        string flag = mapMultiArgs["-updaterewardrate"][0];
+        if (flag.compare("true") == 0)
+            updateRewardRate = true;
+    }
+    if (updateRewardRate && !isUndo && blockReward > 0)
+    {
+        arith_uint256 totalval = blockReward;
+        arith_uint256 distributedval = distributedRewards;
+        double rewardRate = distributedval.getdouble() / totalval.getdouble();
+        if (!prewardratedbview->UpdateRewardRate(clubLeaderAddress, rewardRate, nHeight))
+            return false;//LogPrintf("Warning: UpdateRewardRate failed!");
+    }
+    else if(updateRewardRate && !isUndo)
+    {
+        if (!prewardratedbview->UpdateRewardRate(clubLeaderAddress, -1, nHeight))
+            return false;//LogPrintf("Warning: UpdateRewardRate failed!");
+    }
+
+    return true;
+}
+
+bool InitRewardsDist(CAmount memberTotalRewards, const CScript& scriptPubKey, map<string, uint64_t>& addrToTC,
+                     string& clubLeaderAddress, CAmount& distributedRewards, arith_uint256& totalmemberTXCnt)
+{
+    addrToTC.clear();
+    bool ret = true;
+    ClubManager* clubMan = ClubManager::GetInstance();
+    RewardManager* rewardMan = RewardManager::GetInstance();
+    CBitcoinAddress addr;
+    uint64_t clubID;
+    if (!addr.ScriptPub2Addr(scriptPubKey, clubLeaderAddress))
+        return false;
+    totalmemberTXCnt = clubMan->GetHarvestPowerByAddress(clubLeaderAddress, 0) - 0;
+    distributedRewards = 0;
+    if (totalmemberTXCnt.getdouble() > 0)
+    {
         ret &= clubMan->GetClubIDByAddress(clubLeaderAddress, clubID);
         ret &= rewardMan->GetMembersTxCountByClubID(clubID, addrToTC, clubLeaderAddress);
         if (!ret)
             return ret;
+        for(std::map<string, uint64_t>::const_iterator it = addrToTC.begin(); it != addrToTC.end(); it++)
+        {
+            arith_uint256 TXCnt = it->second;
+            CAmount memberReward = TXCnt.getdouble() / totalmemberTXCnt.getdouble() * memberTotalRewards;
+            distributedRewards += memberReward;
+        }
+        CAmount remainedReward = memberTotalRewards - distributedRewards;
+        if (remainedReward < 0)
+        {
+            //LogPrintf("Error: The club's totalRewards are less than distributedRewards\n");
+            return false;
+        }
+    }
 
-        CAmount totalRewards = blockReward-tx.vout[0].nValue;
-        CAmount distributedRewards = 0;
+    return true;
+}
+
+bool UpdateRewards(const CTransaction& tx, CAmount blockReward, int nHeight, bool isUndo)
+{
+    RewardManager* rewardMan = RewardManager::GetInstance();
+    if (rewardMan->currentHeight == nHeight)
+        return true;
+
+    bool ret = true;
+    if (!tx.IsCoinBase())
+    {
+        for(unsigned int i = 0; i < tx.vreward.size(); i++)
+            ret &= RewardChangeUpdateByPubkey(0-tx.vreward[i].rewardBalance,
+                                              tx.vreward[i].senderPubkey, isUndo);
+
+        return ret;
+    }
+
+    // Init rewards distribution and check if valid
+    if (tx.vout.size() != 1)
+    {
+        //LogPrintf("Error: The TX's vout size is 0\n");
+        return false;
+    }
+    arith_uint256 totalmemberTXCnt = 0;
+    CAmount distributedRewards = 0;
+    map<string, uint64_t> addrToTC;
+    CAmount memberTotalRewards = blockReward-tx.vout[0].nValue;
+    string clubLeaderAddress;
+    if (!InitRewardsDist(memberTotalRewards, tx.vout[0].scriptPubKey, addrToTC, clubLeaderAddress,
+                         distributedRewards, totalmemberTXCnt))
+        return false;
+
+    // Distribute rewards to member and return remained rewards back to club leader
+    if (totalmemberTXCnt.getdouble() > 0)
+    {
         for(std::map<string, uint64_t>::const_iterator it = addrToTC.begin(); it != addrToTC.end(); it++)
         {
             arith_uint256 TXCnt = it->second;
             string member = it->first;
-            CAmount memberReward = TXCnt.getdouble() / totalTXCnt.getdouble() * totalRewards;
+            CAmount memberReward = TXCnt.getdouble() / totalmemberTXCnt.getdouble() * memberTotalRewards;
             if (memberReward > 0)
-            {
-                CAmount rewardbalance_old = rewardMan->GetRewardsByAddress(member);
-                LogPrintf("%s, member:%s, rw:%d\n", __func__, member, rewardbalance_old);
-                if (isUndo)
-                    ret &= rewardMan->UpdateRewardsByAddress(member, rewardbalance_old-memberReward,
-                                                             rewardbalance_old);
-                else
-                    ret &= rewardMan->UpdateRewardsByAddress(member, rewardbalance_old+memberReward,
-                                                             rewardbalance_old);
-                distributedRewards += memberReward;
-            }
-        }
-
-        // Return remained rewards back to club leader
-        CAmount rewardbalance = rewardMan->GetRewardsByAddress(clubLeaderAddress);
-        CAmount remainedReward = totalRewards - distributedRewards;
-        assert(remainedReward >= 0);
-        if (isUndo)
-            ret &= rewardMan->UpdateRewardsByAddress(clubLeaderAddress,
-                                                     rewardbalance-remainedReward,
-                                                     rewardbalance);
-        else
-            ret &= rewardMan->UpdateRewardsByAddress(clubLeaderAddress,
-                                                     rewardbalance+remainedReward,
-                                                     rewardbalance);
-
-        // Update rewards rate
-        bool updateRewardRate = false;
-        if (mapArgs.count("-updaterewardrate") && mapMultiArgs["-updaterewardrate"].size() > 0)
-        {
-            string flag = mapMultiArgs["-updaterewardrate"][0];
-            if (flag.compare("true") == 0)
-                updateRewardRate = true;
-        }
-        if (updateRewardRate && !isUndo && totalRewards > 0)
-        {
-            arith_uint256 totalval = blockReward;
-            arith_uint256 distributedval = distributedRewards;
-            double rewardRate = distributedval.getdouble() / totalval.getdouble();
-            if (!prewardratedbview->UpdateRewardRate(clubLeaderAddress, rewardRate, nHeight))
-                LogPrintf("Warning: UpdateRewardRate failed!");
-        }
-        else if(updateRewardRate && !isUndo)
-        {
-            if (!prewardratedbview->UpdateRewardRate(clubLeaderAddress, -1, nHeight))
-                LogPrintf("Warning: UpdateRewardRate failed!");
+                ret &= RewardChangeUpdate(memberReward, member, isUndo);
         }
     }
+    CAmount remainedReward = memberTotalRewards - distributedRewards;
+    ret &= RewardChangeUpdate(remainedReward, clubLeaderAddress, isUndo);
 
-    if (ret)
-        RewardManager::GetInstance()->currentHeight = nHeight;
+    // Update rewards rate
+    RewardRateUpdate(blockReward, distributedRewards, clubLeaderAddress, nHeight, isUndo);
+
     return ret;
 }
 
@@ -2476,6 +2511,7 @@ bool DisconnectBlock(CBlock& block, CValidationState& state, CBlockIndex* pindex
         if (!UpdateRewards(tx, nFees, pindex->nHeight-1, isUndo))
             return error("DisconnectBlock(): UpdateRewards failed");
     }
+    RewardManager::GetInstance()->currentHeight = pindex->nHeight-1;
 
     // undo transactions in reverse order
     for (int i = block.vtx.size() - 1; i >= 0; i--) {
@@ -3117,6 +3153,7 @@ bool ConnectBlock(const CBlock& block, CValidationState& state, CBlockIndex* pin
             if (!UpdateRewards(tx, nFees, pindex->nHeight))
                 return error("ConnectBlock(): UpdateRewards failed");
         }
+        RewardManager::GetInstance()->currentHeight = pindex->nHeight;
     }
 
     if (!fJustCheck) {

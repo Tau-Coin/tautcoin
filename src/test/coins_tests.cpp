@@ -10,11 +10,14 @@
 #include "test/test_bitcoin.h"
 #include "main.h"
 #include "consensus/validation.h"
+#include "rewardman.h"
 
 #include <vector>
 #include <map>
 
 #include <boost/test/unit_test.hpp>
+
+typedef unsigned int uint;
 
 namespace
 {
@@ -209,6 +212,225 @@ BOOST_AUTO_TEST_CASE(coins_cache_simulation_test)
     BOOST_CHECK(updated_an_entry);
     BOOST_CHECK(found_an_entry);
     BOOST_CHECK(missed_an_entry);
+}
+
+static CBlock BuildBlockTestCase(CAmount* leaderVout, uint coinbaseVoutCnt, uint num, string pubkey,
+                                 uint memberCnt, const CScript* memberPubkey)
+{
+    CBlock block;
+    CMutableTransaction tx;
+
+    const CScript outputScript = CScript() << ParseHex(pubkey) << OP_CHECKSIG;
+    if (num < coinbaseVoutCnt) // The tx is coinbase
+    {
+        tx.vin.resize(1);
+        tx.vin[0].scriptSig.resize(10);
+        tx.vin[0].prevout.SetNull();
+
+        tx.vout.resize(1);
+        tx.vout[0].nValue = leaderVout[num];
+        tx.vout[0].scriptPubKey = outputScript;
+
+        block.vtx.resize(1);
+        block.vtx[0] = tx;
+        block.nVersion = 42;
+        block.hashPrevBlock = GetRandHash();
+    }
+    else
+    {
+        tx.vin.resize(memberCnt);
+        tx.vin[0].scriptSig.resize(10);
+        tx.vout.resize(1);
+        tx.vout[0].nValue = 42;
+
+        block.vtx.resize(3);
+        block.vtx[0] = tx;
+        block.nVersion = 42;
+        block.hashPrevBlock = GetRandHash();
+        block.nBits = 0x1f00ffff;
+
+        tx.vin[0].prevout.hash = GetRandHash();
+        tx.vin[0].prevout.n = 0;
+        block.vtx[1] = tx;
+
+        tx.vin.resize(10);
+
+        for (size_t i = 0; i < tx.vin.size(); i++) {
+            tx.vin[i].prevout.hash = GetRandHash();
+            tx.vin[i].prevout.n = 0;
+        }
+        block.vtx[2] = tx;
+    }
+
+    block.hashMerkleRoot = GetRandHash();
+    return block;
+}
+
+static long AddNewLeader(ISNDB* pdb, string addr)
+{
+    long clubId;
+    std::vector<std::string> values;
+
+    values.push_back(addr);
+    values.push_back("1");
+    clubId = pdb->ISNSqlInsert(tableClub, values);
+
+    values.clear();
+    values.push_back(addr);
+    values.push_back(std::to_string(clubId));
+    values.push_back("0");
+    values.push_back("1");
+    values.push_back("0");
+    pdb->ISNSqlInsert(tableMember, values);
+
+    return clubId;
+}
+
+static void AddNewMemberToClub(ISNDB* pdb, string leaderAddr, string memberAddr)
+{
+    std::vector<std::string> field, tableMemberValues;
+    field.clear();
+    field.push_back(memFieldID);
+    field.push_back(memFieldClub);
+    mysqlpp::StoreQueryResult data = pdb->ISNSqlSelectAA(tableMember, field, memFieldAddress, leaderAddr);
+    tableMemberValues.clear();
+    tableMemberValues.push_back(memberAddr);
+    tableMemberValues.push_back(data[0]["club_id"].c_str());
+    tableMemberValues.push_back(data[0]["address_id"].c_str());
+    tableMemberValues.push_back("1");
+    tableMemberValues.push_back("0");
+    pdb->ISNSqlInsert(tableMember, tableMemberValues);
+}
+
+static string ScriptToPubKey(const CScript& script)
+{
+    CTxDestination dest;
+    ExtractDestination(script, dest);
+    string addr = CBitcoinAddress(dest).ToString();//TQNJigbPKJJJMapz49h4uMPqvW7wWgJMnC
+    return addr;
+}
+
+BOOST_AUTO_TEST_CASE(updaterewards_simulation_test)
+{
+    // Init
+    mapArgs["-mysqldbname"] = "imreward";
+    mapArgs["-mysqlserver"] = "localhost";
+    mapArgs["-mysqlusername"] = "root";
+    mapArgs["-mysqlpassword"] = "Mp3895";
+    const uint memberCnt = 3;
+    string testPubkey = "039bb9e9c7f2602721e8f53fdcc1d6583afae76463156db2bda3673f0f11543dde";
+    string testmemberPubkey[memberCnt] = {
+        "0321b6dc3bfc5a5904afb3b431c5636c855f831f8ef7fc7e9b8c2c3a891d066388",
+        "03cb7f6c0381f98b96d260298a124abfeb9eec98aaa98cfa6d4e95032b1b5b773a",
+        "03705869ebbbe22bb84bcd96a3097884e6f818eadaee1520f9a9838aeca070e5a7"
+    };
+    const CScript outputScript = CScript() << ParseHex(testPubkey) << OP_CHECKSIG;
+    const CScript memberScript[memberCnt] = {
+        CScript() << ParseHex(testmemberPubkey[0]) << OP_CHECKSIG,
+        CScript() << ParseHex(testmemberPubkey[1]) << OP_CHECKSIG,
+        CScript() << ParseHex(testmemberPubkey[2]) << OP_CHECKSIG,
+    };
+    string testAddr = ScriptToPubKey(outputScript);//TQNJigbPKJJJMapz49h4uMPqvW7wWgJMnC
+    string memberAddr[memberCnt];
+    // Here start ISNDB service ASAP
+    ISNDB::StartISNDBService();
+    // Construct DB
+    ISNDB* pdb = ISNDB::GetInstance();
+    AddNewLeader(pdb, testAddr);
+
+    // Create inputs
+    const int height = 100;
+    const uint voutCnt = 5;
+    const uint TotalrewardsCnt = 3;
+    const uint heightCnt = 3;
+    const uint tcLeaderCaseCnt = 2;
+    const uint tcCaseCnt = 3;
+    const uint testTime = voutCnt*TotalrewardsCnt;// + tcLeaderCaseCnt*tcCaseCnt*voutCnt*TotalrewardsCnt;
+    CAmount leaderVout[voutCnt] = {-2, 0, 10, 10000, 20000};
+    CAmount TotalRewards[TotalrewardsCnt] = {-5, 0, 10000};
+    arith_uint256 tcLeaderCase[tcLeaderCaseCnt] = {5, 0};
+    arith_uint256 tcCase[tcCaseCnt][memberCnt] = {{0, 0, 0}, {0, 0, 1}, {2, 2, 1}};
+    RewardManager* rewardMan = RewardManager::GetInstance();
+    vector<CBlock> blocks;
+    for (uint i = 0; i < testTime; i++)
+    {
+        CBlock block(BuildBlockTestCase(leaderVout, voutCnt, i, testPubkey, memberCnt, memberScript));
+        blocks.push_back(block);
+    }
+
+    // Create outputs
+    CAmount rewardbalance_new[testTime];
+    CAmount rbalanceMember_new[tcCaseCnt];
+    for (uint i = 0; i < testTime; i++)
+    {
+        if (i < voutCnt*TotalrewardsCnt)
+        {
+            CAmount rewardOld = rewardMan->GetRewardsByAddress(testAddr);
+            assert(rewardOld == 0);
+            rewardbalance_new[i] = TotalRewards[i/voutCnt] - leaderVout[i%voutCnt];
+        }
+        else if(i == voutCnt*TotalrewardsCnt)
+        {
+            CAmount rewardOld = rewardMan->GetRewardsByAddress(testAddr);
+            assert(rewardOld == 0);
+            rbalanceMember_new[0] = TotalRewards[i/voutCnt] - leaderVout[i%voutCnt];
+        }
+    }
+
+    // Execute tests
+    bool ret[testTime];
+    CAmount rewardbalance_ret[testTime];
+    for (uint i = 0; i < testTime; i++)
+    {
+        CBlock block;
+        if (i < voutCnt*TotalrewardsCnt)
+            block = blocks[i % voutCnt];
+        else if(i == voutCnt*TotalrewardsCnt)
+        {
+            for(uint i = 0; i < memberCnt; i++)
+            {
+                //TKPDyXLTh7mwUp1wLqzJCZZvFRKhWZcao8, TGntmw2qpvZc7aTpUr9dYYGduaRmvD6pWX, TGPtvy6P5RcUnvGSs7cbhYw2RC3VqnwvWA
+                memberAddr[i] = ScriptToPubKey(memberScript[i]);
+                AddNewMemberToClub(pdb, testAddr, memberAddr[i]);
+            }
+        }
+        for (uint j = 0; j < block.vtx.size(); j++)
+        {
+            const CTransaction tx = block.vtx[j];
+            ret[i] = UpdateRewards(tx, TotalRewards[i / voutCnt], height);
+            rewardbalance_ret[i] = rewardMan->GetRewardsByAddress(testAddr);
+            CAmount rewardOld = rewardMan->GetRewardsByAddress(testAddr);
+            assert(rewardMan->UpdateRewardsByAddress(testAddr, 0, rewardOld));
+            assert(rewardMan->GetRewardsByAddress(testAddr) == 0);
+        }
+
+    }
+
+    // Verify
+    for (uint i = 0; i < testTime; i++)
+    {
+        if (i < 5 || (i > 6 && i < 10) || i == 14)
+            BOOST_CHECK_MESSAGE(ret[i] == false, "case: " << i);
+        else if(i < 15)
+        {
+            BOOST_CHECK_MESSAGE(ret[i] == true, "case: " << i);
+            BOOST_CHECK_MESSAGE(rewardbalance_new[i] == rewardbalance_ret[i], "case: " << i);
+        }
+
+    }
+
+    // Clean
+    {
+        pdb->ISNSqlDelete(tableClub, clubFieldAddress, testAddr);
+        pdb->ISNSqlDelete(tableMember, memFieldAddress, testAddr);
+        pdb->ISNSqlDelete(tableMember, memFieldAddress, memberAddr[0]);
+        pdb->ISNSqlDelete(tableMember, memFieldAddress, memberAddr[1]);
+        pdb->ISNSqlDelete(tableMember, memFieldAddress, memberAddr[2]);
+    }
+    // Stop ISNDB service
+    ISNDB::StopISNDBService();
+
+    assert(false);
 }
 
 // This test is similar to the previous test
