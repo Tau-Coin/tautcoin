@@ -2037,6 +2037,9 @@ bool RewardRateUpdate(CAmount blockReward, CAmount distributedRewards, string cl
 bool InitRewardsDist(CAmount memberTotalRewards, const CScript& scriptPubKey, map<string, uint64_t>& addrToTC,
                      string& clubLeaderAddress, CAmount& distributedRewards, arith_uint256& totalmemberTXCnt)
 {
+    if (memberTotalRewards < 0)
+        return false;
+
     addrToTC.clear();
     bool ret = true;
     ClubManager* clubMan = ClubManager::GetInstance();
@@ -2045,7 +2048,8 @@ bool InitRewardsDist(CAmount memberTotalRewards, const CScript& scriptPubKey, ma
     uint64_t clubID;
     if (!addr.ScriptPub2Addr(scriptPubKey, clubLeaderAddress))
         return false;
-    totalmemberTXCnt = clubMan->GetHarvestPowerByAddress(clubLeaderAddress, 0) - 0;
+    totalmemberTXCnt = clubMan->GetHarvestPowerByAddress(clubLeaderAddress, 0) -
+                       rewardMan->GetTxCountByAddress(clubLeaderAddress);
     distributedRewards = 0;
     if (totalmemberTXCnt.getdouble() > 0)
     {
