@@ -214,8 +214,7 @@ BOOST_AUTO_TEST_CASE(coins_cache_simulation_test)
     BOOST_CHECK(missed_an_entry);
 }
 
-static CBlock BuildBlockTestCase(CAmount* leaderVout, uint coinbaseVoutCnt, uint num, string pubkey,
-                                 uint memberCnt, const CScript* memberPubkey)
+static CBlock BuildBlockTestCase1(const CAmount* leaderVout, uint coinbaseVoutCnt, uint num, string pubkey)
 {
     CBlock block;
     CMutableTransaction tx;
@@ -236,31 +235,56 @@ static CBlock BuildBlockTestCase(CAmount* leaderVout, uint coinbaseVoutCnt, uint
         block.nVersion = 42;
         block.hashPrevBlock = GetRandHash();
     }
-    else
-    {
-        tx.vin.resize(memberCnt);
-        tx.vin[0].scriptSig.resize(10);
-        tx.vout.resize(1);
-        tx.vout[0].nValue = 42;
 
-        block.vtx.resize(3);
-        block.vtx[0] = tx;
-        block.nVersion = 42;
-        block.hashPrevBlock = GetRandHash();
-        block.nBits = 0x1f00ffff;
+    block.hashMerkleRoot = GetRandHash();
+    return block;
+}
 
-        tx.vin[0].prevout.hash = GetRandHash();
-        tx.vin[0].prevout.n = 0;
-        block.vtx[1] = tx;
+static CBlock BuildBlockTestCase2(CAmount totalRewards, double voutRatio, string pubkey)
+{
+    CBlock block;
+    CMutableTransaction tx;
 
-        tx.vin.resize(10);
+    const CScript outputScript = CScript() << ParseHex(pubkey) << OP_CHECKSIG;
 
-        for (size_t i = 0; i < tx.vin.size(); i++) {
-            tx.vin[i].prevout.hash = GetRandHash();
-            tx.vin[i].prevout.n = 0;
-        }
-        block.vtx[2] = tx;
+    tx.vin.resize(1);
+    tx.vin[0].scriptSig.resize(10);
+    tx.vin[0].prevout.SetNull();
+
+    tx.vout.resize(1);
+    tx.vout[0].nValue = totalRewards * voutRatio;
+    tx.vout[0].scriptPubKey = outputScript;
+
+    block.vtx.resize(1);
+    block.vtx[0] = tx;
+    block.nVersion = 42;
+    block.hashPrevBlock = GetRandHash();
+
+    block.hashMerkleRoot = GetRandHash();
+    return block;
+}
+
+static CBlock BuildBlockTestCase3(const CAmount* memberRBalance, const string* memberPubkey)
+{
+    CBlock block;
+    CMutableTransaction tx;
+
+    block.vtx.resize(1);
+    block.nVersion = 42;
+    block.hashPrevBlock = GetRandHash();
+
+    tx.vin.resize(10);
+    for (size_t i = 0; i < tx.vin.size(); i++) {
+        tx.vin[i].prevout.hash = GetRandHash();
+        tx.vin[i].prevout.n = 0;
     }
+    tx.vreward.resize(3);
+    for (size_t i = 0; i < tx.vreward.size(); i++) {
+        tx.vreward[i].senderPubkey = memberPubkey[i];
+        tx.vreward[i].scriptSig.resize(10);
+        tx.vreward[i].rewardBalance = memberRBalance[i];
+    }
+    block.vtx[0] = tx;
 
     block.hashMerkleRoot = GetRandHash();
     return block;
@@ -297,9 +321,28 @@ static void AddNewMemberToClub(ISNDB* pdb, string leaderAddr, string memberAddr)
     tableMemberValues.push_back(memberAddr);
     tableMemberValues.push_back(data[0]["club_id"].c_str());
     tableMemberValues.push_back(data[0]["address_id"].c_str());
-    tableMemberValues.push_back("1");
+    tableMemberValues.push_back("0");
     tableMemberValues.push_back("0");
     pdb->ISNSqlInsert(tableMember, tableMemberValues);
+}
+
+static void TCAddOneByAddress(ISNDB* pdb, string address)
+{
+    std::vector<std::string> field;
+    field.clear();
+    field.push_back(memFieldCount);
+    pdb->ISNSqlAddOne(tableMember, field, memFieldAddress, address);
+}
+
+static void TTCAddOneByAddress(ISNDB* pdb, string leaderAddress)
+{
+    std::vector<std::string> field;
+    field.clear();
+    field.push_back(memFieldClub);
+    mysqlpp::StoreQueryResult data = pdb->ISNSqlSelectAA(tableMember, field, memFieldAddress, leaderAddress);
+    field.clear();
+    field.push_back(clubFieldCount);
+    pdb->ISNSqlAddOne(tableClub, field, clubFieldID, data[0]["club_id"].c_str());
 }
 
 static string ScriptToPubKey(const CScript& script)
@@ -317,6 +360,7 @@ BOOST_AUTO_TEST_CASE(updaterewards_simulation_test)
     mapArgs["-mysqlserver"] = "localhost";
     mapArgs["-mysqlusername"] = "root";
     mapArgs["-mysqlpassword"] = "Mp3895";
+    mapArgs["-leaderreward"] = "0.5";
     const uint memberCnt = 3;
     string testPubkey = "039bb9e9c7f2602721e8f53fdcc1d6583afae76463156db2bda3673f0f11543dde";
     string testmemberPubkey[memberCnt] = {
@@ -339,28 +383,50 @@ BOOST_AUTO_TEST_CASE(updaterewards_simulation_test)
     AddNewLeader(pdb, testAddr);
 
     // Create inputs
+    const string ratiostr = mapArgs["-leaderreward"];
+    const double leaderRatio = atof(ratiostr.c_str());
     const int height = 100;
     const uint voutCnt = 5;
     const uint TotalrewardsCnt = 3;
-    const uint heightCnt = 3;
-    const uint tcLeaderCaseCnt = 2;
+    const uint tcLeaderCaseCnt = 3;
     const uint tcCaseCnt = 3;
-    const uint testTime = voutCnt*TotalrewardsCnt;// + tcLeaderCaseCnt*tcCaseCnt*voutCnt*TotalrewardsCnt;
-    CAmount leaderVout[voutCnt] = {-2, 0, 10, 10000, 20000};
-    CAmount TotalRewards[TotalrewardsCnt] = {-5, 0, 10000};
-    arith_uint256 tcLeaderCase[tcLeaderCaseCnt] = {5, 0};
-    arith_uint256 tcCase[tcCaseCnt][memberCnt] = {{0, 0, 0}, {0, 0, 1}, {2, 2, 1}};
+    const uint testTime = voutCnt*TotalrewardsCnt + tcLeaderCaseCnt;
+    const uint clubTtc[tcCaseCnt] = {5, 8, 8};
+    const CAmount leaderVout[voutCnt] = {-2, 0, 10, 10000, 20000};
+    const CAmount TotalRewards[TotalrewardsCnt] = {-5, 0, 10000};
+    const arith_uint256 tcCase[tcCaseCnt][memberCnt] = {{0, 0, 0}, {2, 0, 1}, {3, 3, 3}};
+    const arith_uint256 tcLeaderCase = 5;
+    const CAmount memberRBalance[memberCnt] = {3333, 0, 1666};
     RewardManager* rewardMan = RewardManager::GetInstance();
     vector<CBlock> blocks;
+    for(uint i = 0; i < memberCnt; i++)
+    {
+        //TKPDyXLTh7mwUp1wLqzJCZZvFRKhWZcao8, TGntmw2qpvZc7aTpUr9dYYGduaRmvD6pWX, TGPtvy6P5RcUnvGSs7cbhYw2RC3VqnwvWA
+        memberAddr[i] = ScriptToPubKey(memberScript[i]);
+    }
     for (uint i = 0; i < testTime; i++)
     {
-        CBlock block(BuildBlockTestCase(leaderVout, voutCnt, i, testPubkey, memberCnt, memberScript));
-        blocks.push_back(block);
+        if (i < voutCnt*TotalrewardsCnt)
+        {
+            CBlock block(BuildBlockTestCase1(leaderVout, voutCnt, i, testPubkey));
+            blocks.push_back(block);
+        }
+        else if(i >= voutCnt*TotalrewardsCnt && i < voutCnt*TotalrewardsCnt + tcLeaderCaseCnt)
+        {
+            CBlock block(BuildBlockTestCase2(TotalRewards[2], leaderRatio, testPubkey));
+            blocks.push_back(block);
+        }
+        else if(i >= voutCnt*TotalrewardsCnt + tcLeaderCaseCnt)
+        {
+            CBlock block(BuildBlockTestCase3(memberRBalance, testmemberPubkey));
+            blocks.push_back(block);
+        }
     }
 
     // Create outputs
     CAmount rewardbalance_new[testTime];
-    CAmount rbalanceMember_new[tcCaseCnt];
+    CAmount rbalanceMember_new[tcCaseCnt][memberCnt];
+    CAmount rbalanceMember_new_case3[memberCnt];
     for (uint i = 0; i < testTime; i++)
     {
         if (i < voutCnt*TotalrewardsCnt)
@@ -369,41 +435,128 @@ BOOST_AUTO_TEST_CASE(updaterewards_simulation_test)
             assert(rewardOld == 0);
             rewardbalance_new[i] = TotalRewards[i/voutCnt] - leaderVout[i%voutCnt];
         }
-        else if(i == voutCnt*TotalrewardsCnt)
+        else if(i >= voutCnt*TotalrewardsCnt && i < voutCnt*TotalrewardsCnt + tcLeaderCaseCnt)
         {
-            CAmount rewardOld = rewardMan->GetRewardsByAddress(testAddr);
-            assert(rewardOld == 0);
-            rbalanceMember_new[0] = TotalRewards[i/voutCnt] - leaderVout[i%voutCnt];
+            assert(rewardMan->GetRewardsByAddress(testAddr) == 0);
+            CAmount TotalMemberRewards = TotalRewards[2] * (1 - leaderRatio);
+
+            assert(rewardMan->GetRewardsByAddress(memberAddr[0]) == 0);
+            assert(rewardMan->GetRewardsByAddress(memberAddr[1]) == 0);
+            assert(rewardMan->GetRewardsByAddress(memberAddr[2]) == 0);
+            double memberttc = clubTtc[i-voutCnt*TotalrewardsCnt]-tcLeaderCase.getdouble();
+            rbalanceMember_new[i-voutCnt*TotalrewardsCnt][0] = memberttc == 0 ? 0 :
+                    (tcCase[i-voutCnt*TotalrewardsCnt][0].getdouble() / memberttc * TotalMemberRewards);
+            rbalanceMember_new[i-voutCnt*TotalrewardsCnt][1] = memberttc == 0 ? 0 :
+                    (tcCase[i-voutCnt*TotalrewardsCnt][1].getdouble() / memberttc * TotalMemberRewards);
+            rbalanceMember_new[i-voutCnt*TotalrewardsCnt][2] = memberttc == 0 ? 0 :
+                    (tcCase[i-voutCnt*TotalrewardsCnt][2].getdouble() / memberttc * TotalMemberRewards);
+
+            rewardbalance_new[i] = TotalMemberRewards - rbalanceMember_new[i-voutCnt*TotalrewardsCnt][0] -
+                     - rbalanceMember_new[i-voutCnt*TotalrewardsCnt][1] - rbalanceMember_new[i-voutCnt*TotalrewardsCnt][2];
+        }
+        else if(i >= voutCnt*TotalrewardsCnt + tcLeaderCaseCnt)
+        {
+            rbalanceMember_new_case3[0] = 0;
+            rbalanceMember_new_case3[1] = 0;
+            rbalanceMember_new_case3[2] = 0;
         }
     }
 
     // Execute tests
     bool ret[testTime];
     CAmount rewardbalance_ret[testTime];
+    CAmount rbalanceMember_ret[tcCaseCnt][memberCnt];
+    CAmount rbalanceMember_ret_case3[memberCnt];
     for (uint i = 0; i < testTime; i++)
     {
         CBlock block;
         if (i < voutCnt*TotalrewardsCnt)
-            block = blocks[i % voutCnt];
-        else if(i == voutCnt*TotalrewardsCnt)
         {
-            for(uint i = 0; i < memberCnt; i++)
+            block = blocks[i % voutCnt];
+            for (uint j = 0; j < block.vtx.size(); j++)
             {
-                //TKPDyXLTh7mwUp1wLqzJCZZvFRKhWZcao8, TGntmw2qpvZc7aTpUr9dYYGduaRmvD6pWX, TGPtvy6P5RcUnvGSs7cbhYw2RC3VqnwvWA
-                memberAddr[i] = ScriptToPubKey(memberScript[i]);
-                AddNewMemberToClub(pdb, testAddr, memberAddr[i]);
+                const CTransaction tx = block.vtx[j];
+                ret[i] = UpdateRewards(tx, TotalRewards[i / voutCnt], height);
+                rewardbalance_ret[i] = rewardMan->GetRewardsByAddress(testAddr);
+                CAmount rewardOld = rewardMan->GetRewardsByAddress(testAddr);
+                assert(rewardMan->UpdateRewardsByAddress(testAddr, 0, rewardOld));
+                assert(rewardMan->GetRewardsByAddress(testAddr) == 0);
             }
         }
-        for (uint j = 0; j < block.vtx.size(); j++)
+        else if(i >= voutCnt*TotalrewardsCnt && i < voutCnt*TotalrewardsCnt + tcLeaderCaseCnt)
         {
-            const CTransaction tx = block.vtx[j];
-            ret[i] = UpdateRewards(tx, TotalRewards[i / voutCnt], height);
-            rewardbalance_ret[i] = rewardMan->GetRewardsByAddress(testAddr);
-            CAmount rewardOld = rewardMan->GetRewardsByAddress(testAddr);
-            assert(rewardMan->UpdateRewardsByAddress(testAddr, 0, rewardOld));
-            assert(rewardMan->GetRewardsByAddress(testAddr) == 0);
-        }
+            if (i == voutCnt*TotalrewardsCnt)
+            {
+                for(uint i = 0; i < memberCnt; i++)
+                    AddNewMemberToClub(pdb, testAddr, memberAddr[i]);
 
+                for(uint i = 0; i < clubTtc[0]-1; i++)
+                {
+                    TTCAddOneByAddress(pdb, testAddr);
+                    TCAddOneByAddress(pdb, testAddr);
+                }
+            }
+            else if(i == voutCnt*TotalrewardsCnt + 1)
+            {
+                TTCAddOneByAddress(pdb, testAddr);
+                TTCAddOneByAddress(pdb, testAddr);
+                TTCAddOneByAddress(pdb, testAddr);
+                TCAddOneByAddress(pdb, memberAddr[0]);
+                TCAddOneByAddress(pdb, memberAddr[0]);
+                TCAddOneByAddress(pdb, memberAddr[2]);
+            }
+            else if(i == voutCnt*TotalrewardsCnt + 2)
+            {
+                TCAddOneByAddress(pdb, memberAddr[0]);
+                TCAddOneByAddress(pdb, memberAddr[1]);
+                TCAddOneByAddress(pdb, memberAddr[1]);
+                TCAddOneByAddress(pdb, memberAddr[1]);
+                TCAddOneByAddress(pdb, memberAddr[2]);
+                TCAddOneByAddress(pdb, memberAddr[2]);
+            }
+
+            block = blocks[i];
+            for (uint j = 0; j < block.vtx.size(); j++)
+            {
+                const CTransaction tx = block.vtx[j];
+                ret[i] = UpdateRewards(tx, TotalRewards[2], height);
+                rewardbalance_ret[i] = rewardMan->GetRewardsByAddress(testAddr);
+                rbalanceMember_ret[i-voutCnt*TotalrewardsCnt][0] = rewardMan->GetRewardsByAddress(memberAddr[0]);
+                rbalanceMember_ret[i-voutCnt*TotalrewardsCnt][1] = rewardMan->GetRewardsByAddress(memberAddr[1]);
+                rbalanceMember_ret[i-voutCnt*TotalrewardsCnt][2] = rewardMan->GetRewardsByAddress(memberAddr[2]);
+                CAmount rewardOld = rewardMan->GetRewardsByAddress(testAddr);
+                assert(rewardMan->UpdateRewardsByAddress(testAddr, 0, rewardOld));
+                assert(rewardMan->GetRewardsByAddress(testAddr) == 0);
+                rewardOld = rewardMan->GetRewardsByAddress(memberAddr[0]);
+                assert(rewardMan->UpdateRewardsByAddress(memberAddr[0], 0, rewardOld));
+                assert(rewardMan->GetRewardsByAddress(memberAddr[0]) == 0);
+                rewardOld = rewardMan->GetRewardsByAddress(memberAddr[1]);
+                assert(rewardMan->UpdateRewardsByAddress(memberAddr[1], 0, rewardOld));
+                assert(rewardMan->GetRewardsByAddress(memberAddr[1]) == 0);
+                rewardOld = rewardMan->GetRewardsByAddress(memberAddr[2]);
+                assert(rewardMan->UpdateRewardsByAddress(memberAddr[2], 0, rewardOld));
+                assert(rewardMan->GetRewardsByAddress(memberAddr[2]) == 0);
+            }
+        }
+        else if(i >= voutCnt*TotalrewardsCnt + tcLeaderCaseCnt)
+        {
+            rewardMan->UpdateRewardsByAddress(testAddr, memberRBalance[0], -1);
+            assert(rewardMan->GetRewardsByAddress(testAddr) == memberRBalance[0]);
+            rewardMan->UpdateRewardsByAddress(testAddr, memberRBalance[1], -1);
+            assert(rewardMan->GetRewardsByAddress(testAddr) == memberRBalance[1]);
+            rewardMan->UpdateRewardsByAddress(testAddr, memberRBalance[2], -1);
+            assert(rewardMan->GetRewardsByAddress(testAddr) == memberRBalance[2]);
+            block = blocks[i];
+            for (uint j = 0; j < block.vtx.size(); j++)
+            {
+                const CTransaction tx = block.vtx[j];
+                ret[i] = UpdateRewards(tx, TotalRewards[2], height);
+                rewardbalance_ret[i] = rewardMan->GetRewardsByAddress(testAddr);
+            }
+            rbalanceMember_ret_case3[0] = rewardMan->GetRewardsByAddress(memberAddr[0]);
+            rbalanceMember_ret_case3[1] = rewardMan->GetRewardsByAddress(memberAddr[1]);
+            rbalanceMember_ret_case3[2] = rewardMan->GetRewardsByAddress(memberAddr[2]);
+        }
     }
 
     // Verify
@@ -411,10 +564,35 @@ BOOST_AUTO_TEST_CASE(updaterewards_simulation_test)
     {
         if (i < 5 || (i > 6 && i < 10) || i == 14)
             BOOST_CHECK_MESSAGE(ret[i] == false, "case: " << i);
-        else if(i < 15)
+        else if(i < voutCnt*TotalrewardsCnt)
         {
             BOOST_CHECK_MESSAGE(ret[i] == true, "case: " << i);
             BOOST_CHECK_MESSAGE(rewardbalance_new[i] == rewardbalance_ret[i], "case: " << i);
+        }
+        else if(i == voutCnt*TotalrewardsCnt)
+        {
+            BOOST_CHECK_MESSAGE(ret[i] == true, "case: " << i);
+            BOOST_CHECK_MESSAGE(rewardbalance_new[i] == rewardbalance_ret[i], "case: " << i);
+            BOOST_CHECK_MESSAGE(rbalanceMember_new[0][0] == rbalanceMember_ret[0][0], "case: " << i);
+            BOOST_CHECK_MESSAGE(rbalanceMember_new[0][1] == rbalanceMember_ret[0][1], "case: " << i);
+            BOOST_CHECK_MESSAGE(rbalanceMember_new[0][2] == rbalanceMember_ret[0][2], "case: " << i);
+        }
+        else if(i == voutCnt*TotalrewardsCnt + 1)
+        {
+            BOOST_CHECK_MESSAGE(ret[i] == true, "case: " << i);
+            BOOST_CHECK_MESSAGE(rewardbalance_new[i] == rewardbalance_ret[i], "case: " << i);
+            BOOST_CHECK_MESSAGE(rbalanceMember_new[1][0] == rbalanceMember_ret[1][0], "case: " << i);
+            BOOST_CHECK_MESSAGE(rbalanceMember_new[1][1] == rbalanceMember_ret[1][1], "case: " << i);
+            BOOST_CHECK_MESSAGE(rbalanceMember_new[1][2] == rbalanceMember_ret[1][2], "case: " << i);
+        }
+        else if(i == voutCnt*TotalrewardsCnt + 2)
+            BOOST_CHECK_MESSAGE(ret[i] == false, "case: " << i);
+        else if(i >= voutCnt*TotalrewardsCnt + tcLeaderCaseCnt)
+        {
+            BOOST_CHECK_MESSAGE(ret[i] == true, "case: " << i);
+            BOOST_CHECK_MESSAGE(rbalanceMember_new_case3[0] == rbalanceMember_ret_case3[0], "case: " << i);
+            BOOST_CHECK_MESSAGE(rbalanceMember_new_case3[1] == rbalanceMember_ret_case3[1], "case: " << i);
+            BOOST_CHECK_MESSAGE(rbalanceMember_new_case3[2] == rbalanceMember_ret_case3[2], "case: " << i);
         }
 
     }
@@ -429,8 +607,6 @@ BOOST_AUTO_TEST_CASE(updaterewards_simulation_test)
     }
     // Stop ISNDB service
     ISNDB::StopISNDBService();
-
-    assert(false);
 }
 
 // This test is similar to the previous test
