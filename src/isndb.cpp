@@ -8,9 +8,52 @@
 #include "sync.h"
 #include "util.h"
 
+#include<exception>
+#include<fstream>
+#include<stdexcept>
+
+#include <boost/algorithm/string.hpp>
+#include <boost/assign/list_of.hpp>
+#include <boost/filesystem.hpp>
+
 static CCriticalSection cs_isndb;
 
 ISNDB* ISNDB::pIsnDBSingleton = NULL;
+
+string ISNDB::mysqldbname = "";
+string ISNDB::mysqlserver = "";
+string ISNDB::mysqlusername = "";
+string ISNDB::mysqlpassword = "";
+
+string ISNDB::CREATE_CLUB_TABLE = string("create table clubinfo(")
+            + string("club_id INT NOT NULL AUTO_INCREMENT, ")
+            + string("address VARCHAR(128) NOT NULL, ")
+            + string("ttc BIGINT NOT NULL, ")
+            + string("PRIMARY KEY(club_id))")
+            + string("ENGINE=InnoDB DEFAULT CHARSET=utf8;");
+
+string ISNDB::CREATE_MEMBER_TABLE = string("create table memberinfo(")
+            + string("address_id INT NOT NULL AUTO_INCREMENT, ")
+            + string("address VARCHAR(128) NOT NULL, ")
+            + string("club_id INT NOT NULL, ")
+            + string("father INT NOT NULL, ")
+            + string("tc BIGINT NOT NULL, ")
+            + string("balance BIGINT NOT NULL, ")
+            + string("PRIMARY KEY(address_id))")
+            + string("ENGINE=InnoDB DEFAULT CHARSET=utf8;");
+
+
+bool ISNDB::BootupPreCheck()
+{
+    boost::filesystem::path cfgFile = GetDataDir() / "mysql.cfg";
+    if (!boost::filesystem::exists(cfgFile) && (!mapArgs.count("-mysqlusername")
+        || !mapArgs.count("-mysqlpassword") || GetArg("-mysqlusername", "").empty()))
+    {
+        return false;
+    }
+
+    return true;
+}
 
 void ISNDB::StartISNDBService()
 {
@@ -37,21 +80,170 @@ ISNDB* ISNDB::GetInstance()
     return pIsnDBSingleton;
 }
 
+void ISNDB::LoadMysqlCfg()
+{
+    boost::filesystem::path cfgFile = GetDataDir() / "mysql.cfg";
+    if (!boost::filesystem::exists(cfgFile))
+        return;
+
+    const int LINE_LENGTH = 100;
+    char str[LINE_LENGTH] = {0};
+    ifstream f(cfgFile.string());
+    if (!f)
+    {
+        LogPrintf("%s warning: open cfg file failed\n", __func__);
+        return;
+    }
+
+    vector<string> vStrInputParts;
+    while(f.getline(str, LINE_LENGTH))
+    {
+        string line(str);
+        vStrInputParts.clear();
+        boost::split(vStrInputParts, line, boost::is_any_of(":"));
+        if (vStrInputParts.size() == 0)
+            continue;
+
+        if (vStrInputParts[0] == "mysqldbname")
+        {
+            mysqldbname = vStrInputParts[1];
+        }
+        else if (vStrInputParts[0] == "mysqlserver")
+        {
+            mysqlserver = vStrInputParts[1];
+        }
+        else if (vStrInputParts[0] == "mysqlusername")
+        {
+            mysqlusername = vStrInputParts[1];
+        }
+        else if (vStrInputParts[0] == "mysqlpassword")
+        {
+            mysqlpassword = vStrInputParts[1];
+        }
+    }
+    f.close();
+
+    LogPrintf("%s %s %s %s %s\n", __func__, mysqldbname, mysqlserver, mysqlusername, mysqlpassword);
+}
+
+void ISNDB::StoreMysqlCfg()
+{
+    boost::filesystem::path cfgFile = GetDataDir() / "mysql.cfg";
+    ofstream ofs(cfgFile.string());
+    if (!ofs)
+    {
+        LogPrintf("%s warning: open cfg file failed\n", __func__);
+        return;
+    }
+
+    ofs << "mysqldbname:"   << mysqldbname << endl;
+    ofs << "mysqlserver:"   << mysqlserver << endl;
+    ofs << "mysqlusername:" << mysqlusername << endl;
+    ofs << "mysqlpassword:" << mysqlpassword << endl;
+
+    ofs.close();
+}
+
+void ISNDB::InitMysqlCfg()
+{
+    // First read configurations where cfg file "mysql.cfg".
+    LoadMysqlCfg();
+
+    // Use specified value from arguments
+    if (mapArgs.count("-mysqldbname"))
+    {
+        mysqldbname = GetArg("-mysqldbname", mysqldbname);
+    }
+    if (mapArgs.count("-mysqlserver"))
+    {
+        mysqlserver = GetArg("-mysqlserver", mysqlserver);
+    }
+    if (mapArgs.count("-mysqlusername"))
+    {
+        mysqlusername = GetArg("-mysqlusername", mysqlusername);
+    }
+    if (mapArgs.count("-mysqlpassword"))
+    {
+        mysqlpassword = GetArg("-mysqlpassword", mysqlpassword);
+    }
+}
+
 ISNDB::ISNDB()
 {
-	try{
-        LOCK(cs_isndb);
-        con= mysqlpp::Connection(GetArg("-mysqldbname", DBName).c_str(), GetArg("-mysqlserver", hostName).c_str(), GetArg("-mysqlusername", userName).c_str(), GetArg("-mysqlpassword", passWord).c_str());
-        //con= mysqlpp::Connection(DBName, hostName, userName, passWord);
+    try {
+        InitMysqlCfg();
+        if (mysqlusername.empty())
+        {
+            throw std::logic_error("mysql username is empty");
+        }
+        if (mysqlpassword.empty())
+        {
+            LogPrintf("isndb warning: mysql password is empty.\n");
+        }
+        if (mysqldbname.empty())
+        {
+            mysqldbname = DBName;
+        }
+        if (mysqlserver.empty())
+        {
+            mysqlserver = hostName;
+        }
+        StoreMysqlCfg();
 
+        LogPrintf("Mysql cfg: username:%s, password:%s, db:%s, server:%s\n",
+            mysqlusername, mysqlpassword, mysqldbname, mysqlserver);
+
+        LOCK(cs_isndb);
+        con = mysqlpp::Connection(NULL, mysqlserver.c_str(), mysqlusername.c_str(), mysqlpassword.c_str());
         poption = new mysqlpp::ReconnectOption(true);
         // Objects passed to "Objects passed to this method and successfully set will be released
         // when this Connection object is destroyed.
         // So there is no need to obviously destroy "poption".
         con.set_option(poption);
+
+        try
+        {
+            con.select_db(mysqldbname);
+            mysqlpp::Query query = con.query();
+            // If blocks directory don't exist, truncate tables;
+            boost::filesystem::path blocksDir = GetDataDir() / "blocks";
+            if (!boost::filesystem::exists(blocksDir))
+            {
+                LogPrintf("truncate tables...\n");
+                query.exec("truncate table clubinfo");
+                query.exec("truncate table memberinfo");
+            }
+        }
+        catch (const mysqlpp::DBSelectionFailed& er)
+        {
+            LogPrintf("DBSelectionFailed: %d, %s\n", er.errnum(), er.what());
+            // err code 1049 means database not exist
+            // Create database and tables;
+            string errstr(er.what());
+            if (er.errnum() == 1049 && (errstr.find("Unknown database") != string::npos))
+            {
+                if (con.create_db(mysqldbname) && con.select_db(mysqldbname))
+                {
+                    LogPrintf("create tables...\n");
+                    mysqlpp::Query query = con.query();
+                    query << CREATE_CLUB_TABLE;
+                    query.execute();
+                    query << CREATE_MEMBER_TABLE;
+                    query.execute();
+                }
+                else
+                {
+                    throw std::runtime_error("create or select database failed");
+                }
+            }
+        }
 	}
 	catch (const mysqlpp::Exception& er) {
 		// Catch-all for any other MySQL++ exceptions
+		cerr << "Error: " << er.what() << endl;
+		exit(-1);
+	}
+	catch (const std::exception& er) {
 		cerr << "Error: " << er.what() << endl;
 		exit(-1);
 	}

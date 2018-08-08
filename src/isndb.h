@@ -20,8 +20,6 @@ using namespace std;
 //Database info
 const char DBName[32]= "taureward";
 const char hostName[32]= "localhost";
-const char userName[32]= "root";
-const char passWord[32]= "Root1122!!@@";
 
 //Table info
 const string tableClub= "clubinfo";
@@ -62,6 +60,8 @@ public:
 
     static ISNDB* GetInstance();
 
+    static bool BootupPreCheck();
+
     static void StartISNDBService();
 
     static void StopISNDBService();
@@ -72,6 +72,19 @@ private:
     mysqlpp::Option* poption;
 
     static ISNDB* pIsnDBSingleton;
+
+    static string mysqldbname;
+    static string mysqlserver;
+    static string mysqlusername;
+    static string mysqlpassword;
+
+    static string CREATE_CLUB_TABLE;
+    static string CREATE_MEMBER_TABLE;
+
+private:
+    void LoadMysqlCfg();
+    void StoreMysqlCfg();
+    void InitMysqlCfg();
 
 protected:
     ISNDB();

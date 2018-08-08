@@ -1053,6 +1053,11 @@ bool AppInit2(boost::thread_group& threadGroup, CScheduler& scheduler)
             return InitError(_("Unable to start HTTP server. See debug log for details."));
     }
 
+    if (!ISNDB::BootupPreCheck())
+    {
+        return InitError(_("Please specify mysql username and password by -mysqlusername and -mysqlpassword."));
+    }
+
     // Here start ISNDB service ASAP
     ISNDB::StartISNDBService();
 
