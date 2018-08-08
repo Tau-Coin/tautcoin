@@ -707,7 +707,7 @@ BOOST_AUTO_TEST_CASE(RewardChangeUpdate_simulation_test)
 
     // Create inputs
     const uint rewardChangeCase = 7;
-    const uint addressCase = 1000;
+    const uint addressCase = NUM_SIMULATION_ITERATIONS;
     const uint isUndoCase = 2;
     const CAmount rewardChange[rewardChangeCase] = {0x7fffffffffffffff+1, -43251, 0, 43251, MAX_MONEY-1, 0x7fffffffffffffff, CAmount(0xffffffffffffffff)};
     string address[addressCase];
@@ -732,20 +732,22 @@ BOOST_AUTO_TEST_CASE(RewardChangeUpdate_simulation_test)
             }
         }
     }
+    cout<<"=============haha"<<endl;
 
     // Execute tests
     bool ret[testTime];
-    for(uint i = 0; i < isUndoCase; i++)
+    for(uint i = 1; i < isUndoCase; i++)
     {
         for(uint j = 0; j < addressCase; j++)
         {
-            for(uint k = 0; k < rewardChangeCase; k++)
+            for(uint k = 3; k < 4; k++)
             {
                 uint num = k+rewardChangeCase*j+addressCase*rewardChangeCase*i;
                 ret[num] = RewardChangeUpdate(rewardChange[k], address[j], isUndo[i]);
             }
         }
     }
+    cout<<"=============haha"<<endl;
 
     // Verify
     for(uint i = 0; i < isUndoCase; i++)
