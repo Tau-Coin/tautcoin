@@ -588,6 +588,7 @@ void ThreadImport(std::vector<boost::filesystem::path> vImportFiles)
     // -reindex
     if (fReindex) {
         int nFile = 0;
+        InitBlockIndex(chainparams);
         while (true) {
             CDiskBlockPos pos(nFile, 0);
             if (!boost::filesystem::exists(GetBlockPosFilename(pos, "blk")))
@@ -603,7 +604,7 @@ void ThreadImport(std::vector<boost::filesystem::path> vImportFiles)
         fReindex = false;
         LogPrintf("Reindexing finished\n");
         // To avoid ending up in a situation without genesis block, re-try initializing (no-op if reindexing worked):
-        InitBlockIndex(chainparams);
+        // InitBlockIndex(chainparams);
     }
 
     // hardcoded $DATADIR/bootstrap.dat
