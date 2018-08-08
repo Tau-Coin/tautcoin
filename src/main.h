@@ -371,8 +371,10 @@ bool UpdateRewards(const CTransaction& tx, CAmount blockReward, int nHeight, boo
 bool RewardChangeUpdateByPubkey(CAmount rewardChange, string pubkey, bool isUndo);
 bool RewardChangeUpdate(CAmount rewardChange, string address, bool isUndo);
 bool RewardRateUpdate(CAmount blockReward, CAmount distributedRewards, string clubLeaderAddress, int nHeight, bool isUndo);
-bool InitRewardsDist(CAmount memberTotalRewards, const CScript& scriptPubKey, map<string, uint64_t>& addrToTC,
-                     string& clubLeaderAddress, CAmount& distributedRewards, arith_uint256& totalmemberTXCnt);
+bool InitRewardsDist(CAmount memberTotalRewards, const CScript& scriptPubKey, string& clubLeaderAddress,
+                     CAmount& distributedRewards, map<string, CAmount> &memberRewards);
+bool ComputeMemberReward(const uint64_t& txCnt, const uint64_t& totalTXCnt,
+                         const CAmount& totalRewards, CAmount& memberReward);
 
 /** Context-independent validity checks */
 bool CheckTransaction(const CTransaction& tx, CValidationState& state);

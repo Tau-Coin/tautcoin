@@ -1984,6 +1984,9 @@ void UpdateCoins(const CTransaction& tx, CCoinsViewCache& inputs, int nHeight)
 
 bool RewardChangeUpdate(CAmount rewardChange, string address, bool isUndo)
 {
+    if (rewardChange >= MAX_MONEY || rewardChange <= -MAX_MONEY)
+        return false;
+
     bool ret = true;
     RewardManager* rewardMan = RewardManager::GetInstance();
     CAmount rewardbalance_old = rewardMan->GetRewardsByAddress(address);
@@ -2034,24 +2037,41 @@ bool RewardRateUpdate(CAmount blockReward, CAmount distributedRewards, string cl
     return true;
 }
 
-bool InitRewardsDist(CAmount memberTotalRewards, const CScript& scriptPubKey, map<string, uint64_t>& addrToTC,
-                     string& clubLeaderAddress, CAmount& distributedRewards, arith_uint256& totalmemberTXCnt)
+bool ComputeMemberReward(const uint64_t& txCnt, const uint64_t& totalTXCnt,
+                         const CAmount& totalRewards, CAmount& memberReward)
+{
+    if (totalTXCnt < txCnt || totalTXCnt == 0 || totalRewards < 0 || totalRewards >= MAX_MONEY)
+        return false;
+
+    arith_uint256 ttc = totalTXCnt;
+    arith_uint256 tc = txCnt;
+    memberReward = tc.getdouble() / ttc.getdouble() * totalRewards;
+    if (memberReward >= 0)
+        return true;
+    else
+        return false;
+}
+
+bool InitRewardsDist(CAmount memberTotalRewards, const CScript& scriptPubKey, string& clubLeaderAddress,
+                     CAmount& distributedRewards, map<string, CAmount>& memberRewards)
 {
     if (memberTotalRewards < 0)
         return false;
 
-    addrToTC.clear();
+    memberRewards.clear();
     bool ret = true;
     ClubManager* clubMan = ClubManager::GetInstance();
     RewardManager* rewardMan = RewardManager::GetInstance();
     CBitcoinAddress addr;
     uint64_t clubID;
+    map<string, uint64_t> addrToTC;
+    uint64_t totalmemberTXCnt = 0;
     if (!addr.ScriptPub2Addr(scriptPubKey, clubLeaderAddress))
         return false;
     totalmemberTXCnt = clubMan->GetHarvestPowerByAddress(clubLeaderAddress, 0) -
                        rewardMan->GetTxCountByAddress(clubLeaderAddress);
     distributedRewards = 0;
-    if (totalmemberTXCnt.getdouble() > 0)
+    if (totalmemberTXCnt > 0)
     {
         ret &= clubMan->GetClubIDByAddress(clubLeaderAddress, clubID);
         ret &= rewardMan->GetMembersTxCountByClubID(clubID, addrToTC, clubLeaderAddress);
@@ -2059,8 +2079,12 @@ bool InitRewardsDist(CAmount memberTotalRewards, const CScript& scriptPubKey, ma
             return ret;
         for(std::map<string, uint64_t>::const_iterator it = addrToTC.begin(); it != addrToTC.end(); it++)
         {
-            arith_uint256 TXCnt = it->second;
-            CAmount memberReward = TXCnt.getdouble() / totalmemberTXCnt.getdouble() * memberTotalRewards;
+            uint64_t TXCnt = it->second;
+            CAmount memberReward = 0;
+            if (!ComputeMemberReward(TXCnt, totalmemberTXCnt, memberTotalRewards, memberReward))
+                return false;
+            if (memberReward > 0)
+                memberRewards.insert(pair<string, CAmount>(it->first, memberReward));
             distributedRewards += memberReward;
         }
         CAmount remainedReward = memberTotalRewards - distributedRewards;
@@ -2096,27 +2120,17 @@ bool UpdateRewards(const CTransaction& tx, CAmount blockReward, int nHeight, boo
         //LogPrintf("Error: The TX's vout size is 0\n");
         return false;
     }
-    arith_uint256 totalmemberTXCnt = 0;
     CAmount distributedRewards = 0;
-    map<string, uint64_t> addrToTC;
-    CAmount memberTotalRewards = blockReward-tx.vout[0].nValue;
     string clubLeaderAddress;
-    if (!InitRewardsDist(memberTotalRewards, tx.vout[0].scriptPubKey, addrToTC, clubLeaderAddress,
-                         distributedRewards, totalmemberTXCnt))
+    map<string, CAmount> memberRewards;
+    CAmount memberTotalRewards = blockReward-tx.vout[0].nValue;
+    if (!InitRewardsDist(memberTotalRewards, tx.vout[0].scriptPubKey, clubLeaderAddress,
+                         distributedRewards, memberRewards))
         return false;
 
     // Distribute rewards to member and return remained rewards back to club leader
-    if (totalmemberTXCnt.getdouble() > 0)
-    {
-        for(std::map<string, uint64_t>::const_iterator it = addrToTC.begin(); it != addrToTC.end(); it++)
-        {
-            arith_uint256 TXCnt = it->second;
-            string member = it->first;
-            CAmount memberReward = TXCnt.getdouble() / totalmemberTXCnt.getdouble() * memberTotalRewards;
-            if (memberReward > 0)
-                ret &= RewardChangeUpdate(memberReward, member, isUndo);
-        }
-    }
+    for(std::map<string, CAmount>::const_iterator it = memberRewards.begin(); it != memberRewards.end(); it++)
+        ret &= RewardChangeUpdate(it->second, it->first, isUndo);
     CAmount remainedReward = memberTotalRewards - distributedRewards;
     ret &= RewardChangeUpdate(remainedReward, clubLeaderAddress, isUndo);
 
