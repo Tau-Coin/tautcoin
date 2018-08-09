@@ -2773,6 +2773,14 @@ bool ConnectBlock(const CBlock& block, CValidationState& state, CBlockIndex* pin
     if (!CheckBlock(block, state, chainparams.GetConsensus(), !fJustCheck, !fJustCheck))
         return error("%s: Consensus::CheckBlock: %s", __func__, FormatStateMessage(state));
 
+    if (!fJustCheck)
+    {
+        if (!CheckBlockHarvestPower(block, state, chainparams.GetConsensus()))
+        {
+            return error("%s: harvest power check:%s", __func__, FormatStateMessage(state));
+        }
+    }
+
     // verify that the view's current state corresponds to the previous block
     uint256 hashPrevBlock = pindex->pprev == NULL ? uint256() : pindex->pprev->GetBlockHash();
     assert(hashPrevBlock == view.GetBestBlock());
@@ -4187,7 +4195,9 @@ bool CheckBlockHeader(const CBlockHeader& block, CValidationState& state, const 
     return true;
 }
 
-bool CheckBlock(const CBlock& block, CValidationState& state, const Consensus::Params& consensusParams, bool fCheckPOT, bool fCheckMerkleRoot)
+// Check whether allowed to forge or not. And check whether harverst power
+// is consistent with database.
+bool CheckBlockHarvestPower(const CBlock& block, CValidationState& state, const Consensus::Params& consensusParams)
 {
     static ClubManager* clubMgr = NULL;
     if (!clubMgr)
@@ -4195,6 +4205,24 @@ bool CheckBlock(const CBlock& block, CValidationState& state, const Consensus::P
         clubMgr = ClubManager::GetInstance();
     }
 
+    if (block.GetHash() == consensusParams.hashGenesisBlock)
+        return true;
+
+    uint64_t harvestPower;
+    if (!clubMgr->IsAllowForge(block.pubKeyOfpackager, 0, harvestPower))
+        return state.DoS(100, false, REJECT_INVALID, "not allowed to forge", false, "bad forger");
+
+    if (block.harvestPower != harvestPower)
+    {
+        LogPrintf("%s block hp %d not consistent with db %d\n", __func__, block.harvestPower, harvestPower);
+        return state.DoS(100, false, REJECT_INVALID, "harvest power mismatch", false, "bad forger");
+    }
+
+    return true;
+}
+
+bool CheckBlock(const CBlock& block, CValidationState& state, const Consensus::Params& consensusParams, bool fCheckPOT, bool fCheckMerkleRoot)
+{
     // These are checks that are independent of context.
 
     if (block.fChecked)
@@ -4217,23 +4245,6 @@ bool CheckBlock(const CBlock& block, CValidationState& state, const Consensus::P
         // while still invalidating it.
         if (mutated)
             return state.DoS(100, false, REJECT_INVALID, "bad-txns-duplicate", true, "duplicate transaction");
-    }
-
-    // Check whether allowed to forge or not. And check whether harverst power
-    // is consistent with data base.
-    // The reason why we check harvest power in "Check Block" is as follows:
-    //     only when block received can harverst power be updated.
-    if (fCheckPOT && block.GetHash() != consensusParams.hashGenesisBlock)
-    {
-        uint64_t harvestPower;
-        if (!clubMgr->IsAllowForge(block.pubKeyOfpackager, 0, harvestPower))
-            return state.DoS(100, false, REJECT_INVALID, "not allowed to forge", false, "bad forger");
-
-        if (block.harvestPower != harvestPower)
-        {
-            LogPrintf("%s block hp %d not consistent with db %d\n", __func__, block.harvestPower, harvestPower);
-            return state.DoS(100, false, REJECT_INVALID, "harvest power mismatch", false, "bad forger");
-        }
     }
 
     // All potential-corruption validation must be done before we do any
@@ -4609,6 +4620,14 @@ bool ProcessNewBlock(CValidationState& state, const CChainParams& chainparams, C
             if (fNewBlock) pfrom->nLastBlockTime = GetTime();
         }
         CheckBlockIndex(chainparams.GetConsensus());
+
+        if (ret && !pindex && !pindex->pprev)
+        {
+            CBlockIndex *tip = chainActive.Tip();
+            if (pindex->pprev->GetBlockHash() == tip->GetBlockHash())
+                ret &= CheckBlockHarvestPower(*pblock, state, chainparams.GetConsensus());
+        }
+
         if (!ret)
             return error("%s: AcceptBlock FAILED", __func__);
     }
