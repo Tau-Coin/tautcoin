@@ -66,6 +66,8 @@ public:
 
     static void StopISNDBService();
 
+    bool TruncateTables();
+
 private:
     mysqlpp::Connection con;
 

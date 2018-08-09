@@ -587,6 +587,9 @@ void ThreadImport(std::vector<boost::filesystem::path> vImportFiles)
 
     // -reindex
     if (fReindex) {
+        // First of all, remove mysql db records
+        ISNDB::GetInstance()->TruncateTables();
+
         int nFile = 0;
         InitBlockIndex(chainparams);
         while (true) {

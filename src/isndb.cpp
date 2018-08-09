@@ -255,6 +255,33 @@ ISNDB::~ISNDB()
     con.disconnect();
 }
 
+bool ISNDB::TruncateTables()
+{
+    try
+    {
+        LOCK(cs_isndb);
+        con.select_db(mysqldbname);
+        mysqlpp::Query query = con.query();
+
+        LogPrintf("truncate tables request\n");
+        query.exec("truncate table clubinfo");
+        query.exec("truncate table memberinfo");
+    }
+    catch (const mysqlpp::DBSelectionFailed& er)
+    {
+        cerr << "Error: " << er.what() << endl;
+		return false;
+    }
+    catch (const mysqlpp::Exception& er)
+    {
+		// Catch-all for any other MySQL++ exceptions
+		cerr << "Error: " << er.what() << endl;
+		return false;
+    }
+
+    return true;
+}
+
 // select from ISNDB according to address
 mysqlpp::StoreQueryResult ISNDB::ISNSqlSelectAA(const string &tablename, const vector<string> &field, const string &condition, const string &cvalue)
 {
