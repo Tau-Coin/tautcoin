@@ -4,6 +4,7 @@
 
 #include "coins.h"
 #include "tool.h"
+#include "util.h"
 #include "isndb.h"
 
 #include "memusage.h"
@@ -235,6 +236,24 @@ unsigned int CCoinsViewCache::GetCacheSize() const {
 const CTxOut &CCoinsViewCache::GetOutputFor(const CTxIn& input) const
 {
     const CCoins* coins = AccessCoins(input.prevout.hash);
+    // Add temp debug log
+    if (!coins || !coins->IsAvailable(input.prevout.n))
+    {
+        LogPrintf("input:%s, %d\n", input.ToString(), input.prevout.n);
+        if (!coins)
+        {
+            LogPrintf("%s coins is empty\n", __func__);
+        }
+        else
+        {
+            LogPrintf("output height %d\n", coins->nHeight);
+
+            for (int i = 0; i < coins->vout.size(); i++)
+            {
+                LogPrintf("output %d:%s\n", i, coins->vout[i].ToString());
+            }
+        }
+    }
     assert(coins && coins->IsAvailable(input.prevout.n));
     return coins->vout[input.prevout.n];
 }
