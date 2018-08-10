@@ -2514,23 +2514,6 @@ bool DisconnectBlock(CBlock& block, CValidationState& state, CBlockIndex* pindex
     if (blockUndo.vtxundo.size() + 1 != block.vtx.size())
         return error("DisconnectBlock(): block and undo data inconsistent");
 
-    // restore rewards
-    bool isUndo = true;
-    CAmount nFees = 0;
-    for (int j = block.vtx.size() - 1; j >= 0; j--)
-    {
-        const CTransaction &tx = block.vtx[j];
-        if (!tx.IsCoinBase())
-            nFees += view.GetValueIn(tx)-tx.GetValueOut();
-    }
-    for (int k = block.vtx.size() - 1; k >= 0; k--)
-    {
-        const CTransaction &tx = block.vtx[k];
-        if (!UpdateRewards(tx, nFees, pindex->nHeight-1, isUndo))
-            return error("DisconnectBlock(): UpdateRewards failed");
-    }
-    RewardManager::GetInstance()->currentHeight = pindex->nHeight-1;
-
     // undo transactions in reverse order
     for (int i = block.vtx.size() - 1; i >= 0; i--) {
         const CTransaction &tx = block.vtx[i];
@@ -2598,6 +2581,23 @@ bool DisconnectBlock(CBlock& block, CValidationState& state, CBlockIndex* pindex
         ifile.close();
     }
     */
+
+    // restore rewards
+    bool isUndo = true;
+    CAmount nFees = 0;
+    for (int j = block.vtx.size() - 1; j >= 0; j--)
+    {
+        const CTransaction &tx = block.vtx[j];
+        if (!tx.IsCoinBase())
+            nFees += view.GetValueIn(tx)-tx.GetValueOut();
+    }
+    for (int k = block.vtx.size() - 1; k >= 0; k--)
+    {
+        const CTransaction &tx = block.vtx[k];
+        if (!UpdateRewards(tx, nFees, pindex->nHeight-1, isUndo))
+            return error("DisconnectBlock(): UpdateRewards failed");
+    }
+    RewardManager::GetInstance()->currentHeight = pindex->nHeight-1;
 
     if (pfClean) {
         *pfClean = fClean;
