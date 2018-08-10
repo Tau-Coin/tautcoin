@@ -48,6 +48,19 @@ class CValidationState;
 struct CNodeStateStats;
 struct LockPoints;
 
+enum TxType
+{
+    TX_UNDEFINED = 0,
+    TX_NON_MINER_ENTRUST_SELF,         //a non miner entrust himself
+    TX_MINER_ENTRUST_SELF,             //a miner entrust himself
+    TX_NON_MINER_ENTRUST_MINER,        //a non miner entrust a miner(including itself club or another club)
+    TX_MINER_ENTRUST_ANOTHER,          //a miner entrust another
+    TX_ENTRUST_NON_MINER,              //entrust a non miner
+    TX_ENTRUST_NEW_ADDRESS,            //entrust a new address (do not count)
+    TX_TRANSFER_TO_NEW_ADDRESS,        //transfer to a new address
+    TX_TRANSFER_TO_EXISTED_ADDRESS,    //transfer to an existed address
+};
+
 /** Default for DEFAULT_WHITELISTRELAY. */
 static const bool DEFAULT_WHITELISTRELAY = true;
 /** Default for DEFAULT_WHITELISTFORCERELAY. */
@@ -478,7 +491,7 @@ bool ContextualCheckBlockHeader(const CBlockHeader& block, CValidationState& sta
 bool ContextualCheckBlock(const CBlock& block, CValidationState& state, CBlockIndex *pindexPrev);
 
 //Non recursive version
-unsigned long BreadthFirstSearch(ISNDB* &pdb, std::string root_id, long club_id);
+unsigned long BreadthFirstUpdate(ISNDB* &pdb, std::string root_id, std::string root_fatherid, long club_id);
 
 /** Apply the effects of this block (with given index) on the UTXO set represented by coins.
  *  Validity checks that depend on the UTXO set are also done; ConnectBlock()

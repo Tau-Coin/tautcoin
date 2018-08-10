@@ -412,6 +412,32 @@ mysqlpp::SimpleResult ISNDB::ISNSqlAddOne(const string &tablename, const vector<
 		exit(-1);
 	}
 }
+
+mysqlpp::SimpleResult ISNDB::ISNSqlMinusOne(const string &tablename, const vector<string> &field, const string &condition, const string &cvalue)
+{
+    try{
+        LOCK(cs_isndb);
+        mysqlpp::Query query= con.query();
+        //according tablename in different way
+        query<< "update %0"" set %1""=%1""- 1 where %2""= %3q";
+        query.parse();
+        mysqlpp::SimpleResult dataTmp = query.execute(tablename, field[0], condition, cvalue);
+        return dataTmp;
+    }
+    catch (const mysqlpp::BadQuery& er) {
+        // Handle any query errors
+        cerr << "Query error: " << er.what() << endl;
+        exit(-1);
+    }
+    catch (const mysqlpp::BadConversion& er) {
+        // Handle bad conversions; e.g. type mismatch populating 'stock'
+        cerr << "Conversion error: " << er.what() << endl <<
+                "\tretrieved data size: " << er.retrieved <<
+                ", actual size: " << er.actual_size << endl;
+        exit(-1);
+    }
+}
+
 // insert ISNDB with condition
 long ISNDB::ISNSqlInsert(const string &tablename, const vector<string> &values)
 {
