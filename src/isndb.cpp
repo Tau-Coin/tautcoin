@@ -314,6 +314,13 @@ mysqlpp::StoreQueryResult ISNDB::ISNSqlSelectAA(const string &tablename, const v
             dataTmp = query.store(field[0], field[1], field[2], tablename, condition, cvalue);
 			return dataTmp;
 		}
+        else if(fieldSize == 4)
+        {
+            query<< "select %0"", %1"", %2"", %3"" from %4"" where %5"" = %6q";
+            query.parse();
+            dataTmp = query.store(field[0], field[1], field[2], field[3], tablename, condition, cvalue);
+            return dataTmp;
+        }
 	}
 	catch (const mysqlpp::BadQuery& er) {
 		// Handle any query errors
