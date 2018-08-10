@@ -1279,7 +1279,7 @@ bool AppInit2(boost::thread_group& threadGroup, CScheduler& scheduler)
                 pcoinsdbview = new CCoinsViewDB(nCoinDBCache, false, fReindex || fReindexChainState);
                 pcoinscatcher = new CCoinsViewErrorCatcher(pcoinsdbview);
                 pcoinsTip = new CCoinsViewCache(pcoinscatcher);
-                //pbalancedbview = new CBalanceViewDB();
+                prbalancedbview = new CRwdBalanceViewDB();
                 if (mapArgs.count("-updaterewardrate") && mapMultiArgs["-updaterewardrate"].size() > 0)
                 {
                     string flag = mapMultiArgs["-updaterewardrate"][0];

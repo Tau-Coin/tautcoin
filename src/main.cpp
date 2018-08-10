@@ -88,7 +88,7 @@ size_t nCoinCacheUsage = 5000 * 300;
 uint64_t nPruneTarget = 0;
 int64_t nMaxTipAge = DEFAULT_MAX_TIP_AGE;
 bool fEnableReplacement = DEFAULT_ENABLE_REPLACEMENT;
-//CBalanceViewDB *pbalancedbview = NULL;
+CRwdBalanceViewDB *prbalancedbview = NULL;
 CRewardRateViewDB *prewardratedbview = NULL;
 
 struct TxInfo
@@ -1983,7 +1983,7 @@ void UpdateCoins(const CTransaction& tx, CCoinsViewCache& inputs, int nHeight)
     UpdateCoins(tx, inputs, txundo, nHeight);
 }
 
-bool RewardChangeUpdate(CAmount rewardChange, string address, bool isUndo)
+bool RewardChangeUpdate(CAmount rewardChange, string address, bool isUndo, int nHeight)
 {
     if (rewardChange >= MAX_MONEY || rewardChange <= -MAX_MONEY)
         return false;
@@ -1998,16 +1998,19 @@ bool RewardChangeUpdate(CAmount rewardChange, string address, bool isUndo)
     else
         ret &= rewardMan->UpdateRewardsByAddress(address, rewardbalance_old+rewardChange,
                                                  rewardbalance_old);
+    if (!isUndo)
+        ret &= rewardMan->UpdateRewardsByAddress(address, prbalancedbview->GetRwdBalance(address, nHeight),
+                                                 rewardbalance_old);
     return ret;
 }
 
-bool RewardChangeUpdateByPubkey(CAmount rewardChange, string pubkey, bool isUndo)
+bool RewardChangeUpdateByPubkey(CAmount rewardChange, string pubkey, bool isUndo, int nHeight)
 {
     bool ret = true;
     string address;
     ret &= ConvertPubkeyToAddress(pubkey, address);
     if (ret)
-        ret &= RewardChangeUpdate(rewardChange, address, isUndo);
+        ret &= RewardChangeUpdate(rewardChange, address, isUndo, nHeight);
 
     return ret;
 }
@@ -2110,7 +2113,7 @@ bool UpdateRewards(const CTransaction& tx, CAmount blockReward, int nHeight, boo
     {
         for(unsigned int i = 0; i < tx.vreward.size(); i++)
             ret &= RewardChangeUpdateByPubkey(0-tx.vreward[i].rewardBalance,
-                                              tx.vreward[i].senderPubkey, isUndo);
+                                              tx.vreward[i].senderPubkey, isUndo, nHeight);
 
         return ret;
     }
@@ -2131,14 +2134,36 @@ bool UpdateRewards(const CTransaction& tx, CAmount blockReward, int nHeight, boo
 
     // Distribute rewards to member and return remained rewards back to club leader
     for(std::map<string, CAmount>::const_iterator it = memberRewards.begin(); it != memberRewards.end(); it++)
-        ret &= RewardChangeUpdate(it->second, it->first, isUndo);
+        ret &= RewardChangeUpdate(it->second, it->first, isUndo, nHeight);
     CAmount remainedReward = memberTotalRewards - distributedRewards;
-    ret &= RewardChangeUpdate(remainedReward, clubLeaderAddress, isUndo);
+    ret &= RewardChangeUpdate(remainedReward, clubLeaderAddress, isUndo, nHeight);
 
     // Update rewards rate
     RewardRateUpdate(blockReward, distributedRewards, clubLeaderAddress, nHeight, isUndo);
 
     return ret;
+}
+
+bool UpdateRewards2(const CBlock& block, CAmount blockReward, int nHeight)
+{
+    for (unsigned int j = 0; j < block.vtx.size(); j++)
+    {
+        const CTransaction &tx = block.vtx[j];
+        if (!tx.IsCoinBase())
+        {
+            if (!prbalancedbview->UpdateRewardsByTX(tx, blockReward, nHeight))
+                return false;
+        }
+    }
+
+    const CTransaction coinbase = block.vtx[0];
+    if (!coinbase.IsCoinBase())
+        return false;
+    if (!prbalancedbview->UpdateRewardsByTX(coinbase, blockReward, nHeight))
+        return false;
+    prbalancedbview->ClearCache();
+
+    return true;
 }
 
 bool CScriptCheck::operator()() {
@@ -3390,6 +3415,9 @@ bool ConnectBlock(const CBlock& block, CValidationState& state, CBlockIndex* pin
     // Update rewards
     if (!fJustCheck)
     {
+        if (!UpdateRewards2(block, nFees, pindex->nHeight))
+            return error("ConnectBlock(): UpdateRewards failed");
+
         for (unsigned int j = 0; j < block.vtx.size(); j++)
         {
             const CTransaction &tx = block.vtx[j];
