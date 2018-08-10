@@ -3329,7 +3329,7 @@ bool ConnectBlock(const CBlock& block, CValidationState& state, CBlockIndex* pin
                                 } else {//4.one miner entrust another
                                     //delete
                                     pdb->ISNSqlDelete(tableClub, clubFieldAddress, maxValueAddress);
-                                    ofile << maxValueAddress << "    " << voutAddress << "    " << TX_MINER_ENTRUST_ANOTHER << "    " << TX_NON_MINER_ENTRUST_MINER << std::endl;
+                                    ofile << maxValueAddress << "    " << voutAddress << "    " << TX_MINER_ENTRUST_ANOTHER << "    " << TX_MINER_ENTRUST_ANOTHER << std::endl;
                                 }
                             } else {//entrust a non miner
                                 //if a new address;
