@@ -486,7 +486,7 @@ bool CRwdBalanceViewDB::WriteDB(std::string key, int nHeight, std::string father
     leveldb::Status status = pdb->Put(leveldb::WriteOptions(), key+DBSEPECTATOR+strHeight, strValue);
     if(!status.ok())
     {
-        LogPrintf("LevelDB write failure in balance module: %s\n", status.ToString());
+        LogPrintf("LevelDB write failure in rwdbalance module: %s\n", status.ToString());
         dbwrapper_private::HandleError(status);
         return false;
     }
@@ -509,7 +509,7 @@ bool CRwdBalanceViewDB::ReadDB(std::string key, int nHeight, string father, uint
             value = 0;
         else
         {
-            LogPrintf("LevelDB read failure in balance module: %s\n", status.ToString());
+            LogPrintf("LevelDB read failure in rwdbalance module: %s\n", status.ToString());
             dbwrapper_private::HandleError(status);
         }
         return false;
@@ -531,7 +531,7 @@ bool CRwdBalanceViewDB::DeleteDB(std::string key, int nHeight)
     leveldb::Status status = pdb->Delete(leveldb::WriteOptions(), key+DBSEPECTATOR+strHeight);
     if(!status.ok() && !status.IsNotFound())
     {
-        LogPrintf("LevelDB write failure in balance module: %s\n", status.ToString());
+        LogPrintf("LevelDB write failure in rwdbalance module: %s\n", status.ToString());
         dbwrapper_private::HandleError(status);
         return false;
     }
@@ -626,6 +626,12 @@ bool CRwdBalanceViewDB::RewardChangeUpdate(CAmount rewardChange, string address,
 {
     if (rewardChange >= MAX_MONEY || rewardChange <= -MAX_MONEY)
         return false;
+    if (isUndo)
+    {
+        if (!DeleteDB(address, nHeight+1))
+            return false;
+        return true;
+    }
 
     CAmount rewardbalance_old = 0;
     string ft = "father";/////////////////////////////
@@ -644,16 +650,8 @@ bool CRwdBalanceViewDB::RewardChangeUpdate(CAmount rewardChange, string address,
     else
         cacheRecord[address] = newRecord;
 
-    if (!isUndo)
-    {
-        if (!WriteDB(address, nHeight, ft, tc, newValue))
-            return false;
-    }
-    else
-    {
-        if (!DeleteDB(address, nHeight+1))
-            return false;
-    }
+    if (!WriteDB(address, nHeight, ft, tc, newValue))
+        return false;
     //LogPrintf("%s, member:%s, rw:%d\n", __func__, member, rewardbalance_old);
 
     return true;

@@ -589,6 +589,10 @@ void ThreadImport(std::vector<boost::filesystem::path> vImportFiles)
     if (fReindex) {
         // First of all, remove mysql db records
         ISNDB::GetInstance()->TruncateTables();
+        // Then, remove rewards balance db records
+        std::string db_path = GetDataDir(true).string() + std::string("/rwdbalance");
+        if (boost::filesystem::exists(db_path))
+            boost::filesystem::remove_all(db_path);
 
         int nFile = 0;
         InitBlockIndex(chainparams);

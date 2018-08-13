@@ -166,7 +166,7 @@ public:
     //! As we use CBalanceViews polymorphically, have a destructor
     ~CRwdBalanceViewDB();
 
-    //! Clear the balance cache
+    //! Clear the rwdbalance cache
     void ClearCache();
 
     //! Parse the record
