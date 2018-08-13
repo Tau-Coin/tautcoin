@@ -2051,7 +2051,11 @@ bool ComputeMemberReward(const uint64_t& txCnt, const uint64_t& totalTXCnt,
     arith_uint256 tc = txCnt;
     memberReward = tc.getdouble() / ttc.getdouble() * totalRewards;
     if (memberReward >= 0)
+    {
+        if (memberReward > totalRewards)
+            memberReward = totalRewards;
         return true;
+    }
     else
         return false;
 }
