@@ -136,7 +136,8 @@ private:
 
 
 /** View on the open balance dataset. */
-class CBalanceViewDB
+#define DBSEPECTATOR "_"
+class CRwdBalanceViewDB
 {
 private:
     //! the database itself
@@ -146,27 +147,46 @@ private:
     leveldb::Options options;
 
     //! cache for multi-transaction balance updating
-    std::map<std::string, CAmount> cacheBalance;
+    std::map<std::string, std::string> cacheRecord;
 
-    bool WriteDB(std::string key, int nHeight, CAmount value);
+    bool RewardChangeUpdateByPubkey(CAmount rewardChange, std::string pubKey, int nHeight);
 
-    bool ReadDB(std::string key, int nHeight, CAmount& value);
+    bool RewardChangeUpdate(CAmount rewardChange, std::string address, int nHeight);
+
+    bool WriteDB(std::string key, int nHeight, std::string father, uint64_t tc, CAmount value);
+
+    bool ReadDB(std::string key, int nHeight, std::string father, uint64_t tc, CAmount& value);
 
 public:
     //! Constructor
-    CBalanceViewDB();
+    CRwdBalanceViewDB();
 
     //! As we use CBalanceViews polymorphically, have a destructor
-    ~CBalanceViewDB();
+    ~CRwdBalanceViewDB();
 
     //! Clear the balance cache
     void ClearCache();
 
-    //! Retrieve the CBalance for a given address
-    CAmount GetBalance(std::string address, int nHeight);
+    //! Parse the record
+    bool ParseRecord(std::string inputStr, std::string& father, uint64_t& tc, CAmount& value);
 
-    //! Update the Balance dataset represented by view
-    bool UpdateBalance(const CTransaction& tx, const CCoinsViewCache& inputs, int nHeight);
+    //! Generate a record
+    void GenerateRecord(std::string father, uint64_t tc, CAmount value, std::string& outputStr);
+
+    //! Retrieve the CBalance for a given address
+    CAmount GetRwdBalance(std::string address, int nHeight);
+
+    //! Retrieve the father for a given address
+    std::string GetFather(std::string address, int nHeight);
+
+    //! Retrieve the transaction count for a given address
+    uint64_t GetTXCnt(std::string address, int nHeight);
+
+    //! Retrieve a full record for a given address
+    bool GetFullRecord(std::string address, int nHeight, std::string& father, uint64_t& tc, CAmount& value);
+
+    //! Update the Balance dataset
+    bool UpdateRewardsByTX(const CTransaction& tx, CAmount blockReward, int nHeight);
 };
 
 /** View on the open reward rate dataset. */

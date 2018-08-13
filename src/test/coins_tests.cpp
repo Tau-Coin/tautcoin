@@ -693,82 +693,143 @@ static string GetRandomAddress()
     return address;
 }
 
-BOOST_AUTO_TEST_CASE(RewardChangeUpdate_simulation_test)
+//BOOST_AUTO_TEST_CASE(RewardChangeUpdate_simulation_test)
+//{
+//    // Init
+//    mapArgs["-mysqldbname"] = "imreward";
+//    mapArgs["-mysqlserver"] = "localhost";
+//    mapArgs["-mysqlusername"] = "root";
+//    mapArgs["-mysqlpassword"] = "Mp3895";
+//    // Here start ISNDB service ASAP
+//    ISNDB::StartISNDBService();
+//    // Construct DB
+//    ISNDB* pdb = ISNDB::GetInstance();
+
+//    // Create inputs
+//    const uint rewardChangeCase = 7;
+//    const uint addressCase = 1000;
+//    const uint isUndoCase = 2;
+//    const CAmount rewardChange[rewardChangeCase] = {0x7fffffffffffffff+1, -43251, 0, 43251, MAX_MONEY-1, 0x7fffffffffffffff, CAmount(0xffffffffffffffff)};
+//    string address[addressCase];
+//    const bool isUndo[isUndoCase] = {false, true};
+//    const uint testTime = rewardChangeCase * addressCase * isUndoCase;
+//    for(uint i = 0; i < addressCase; i++)
+//    {
+//        address[i] = GetRandomAddress();
+//        AddNewLeader(pdb, address[i]);
+//    }
+
+//    // Create outputs
+//    bool expRet[testTime];
+//    for(uint i = 0; i < isUndoCase; i++)
+//    {
+//        for(uint j = 0; j < addressCase; j++)
+//        {
+//            for(uint k = 0; k < rewardChangeCase; k++)
+//            {
+//                uint num = k+rewardChangeCase*j+addressCase*rewardChangeCase*i;
+
+//            }
+//        }
+//    }
+
+//    // Execute tests
+//    bool ret[testTime];
+//    for(uint i = 0; i < isUndoCase; i++)
+//    {
+//        for(uint j = 0; j < addressCase; j++)
+//        {
+//            for(uint k = 0; k < rewardChangeCase; k++)
+//            {
+//                uint num = k+rewardChangeCase*j+addressCase*rewardChangeCase*i;
+//                ret[num] = RewardChangeUpdate(rewardChange[k], address[j], isUndo[i]);
+//            }
+//        }
+//    }
+
+//    // Verify
+//    for(uint i = 0; i < isUndoCase; i++)
+//    {
+//        for(uint j = 0; j < addressCase; j++)
+//        {
+//            for(uint k = 0; k < rewardChangeCase; k++)
+//            {
+//                uint num = k+rewardChangeCase*j+addressCase*rewardChangeCase*i;
+
+//            }
+//        }
+//    }
+
+//    // Clean
+//    for(uint i = 0; i < addressCase; i++)
+//    {
+//        pdb->ISNSqlDelete(tableClub, clubFieldAddress, address[i]);
+//    }
+//    // Stop ISNDB service
+//    ISNDB::StopISNDBService();
+
+//    assert(false);
+//}
+
+BOOST_AUTO_TEST_CASE(RewardRateUpdate_simulation_test)
 {
     // Init
-    mapArgs["-mysqldbname"] = "imreward";
-    mapArgs["-mysqlserver"] = "localhost";
-    mapArgs["-mysqlusername"] = "root";
-    mapArgs["-mysqlpassword"] = "Mp3895";
-    // Here start ISNDB service ASAP
-    ISNDB::StartISNDBService();
-    // Construct DB
-    ISNDB* pdb = ISNDB::GetInstance();
+    mapArgs["-updaterewardrate"] = "true";
+    mapMultiArgs["-updaterewardrate"].push_back("true");
+    if (prewardratedbview != NULL)
+    {
+        delete prewardratedbview;
+        prewardratedbview = NULL;
+    }
+    prewardratedbview = new CRewardRateViewDB();
 
     // Create inputs
-    const uint rewardChangeCase = 7;
-    const uint addressCase = NUM_SIMULATION_ITERATIONS;
     const uint isUndoCase = 2;
-    const CAmount rewardChange[rewardChangeCase] = {0x7fffffffffffffff+1, -43251, 0, 43251, MAX_MONEY-1, 0x7fffffffffffffff, CAmount(0xffffffffffffffff)};
-    string address[addressCase];
+    const uint addressCase = NUM_SIMULATION_ITERATIONS;
+    const uint blockRewardCase = 7;
+    const uint distributedRewardsCase = 7;
     const bool isUndo[isUndoCase] = {false, true};
-    const uint testTime = rewardChangeCase * addressCase * isUndoCase;
+    string address[addressCase];
+    const CAmount blockReward[blockRewardCase] = {
+        0x7fffffffffffffff+1, -43251, 0, 43251, MAX_MONEY-1, 0x7fffffffffffffff, CAmount(0xffffffffffffffff)
+    };
+    const CAmount distributedRewards[distributedRewardsCase] = {
+        0x7fffffffffffffff+1, -43251, 0, 43251, MAX_MONEY-1, 0x7fffffffffffffff, CAmount(0xffffffffffffffff)
+    };
+    const uint testTime = isUndoCase * addressCase;
     for(uint i = 0; i < addressCase; i++)
-    {
         address[i] = GetRandomAddress();
-        AddNewLeader(pdb, address[i]);
-    }
 
     // Create outputs
-    bool expRet[testTime];
-    for(uint i = 0; i < isUndoCase; i++)
-    {
-        for(uint j = 0; j < addressCase; j++)
-        {
-            for(uint k = 0; k < rewardChangeCase; k++)
-            {
-                uint num = k+rewardChangeCase*j+addressCase*rewardChangeCase*i;
-
-            }
-        }
-    }
-    cout<<"=============haha"<<endl;
 
     // Execute tests
     bool ret[testTime];
-    for(uint i = 1; i < isUndoCase; i++)
+    string expAddress[testTime];
+    for(uint i = 0; i < 1/*isUndoCase*/; i++)
     {
         for(uint j = 0; j < addressCase; j++)
         {
-            for(uint k = 3; k < 4; k++)
+            for(uint k = 0; k < 1; k++)
             {
-                uint num = k+rewardChangeCase*j+addressCase*rewardChangeCase*i;
-                ret[num] = RewardChangeUpdate(rewardChange[k], address[j], isUndo[i]);
+                //uint num = k+rewardChangeCase*j+addressCase*rewardChangeCase*i;
+                assert(RewardRateUpdate(blockReward[4], distributedRewards[3], address[j], j, isUndo[i]));
+                //ret[j] = RewardRateUpdate(blockReward[4], distributedRewards[3], address[j], j, isUndo[i]);
             }
         }
     }
-    cout<<"=============haha"<<endl;
 
     // Verify
-    for(uint i = 0; i < isUndoCase; i++)
+    for(uint j = 0; j < addressCase; j++)
     {
-        for(uint j = 0; j < addressCase; j++)
-        {
-            for(uint k = 0; k < rewardChangeCase; k++)
-            {
-                uint num = k+rewardChangeCase*j+addressCase*rewardChangeCase*i;
-
-            }
-        }
+        ret[j] = prewardratedbview->GetRewardRate(j, expAddress[j]);
     }
 
     // Clean
-    for(uint i = 0; i < addressCase; i++)
+    if (prewardratedbview != NULL)
     {
-        pdb->ISNSqlDelete(tableClub, clubFieldAddress, address[i]);
+        delete prewardratedbview;
+        prewardratedbview = NULL;
     }
-    // Stop ISNDB service
-    ISNDB::StopISNDBService();
 
     assert(false);
 }

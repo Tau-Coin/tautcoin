@@ -203,7 +203,7 @@ extern CBlockIndex *pindexBestHeader;
 /** Minimum disk space required - used in CheckDiskSpace() */
 static const uint64_t nMinDiskSpace = 52428800;
 
-//extern CBalanceViewDB *pbalancedbview;
+extern CRwdBalanceViewDB *prbalancedbview;
 extern CRewardRateViewDB *prewardratedbview;
 
 /** Pruning-related variables and constants */
@@ -381,8 +381,9 @@ void UpdateCoins(const CTransaction& tx, CCoinsViewCache& inputs, int nHeight);
 
 /** Apply the rewards of this transaction on the reward database set */
 bool UpdateRewards(const CTransaction& tx, CAmount blockReward, int nHeight, bool isUndo=false);
-bool RewardChangeUpdateByPubkey(CAmount rewardChange, string pubkey, bool isUndo);
-bool RewardChangeUpdate(CAmount rewardChange, string address, bool isUndo);
+bool UpdateRewards2(const CBlock& block, CAmount blockReward, int nHeight);
+bool RewardChangeUpdateByPubkey(CAmount rewardChange, string pubkey, bool isUndo, int nHeight);
+bool RewardChangeUpdate(CAmount rewardChange, string address, bool isUndo, int nHeight);
 bool RewardRateUpdate(CAmount blockReward, CAmount distributedRewards, string clubLeaderAddress, int nHeight, bool isUndo);
 bool InitRewardsDist(CAmount memberTotalRewards, const CScript& scriptPubKey, string& clubLeaderAddress,
                      CAmount& distributedRewards, map<string, CAmount> &memberRewards);

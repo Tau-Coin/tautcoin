@@ -15,6 +15,7 @@
 #include <stdint.h>
 
 #include <boost/thread.hpp>
+#include <boost/algorithm/string.hpp>
 
 using namespace std;
 
@@ -453,11 +454,11 @@ bool CBlockTreeDB::LoadBlockIndexGuts(boost::function<CBlockIndex*(const uint256
     return true;
 }
 
-CBalanceViewDB::CBalanceViewDB()
+CRwdBalanceViewDB::CRwdBalanceViewDB()
 {
     options.create_if_missing = true;
 
-    std::string db_path = GetDataDir(true).string() + std::string("/balance");
+    std::string db_path = GetDataDir(true).string() + std::string("/rwdbalance");
     LogPrintf("Opening LevelDB in %s\n", db_path);
 
     leveldb::Status status = leveldb::DB::Open(options, db_path, &pdb);
@@ -466,25 +467,23 @@ CBalanceViewDB::CBalanceViewDB()
     LogPrintf("Opened LevelDB successfully\n");
 }
 
-CBalanceViewDB::~CBalanceViewDB()
+CRwdBalanceViewDB::~CRwdBalanceViewDB()
 {
     delete pdb;
     pdb = NULL;
 }
 
-bool CBalanceViewDB::WriteDB(std::string key, int nHeight, CAmount value)
+bool CRwdBalanceViewDB::WriteDB(std::string key, int nHeight, std::string father, uint64_t tc, CAmount value)
 {
-    std::stringstream ssVal;
-    ssVal << value;
-    std::string strValue;
-    ssVal >> strValue;
+    string strValue = "";
+    GenerateRecord(father, tc, value, strValue);
 
     std::stringstream ssHeight;
     std::string strHeight;
     ssHeight << nHeight;
     ssHeight >> strHeight;
 
-    leveldb::Status status = pdb->Put(leveldb::WriteOptions(), key+"_"+strHeight, strValue);
+    leveldb::Status status = pdb->Put(leveldb::WriteOptions(), key+DBSEPECTATOR+strHeight, strValue);
     if(!status.ok())
     {
         LogPrintf("LevelDB write failure in balance module: %s\n", status.ToString());
@@ -495,7 +494,7 @@ bool CBalanceViewDB::WriteDB(std::string key, int nHeight, CAmount value)
     return true;
 }
 
-bool CBalanceViewDB::ReadDB(std::string key, int nHeight, CAmount& value)
+bool CRwdBalanceViewDB::ReadDB(std::string key, int nHeight, string father, uint64_t tc, CAmount& value)
 {
     std::stringstream ssHeight;
     std::string strHeight;
@@ -503,7 +502,7 @@ bool CBalanceViewDB::ReadDB(std::string key, int nHeight, CAmount& value)
     ssHeight >> strHeight;
 
     std::string strValue;
-    leveldb::Status status = pdb->Get(leveldb::ReadOptions(), key+"_"+strHeight, &strValue);
+    leveldb::Status status = pdb->Get(leveldb::ReadOptions(), key+DBSEPECTATOR+strHeight, &strValue);
     if(!status.ok())
     {
         if (status.IsNotFound())
@@ -516,96 +515,177 @@ bool CBalanceViewDB::ReadDB(std::string key, int nHeight, CAmount& value)
         return false;
     }
 
-    std::istringstream ssVal(strValue);
-    ssVal >> value;
+    if (!ParseRecord(strValue, father, tc, value))
+        return false;
 
     return true;
 }
 
-void CBalanceViewDB::ClearCache()
+void CRwdBalanceViewDB::ClearCache()
 {
-    cacheBalance.clear();
+    cacheRecord.clear();
 }
 
-CAmount CBalanceViewDB::GetBalance(std::string address, int nHeight)
+bool CRwdBalanceViewDB::ParseRecord(string inputStr, string& father, uint64_t& tc, CAmount& value)
 {
-    if (cacheBalance.find(address) != cacheBalance.end())
-        return cacheBalance[address];
-    else
-    {
-        for (int h = nHeight; h >= 0; h--)
-        {
-            CAmount amount = 0;
-            if (ReadDB(address, h, amount))
-                return amount;
-        }
-    }
+    vector<string> splitedStr;
+    boost::split(splitedStr, inputStr, boost::is_any_of(DBSEPECTATOR));
+    if (splitedStr.size() != 3)
+        return false;
+    father = splitedStr[0];
+    std::istringstream ssVal1(splitedStr[1]);
+    ssVal1 >> tc;
+    std::istringstream ssVal2(splitedStr[2]);
+    ssVal2 >> value;
+
+    return true;
+}
+
+void CRwdBalanceViewDB::GenerateRecord(string father, uint64_t tc, CAmount value, string& outputStr)
+{
+    std::stringstream ssVal;
+    ssVal << father;
+    ssVal << DBSEPECTATOR;
+    ssVal << tc;
+    ssVal << DBSEPECTATOR;
+    ssVal << value;
+    ssVal >> outputStr;
+}
+
+CAmount CRwdBalanceViewDB::GetRwdBalance(std::string address, int nHeight)
+{
+    string ft;
+    uint64_t tc;
+    CAmount value = 0;
+    if (GetFullRecord(address, nHeight, ft, tc, value))
+        return value;
 
     return 0;
 }
 
-bool CBalanceViewDB::UpdateBalance(const CTransaction& tx, const CCoinsViewCache& inputs, int nHeight)
+string CRwdBalanceViewDB::GetFather(string address, int nHeight)
 {
-    if (tx.vout.size() > 0)
+    string ft = "";
+    uint64_t tc;
+    CAmount value;
+    if (GetFullRecord(address, nHeight, ft, tc, value))
+        return ft;
+
+    return "";
+}
+
+uint64_t CRwdBalanceViewDB::GetTXCnt(string address, int nHeight)
+{
+    string ft;
+    uint64_t tc = 0;
+    CAmount value;
+    if (GetFullRecord(address, nHeight, ft, tc, value))
+        return tc;
+
+    return 0;
+}
+
+bool CRwdBalanceViewDB::GetFullRecord(string address, int nHeight, std::string& father, uint64_t& tc, CAmount& value)
+{
+    if (cacheRecord.find(address) != cacheRecord.end())
     {
-        CBitcoinAddress addr;
-
-        if (!tx.IsCoinBase() && tx.vin.size() > 0)
+        ParseRecord(cacheRecord[address], father, tc, value);
+        return true;
+    }
+    else
+    {
+        for (int h = nHeight; h >= 0; h--)
         {
-            for(uint i = 0; i < tx.vin.size(); i++)
-            {
-                const CCoins* coins = inputs.AccessCoins(tx.vin[i].prevout.hash);
-                assert(coins);
-
-                std::string address;
-                addr.ScriptPub2Addr(coins->vout[tx.vin[i].prevout.n].scriptPubKey, address);
-
-                if (nHeight > 0)
-                {
-                    CAmount val = GetBalance(address, nHeight - 1);
-
-                    std::cout<<"====="<<address<<":   "<<val<<" - "<<coins->vout[tx.vin[i].prevout.n].nValue;
-
-                    val -= coins->vout[tx.vin[i].prevout.n].nValue;
-
-                    std::cout<<" = "<<val<<std::endl;
-
-                    if (cacheBalance.find(address) == cacheBalance.end())
-                        cacheBalance.insert(pair<std::string, CAmount>(address, val));
-                    else
-                        cacheBalance[address] = val;
-                    if (!WriteDB(address, nHeight, val))
-                        return false;
-                }
-            }
-        }
-
-        for(uint o = 0; o < tx.vout.size(); o++)
-        {
-            if (tx.vout[o].nValue <= 0)
-                continue;
-
-            std::string address;
-            addr.ScriptPub2Addr(tx.vout[o].scriptPubKey, address);
-
-            CAmount val = GetBalance(address, nHeight - 1);
-
-            std::cout<<"====="<<address<<":   "<<val<<" + "<<tx.vout[o].nValue;
-
-            val += tx.vout[o].nValue;
-
-            std::cout<<" = "<<val<<std::endl;
-
-            if (cacheBalance.find(address) == cacheBalance.end())
-                cacheBalance.insert(pair<std::string, CAmount>(address, val));
-            else
-                cacheBalance[address] = val;
-            if (!WriteDB(address, nHeight, val))
-                return false;
+            if (ReadDB(address, h, father, tc, value))
+                return true;
         }
     }
 
+    return false;
+}
+
+bool CRwdBalanceViewDB::RewardChangeUpdate(CAmount rewardChange, string address, int nHeight)
+{
+    if (rewardChange >= MAX_MONEY || rewardChange <= -MAX_MONEY)
+        return false;
+
+    CAmount rewardbalance_old = 0;
+    string ft = "father";/////////////////////////////
+    uint64_t tc = 1;/////////////////////////////
+    GetFullRecord(address, nHeight, ft, tc, rewardbalance_old);
+
+    CAmount newValue = rewardbalance_old + rewardChange;
+
+    std::cout<<"====="<<address<<":   "<<rewardbalance_old<<" + "<<rewardChange;
+    std::cout<<" = "<<newValue<<std::endl;
+
+    string newRecord = "";
+    GenerateRecord(ft, tc, newValue, newRecord);
+    if (cacheRecord.find(address) == cacheRecord.end())
+        cacheRecord.insert(pair<string, string>(address, newRecord));
+    else
+        cacheRecord[address] = newRecord;
+
+    if (!WriteDB(address, nHeight, ft, tc, newValue))
+        return false;
+    //LogPrintf("%s, member:%s, rw:%d\n", __func__, member, rewardbalance_old);
+
     return true;
+}
+
+bool CRwdBalanceViewDB::RewardChangeUpdateByPubkey(CAmount rewardChange, string pubKey, int nHeight)
+{
+    string address;
+
+    if (pubKey.empty())
+        return false;
+    const CScript script = CScript() << ParseHex(pubKey) << OP_CHECKSIG;
+    CBitcoinAddress addr;
+    if (!addr.ScriptPub2Addr(script, address))
+        return false;
+
+    if (!RewardChangeUpdate(rewardChange, address, nHeight))
+        return false;
+
+    return true;
+}
+
+bool CRwdBalanceViewDB::UpdateRewardsByTX(const CTransaction& tx, CAmount blockReward, int nHeight)
+{
+    if (!tx.IsCoinBase())
+    {
+        for(unsigned int i = 0; i < tx.vreward.size(); i++)
+            if (!RewardChangeUpdateByPubkey(0-tx.vreward[i].rewardBalance,
+                                            tx.vreward[i].senderPubkey, nHeight));
+
+        return false;
+    }
+
+    // Init rewards distribution and check if valid
+    if (tx.vout.size() != 1)
+    {
+        LogPrintf("Error: The TX's vout size is 0\n");
+        return false;
+    }
+    bool ret = true;
+    CAmount distributedRewards = 0;
+    string clubLeaderAddress;
+    map<string, CAmount> memberRewards;
+    CAmount memberTotalRewards = blockReward-tx.vout[0].nValue;
+    if (!InitRewardsDist(memberTotalRewards, tx.vout[0].scriptPubKey, clubLeaderAddress,
+                         distributedRewards, memberRewards))
+        return false;
+
+    // Distribute rewards to member and return remained rewards back to club leader
+    for(std::map<string, CAmount>::const_iterator it = memberRewards.begin(); it != memberRewards.end(); it++)
+        ret &= RewardChangeUpdate(it->second, it->first, nHeight);
+    CAmount remainedReward = memberTotalRewards - distributedRewards;
+    ret &= RewardChangeUpdate(remainedReward, clubLeaderAddress, nHeight);
+
+    // Update rewards rate
+    RewardRateUpdate(blockReward, distributedRewards, clubLeaderAddress, nHeight, false);
+
+    return ret;
 }
 
 bool CRewardRateViewDB::WriteDB(int nHeight, std::string address, double value)
