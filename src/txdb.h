@@ -149,13 +149,15 @@ private:
     //! cache for multi-transaction balance updating
     std::map<std::string, std::string> cacheRecord;
 
-    bool RewardChangeUpdateByPubkey(CAmount rewardChange, std::string pubKey, int nHeight);
+    bool RewardChangeUpdateByPubkey(CAmount rewardChange, std::string pubKey, int nHeight, bool isUndo);
 
-    bool RewardChangeUpdate(CAmount rewardChange, std::string address, int nHeight);
+    bool RewardChangeUpdate(CAmount rewardChange, std::string address, int nHeight, bool isUndo);
 
     bool WriteDB(std::string key, int nHeight, std::string father, uint64_t tc, CAmount value);
 
     bool ReadDB(std::string key, int nHeight, std::string father, uint64_t tc, CAmount& value);
+
+    bool DeleteDB(std::string key, int nHeight);
 
 public:
     //! Constructor
@@ -186,7 +188,7 @@ public:
     bool GetFullRecord(std::string address, int nHeight, std::string& father, uint64_t& tc, CAmount& value);
 
     //! Update the Balance dataset
-    bool UpdateRewardsByTX(const CTransaction& tx, CAmount blockReward, int nHeight);
+    bool UpdateRewardsByTX(const CTransaction& tx, CAmount blockReward, int nHeight, bool isUndo);
 };
 
 /** View on the open reward rate dataset. */

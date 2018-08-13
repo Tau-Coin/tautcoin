@@ -521,6 +521,24 @@ bool CRwdBalanceViewDB::ReadDB(std::string key, int nHeight, string father, uint
     return true;
 }
 
+bool CRwdBalanceViewDB::DeleteDB(std::string key, int nHeight)
+{
+    std::stringstream ssHeight;
+    std::string strHeight;
+    ssHeight << nHeight;
+    ssHeight >> strHeight;
+
+    leveldb::Status status = pdb->Delete(leveldb::WriteOptions(), key+DBSEPECTATOR+strHeight);
+    if(!status.ok() && !status.IsNotFound())
+    {
+        LogPrintf("LevelDB write failure in balance module: %s\n", status.ToString());
+        dbwrapper_private::HandleError(status);
+        return false;
+    }
+
+    return true;
+}
+
 void CRwdBalanceViewDB::ClearCache()
 {
     cacheRecord.clear();
@@ -604,7 +622,7 @@ bool CRwdBalanceViewDB::GetFullRecord(string address, int nHeight, std::string& 
     return false;
 }
 
-bool CRwdBalanceViewDB::RewardChangeUpdate(CAmount rewardChange, string address, int nHeight)
+bool CRwdBalanceViewDB::RewardChangeUpdate(CAmount rewardChange, string address, int nHeight, bool isUndo)
 {
     if (rewardChange >= MAX_MONEY || rewardChange <= -MAX_MONEY)
         return false;
@@ -626,14 +644,22 @@ bool CRwdBalanceViewDB::RewardChangeUpdate(CAmount rewardChange, string address,
     else
         cacheRecord[address] = newRecord;
 
-    if (!WriteDB(address, nHeight, ft, tc, newValue))
-        return false;
+    if (!isUndo)
+    {
+        if (!WriteDB(address, nHeight, ft, tc, newValue))
+            return false;
+    }
+    else
+    {
+        if (!DeleteDB(address, nHeight+1))
+            return false;
+    }
     //LogPrintf("%s, member:%s, rw:%d\n", __func__, member, rewardbalance_old);
 
     return true;
 }
 
-bool CRwdBalanceViewDB::RewardChangeUpdateByPubkey(CAmount rewardChange, string pubKey, int nHeight)
+bool CRwdBalanceViewDB::RewardChangeUpdateByPubkey(CAmount rewardChange, string pubKey, int nHeight, bool isUndo)
 {
     string address;
 
@@ -644,20 +670,20 @@ bool CRwdBalanceViewDB::RewardChangeUpdateByPubkey(CAmount rewardChange, string 
     if (!addr.ScriptPub2Addr(script, address))
         return false;
 
-    if (!RewardChangeUpdate(rewardChange, address, nHeight))
+    if (!RewardChangeUpdate(rewardChange, address, nHeight, isUndo))
         return false;
 
     return true;
 }
 
-bool CRwdBalanceViewDB::UpdateRewardsByTX(const CTransaction& tx, CAmount blockReward, int nHeight)
+bool CRwdBalanceViewDB::UpdateRewardsByTX(const CTransaction& tx, CAmount blockReward, int nHeight, bool isUndo)
 {
     if (!tx.IsCoinBase())
     {
         for(unsigned int i = 0; i < tx.vreward.size(); i++)
         {
             if (!RewardChangeUpdateByPubkey(0-tx.vreward[i].rewardBalance,
-                                            tx.vreward[i].senderPubkey, nHeight))
+                                            tx.vreward[i].senderPubkey, nHeight, isUndo))
                 return false;
         }
         return true;
@@ -680,9 +706,9 @@ bool CRwdBalanceViewDB::UpdateRewardsByTX(const CTransaction& tx, CAmount blockR
 
     // Distribute rewards to member and return remained rewards back to club leader
     for(std::map<string, CAmount>::const_iterator it = memberRewards.begin(); it != memberRewards.end(); it++)
-        ret &= RewardChangeUpdate(it->second, it->first, nHeight);
+        ret &= RewardChangeUpdate(it->second, it->first, nHeight, isUndo);
     CAmount remainedReward = memberTotalRewards - distributedRewards;
-    ret &= RewardChangeUpdate(remainedReward, clubLeaderAddress, nHeight);
+    ret &= RewardChangeUpdate(remainedReward, clubLeaderAddress, nHeight, isUndo);
 
     // Update rewards rate
     RewardRateUpdate(blockReward, distributedRewards, clubLeaderAddress, nHeight, false);

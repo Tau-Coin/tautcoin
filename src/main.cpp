@@ -2144,14 +2144,14 @@ bool UpdateRewards(const CTransaction& tx, CAmount blockReward, int nHeight, boo
     return ret;
 }
 
-bool UpdateRewards2(const CBlock& block, CAmount blockReward, int nHeight)
+bool UpdateRewards2(const CBlock& block, CAmount blockReward, int nHeight, bool isUndo)
 {
     for (unsigned int j = 0; j < block.vtx.size(); j++)
     {
         const CTransaction &tx = block.vtx[j];
         if (!tx.IsCoinBase())
         {
-            if (!prbalancedbview->UpdateRewardsByTX(tx, blockReward, nHeight))
+            if (!prbalancedbview->UpdateRewardsByTX(tx, blockReward, nHeight, isUndo))
                 return false;
         }
     }
@@ -2159,7 +2159,7 @@ bool UpdateRewards2(const CBlock& block, CAmount blockReward, int nHeight)
     const CTransaction coinbase = block.vtx[0];
     if (!coinbase.IsCoinBase())
         return false;
-    if (!prbalancedbview->UpdateRewardsByTX(coinbase, blockReward, nHeight))
+    if (!prbalancedbview->UpdateRewardsByTX(coinbase, blockReward, nHeight, isUndo))
         return false;
     prbalancedbview->ClearCache();
 
@@ -2802,13 +2802,16 @@ bool DisconnectBlock(CBlock& block, CValidationState& state, CBlockIndex* pindex
     // restore rewards
     bool isUndo = true;
     CAmount nFees = MAX_MONEY-1;
+    if (!UpdateRewards2(block, nFees, pindex->nHeight-1, isUndo))
+        return error("DisconnectBlock(): UpdateRewards failed");
     for (int k = block.vtx.size() - 1; k >= 0; k--)
     {
         const CTransaction &tx = block.vtx[k];
         if (!UpdateRewards(tx, nFees, pindex->nHeight-1, isUndo))
-            return error("DisconnectBlock(): UpdateRewards failed");
+            return error("DisconnectBlock(): UpdateRewards step2 failed");
     }
     RewardManager::GetInstance()->currentHeight = pindex->nHeight-1;
+
 
     if (pfClean) {
         *pfClean = fClean;
