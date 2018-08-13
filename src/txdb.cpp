@@ -655,10 +655,12 @@ bool CRwdBalanceViewDB::UpdateRewardsByTX(const CTransaction& tx, CAmount blockR
     if (!tx.IsCoinBase())
     {
         for(unsigned int i = 0; i < tx.vreward.size(); i++)
+        {
             if (!RewardChangeUpdateByPubkey(0-tx.vreward[i].rewardBalance,
-                                            tx.vreward[i].senderPubkey, nHeight));
-
-        return false;
+                                            tx.vreward[i].senderPubkey, nHeight))
+                return false;
+        }
+        return true;
     }
 
     // Init rewards distribution and check if valid
