@@ -228,8 +228,8 @@ void Shutdown()
 		
         delete pblocktree;
         pblocktree = NULL;
-        //delete pbalancedbview;
-        //pbalancedbview = NULL;
+        delete prbalancedbview;
+        prbalancedbview = NULL;
         delete prewardratedbview;
         prewardratedbview = NULL;
     }
@@ -592,7 +592,11 @@ void ThreadImport(std::vector<boost::filesystem::path> vImportFiles)
         // Then, remove rewards balance db records
         std::string db_path = GetDataDir(true).string() + std::string(RWDBLDBPATH);
         if (boost::filesystem::exists(db_path))
+        {
+            delete prbalancedbview;
             boost::filesystem::remove_all(db_path);
+            prbalancedbview = new CRwdBalanceViewDB();
+        }
 
         int nFile = 0;
         InitBlockIndex(chainparams);
@@ -1276,7 +1280,7 @@ bool AppInit2(boost::thread_group& threadGroup, CScheduler& scheduler)
                 delete pcoinsdbview;
                 delete pcoinscatcher;
                 delete pblocktree;
-                //delete pbalancedbview;
+                delete prbalancedbview;
                 delete prewardratedbview;
 
                 pblocktree = new CBlockTreeDB(nBlockTreeDBCache, false, fReindex);
