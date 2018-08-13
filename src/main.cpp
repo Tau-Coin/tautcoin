@@ -1992,15 +1992,15 @@ bool RewardChangeUpdate(CAmount rewardChange, string address, bool isUndo, int n
     RewardManager* rewardMan = RewardManager::GetInstance();
     CAmount rewardbalance_old = rewardMan->GetRewardsByAddress(address);
     //LogPrintf("%s, member:%s, rw:%d\n", __func__, member, rewardbalance_old);
-    if (isUndo)
-        ret &= rewardMan->UpdateRewardsByAddress(address, rewardbalance_old-rewardChange,
-                                                 rewardbalance_old);
-    else
-        ret &= rewardMan->UpdateRewardsByAddress(address, rewardbalance_old+rewardChange,
-                                                 rewardbalance_old);
-    if (!isUndo)
-        ret &= rewardMan->UpdateRewardsByAddress(address, prbalancedbview->GetRwdBalance(address, nHeight),
-                                                 rewardbalance_old);
+//    if (isUndo)
+//        ret &= rewardMan->UpdateRewardsByAddress(address, rewardbalance_old-rewardChange,
+//                                                 rewardbalance_old);
+//    else
+//        ret &= rewardMan->UpdateRewardsByAddress(address, rewardbalance_old+rewardChange,
+//                                                 rewardbalance_old);
+
+    ret &= rewardMan->UpdateRewardsByAddress(address, prbalancedbview->GetRwdBalance(address, nHeight),
+                                             rewardbalance_old);
     return ret;
 }
 
@@ -2830,13 +2830,7 @@ bool DisconnectBlock(CBlock& block, CValidationState& state, CBlockIndex* pindex
 
     // restore rewards
     bool isUndo = true;
-    CAmount nFees = 0;
-    for (int j = block.vtx.size() - 1; j >= 0; j--)
-    {
-        const CTransaction &tx = block.vtx[j];
-        if (!tx.IsCoinBase())
-            nFees += view.GetValueIn(tx)-tx.GetValueOut();
-    }
+    CAmount nFees = MAX_MONEY-1;
     for (int k = block.vtx.size() - 1; k >= 0; k--)
     {
         const CTransaction &tx = block.vtx[k];
@@ -3422,7 +3416,7 @@ bool ConnectBlock(const CBlock& block, CValidationState& state, CBlockIndex* pin
         {
             const CTransaction &tx = block.vtx[j];
             if (!UpdateRewards(tx, nFees, pindex->nHeight))
-                return error("ConnectBlock(): UpdateRewards failed");
+                return error("ConnectBlock(): UpdateRewards step2 failed");
         }
         RewardManager::GetInstance()->currentHeight = pindex->nHeight;
     }
