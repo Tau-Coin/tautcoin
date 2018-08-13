@@ -590,7 +590,7 @@ void ThreadImport(std::vector<boost::filesystem::path> vImportFiles)
         // First of all, remove mysql db records
         ISNDB::GetInstance()->TruncateTables();
         // Then, remove rewards balance db records
-        std::string db_path = GetDataDir(true).string() + std::string("/rwdbalance");
+        std::string db_path = GetDataDir(true).string() + std::string(RWDBLDBPATH);
         if (boost::filesystem::exists(db_path))
             boost::filesystem::remove_all(db_path);
 

@@ -137,6 +137,7 @@ private:
 
 /** View on the open balance dataset. */
 #define DBSEPECTATOR "_"
+#define RWDBLDBPATH "/rwdbalance"
 class CRwdBalanceViewDB
 {
 private:

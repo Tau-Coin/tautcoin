@@ -458,7 +458,7 @@ CRwdBalanceViewDB::CRwdBalanceViewDB()
 {
     options.create_if_missing = true;
 
-    std::string db_path = GetDataDir(true).string() + std::string("/rwdbalance");
+    std::string db_path = GetDataDir(true).string() + std::string(RWDBLDBPATH);
     LogPrintf("Opening LevelDB in %s\n", db_path);
 
     leveldb::Status status = leveldb::DB::Open(options, db_path, &pdb);
