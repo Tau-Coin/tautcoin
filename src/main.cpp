@@ -2052,7 +2052,6 @@ bool ComputeMemberReward(const uint64_t& txCnt, const uint64_t& totalTXCnt,
         return false;
     }
 
-    const
     arith_uint256 ttc = totalTXCnt;
     arith_uint256 tc = txCnt;
     arith_uint256 tRwd_1 = totalRewards / (CENT*CENT);

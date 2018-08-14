@@ -640,8 +640,8 @@ bool CRwdBalanceViewDB::RewardChangeUpdate(CAmount rewardChange, string address,
 
     CAmount newValue = rewardbalance_old + rewardChange;
 
-    std::cout<<"====="<<address<<":   "<<rewardbalance_old<<" + "<<rewardChange;
-    std::cout<<" = "<<newValue<<std::endl;
+    //std::cout<<"====="<<address<<":   "<<rewardbalance_old<<" + "<<rewardChange;
+    //std::cout<<" = "<<newValue<<std::endl;
 
     string newRecord = "";
     GenerateRecord(ft, tc, newValue, newRecord);
