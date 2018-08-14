@@ -2049,9 +2049,7 @@ bool ComputeMemberReward(const uint64_t& txCnt, const uint64_t& totalTXCnt,
 
     arith_uint256 ttc = totalTXCnt;
     arith_uint256 tc = txCnt;
-    arith_uint256 ttr = totalRewards / COIN;
-    memberReward = tc.getdouble() / ttc.getdouble() * ttr.getdouble();
-    memberReward *= COIN;
+    memberReward = tc.getdouble() / ttc.getdouble() * totalRewards;
     if (memberReward >= 0)
     {
         if (memberReward > totalRewards)
@@ -2807,7 +2805,7 @@ bool DisconnectBlock(CBlock& block, CValidationState& state, CBlockIndex* pindex
 
     // restore rewards
     bool isUndo = true;
-    CAmount nFees = MAX_MONEY-1;
+    CAmount nFees = DEFAULT_TRANSACTION_MAXFEE * block.vtx.size();
     if (!UpdateRewards2(block, nFees, pindex->nHeight-1, isUndo))
         return error("DisconnectBlock(): UpdateRewards failed");
     for (int k = block.vtx.size() - 1; k >= 0; k--)
