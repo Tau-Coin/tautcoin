@@ -2044,12 +2044,25 @@ bool RewardRateUpdate(CAmount blockReward, CAmount distributedRewards, string cl
 bool ComputeMemberReward(const uint64_t& txCnt, const uint64_t& totalTXCnt,
                          const CAmount& totalRewards, CAmount& memberReward)
 {
-    if (totalTXCnt < txCnt || totalTXCnt == 0 || totalRewards < 0 || totalRewards >= MAX_MONEY)
+    if (totalTXCnt < txCnt || totalTXCnt == 0 || totalRewards < 0)
         return false;
+    if (totalRewards >= MAX_MONEY)
+    {
+        LogPrintf("Error: The rewards are too large\n");
+        return false;
+    }
 
+    const
     arith_uint256 ttc = totalTXCnt;
     arith_uint256 tc = txCnt;
-    memberReward = tc.getdouble() / ttc.getdouble() * totalRewards;
+    arith_uint256 tRwd_1 = totalRewards / (CENT*CENT);
+    arith_uint256 tRwd_2 = totalRewards % (CENT*CENT) / CENT;
+    arith_uint256 tRwd_3 = totalRewards % (CENT*CENT) % CENT;
+    double ratio = tc.getdouble() / ttc.getdouble();
+    CAmount memberReward_1 = ratio * tRwd_1.getdouble() * (CENT*CENT);
+    CAmount memberReward_2 = ratio * tRwd_2.getdouble() * CENT;
+    CAmount memberReward_3 = ratio * tRwd_3.getdouble();
+    memberReward = memberReward_1 + memberReward_2 + memberReward_3;
     if (memberReward >= 0)
     {
         if (memberReward > totalRewards)
@@ -2098,7 +2111,7 @@ bool InitRewardsDist(CAmount memberTotalRewards, const CScript& scriptPubKey, st
         CAmount remainedReward = memberTotalRewards - distributedRewards;
         if (remainedReward < 0)
         {
-            //LogPrintf("Error: The club's totalRewards are less than distributedRewards\n");
+            LogPrintf("Error: The club's totalRewards are less than distributedRewards\n");
             return false;
         }
     }
@@ -2150,6 +2163,8 @@ bool UpdateRewards(const CTransaction& tx, CAmount blockReward, int nHeight, boo
 
 bool UpdateRewards2(const CBlock& block, CAmount blockReward, int nHeight, bool isUndo)
 {
+    prbalancedbview->ClearCache();
+
     for (unsigned int j = 0; j < block.vtx.size(); j++)
     {
         const CTransaction &tx = block.vtx[j];
@@ -2165,6 +2180,7 @@ bool UpdateRewards2(const CBlock& block, CAmount blockReward, int nHeight, bool 
         return false;
     if (!prbalancedbview->UpdateRewardsByTX(coinbase, blockReward, nHeight, isUndo))
         return false;
+
     prbalancedbview->ClearCache();
 
     return true;
