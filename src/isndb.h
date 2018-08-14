@@ -69,6 +69,8 @@ public:
 
     bool TruncateTables();
 
+    bool GetConnection(mysqlpp::Connection& conn);
+
 private:
     mysqlpp::Connection con;
 

@@ -508,3 +508,15 @@ bool ISNDB::ISNSqlDelete(const string &tablename, const string &condition, const
 		exit(-1);
 	}
 }
+
+bool ISNDB::GetConnection(mysqlpp::Connection& conn)
+{
+    LOCK(cs_isndb);
+    if (!con.connected())
+    {
+        return false;
+    }
+
+    conn = con;
+    return true;
+}

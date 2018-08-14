@@ -2625,6 +2625,13 @@ bool DisconnectBlock(CBlock& block, CValidationState& state, CBlockIndex* pindex
     }
     ifile.close();
 
+    // Construct db transactions, clubinfo and memeber must be updated
+    // together or not.
+    mysqlpp::Connection conn;
+    ISNDB::GetInstance()->GetConnection(conn);
+    mysqlpp::Transaction trans(conn, mysqlpp::Transaction::serializable,
+        mysqlpp::Transaction::session);
+
     // undo entrust relationship in reverse order
     int nSize = vecTxInfo.size();
     ISNDB* pdb = ISNDB::GetInstance();
@@ -2807,15 +2814,21 @@ bool DisconnectBlock(CBlock& block, CValidationState& state, CBlockIndex* pindex
     bool isUndo = true;
     CAmount nFees = DEFAULT_TRANSACTION_MAXFEE * block.vtx.size();
     if (!UpdateRewards2(block, nFees, pindex->nHeight-1, isUndo))
+    {
+        trans.rollback();
         return error("DisconnectBlock(): UpdateRewards failed");
+    }
     for (int k = block.vtx.size() - 1; k >= 0; k--)
     {
         const CTransaction &tx = block.vtx[k];
         if (!UpdateRewards(tx, nFees, pindex->nHeight-1, isUndo))
+        {
+            trans.rollback();
             return error("DisconnectBlock(): UpdateRewards step2 failed");
+        }
     }
     RewardManager::GetInstance()->currentHeight = pindex->nHeight-1;
-
+    trans.commit();
 
     if (pfClean) {
         *pfClean = fClean;
@@ -3107,6 +3120,13 @@ bool ConnectBlock(const CBlock& block, CValidationState& state, CBlockIndex* pin
         ofile.open(path.string());
     }
 
+    // Construct db transactions, clubinfo and memeber must be updated
+    // together or not.
+    mysqlpp::Connection conn;
+    ISNDB::GetInstance()->GetConnection(conn);
+    mysqlpp::Transaction trans(conn, mysqlpp::Transaction::serializable,
+        mysqlpp::Transaction::session);
+
     for (unsigned int i = 0; i < block.vtx.size(); i++)
     {
         const CTransaction &tx = block.vtx[i];
@@ -3388,18 +3408,25 @@ bool ConnectBlock(const CBlock& block, CValidationState& state, CBlockIndex* pin
     if (!fJustCheck)
     {
         if (!UpdateRewards2(block, nFees, pindex->nHeight))
+        {
+            trans.rollback();
             return error("ConnectBlock(): UpdateRewards failed");
+        }
 
         for (unsigned int j = 0; j < block.vtx.size(); j++)
         {
             const CTransaction &tx = block.vtx[j];
             if (!UpdateRewards(tx, nFees, pindex->nHeight))
+            {
+                trans.rollback();
                 return error("ConnectBlock(): UpdateRewards step2 failed");
+            }
         }
         RewardManager::GetInstance()->currentHeight = pindex->nHeight;
     }
 
     if (!fJustCheck) {
+        trans.commit();
         ofile .close();
     }
 
