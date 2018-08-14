@@ -51,6 +51,6 @@ uint64_t getNextPotRequired(const CBlockIndex* pindexLast);
 uint256 GetNextCumulativeDifficulty(const CBlockIndex* pindexLast, uint64_t baseTarget, const Consensus::Params& consensusParams);
 
 bool CheckProofOfTransaction(const std::string& prevGenerationSignature, const std::string& currPubKey,
-        int nHeight, unsigned int nTime, uint64_t baseTarget, uint64_t harverstPower, const Consensus::Params& consensusParams, PotErr& checkErr);
+        int nHeight, int64_t nTime, uint64_t baseTarget, uint64_t harverstPower, const Consensus::Params& consensusParams, PotErr& checkErr);
 
 #endif // TAUCOIN_POS_H

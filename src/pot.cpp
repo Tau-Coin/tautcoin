@@ -186,11 +186,11 @@ uint256 GetNextCumulativeDifficulty(const CBlockIndex* pindexLast, uint64_t base
 }
 
 bool CheckProofOfTransaction(const std::string& prevGenerationSignature, const std::string& currPubKey,
-        int nHeight, unsigned int nTime, uint64_t baseTarget, uint64_t harverstPower, const Consensus::Params& consensusParams, PotErr& checkErr)
+        int nHeight, int64_t nTime, uint64_t baseTarget, uint64_t harverstPower, const Consensus::Params& consensusParams, PotErr& checkErr)
 {
     checkErr = POT_NO_ERR;
 
-    if (prevGenerationSignature.empty() || currPubKey.empty() || nHeight < 0 || nTime == 0
+    if (prevGenerationSignature.empty() || currPubKey.empty() || nHeight < 0 || nTime <= 0
             || harverstPower == 0) {
         LogPrintf("POT failed, incorrect args, signatrue:%s, pubkey:%s, height:%d, time:%d, hp:%d\n",
             prevGenerationSignature, currPubKey, nHeight, nTime, harverstPower);
