@@ -2647,6 +2647,25 @@ bool DisconnectBlock(CBlock& block, CValidationState& state, CBlockIndex* pindex
     mysqlpp::Transaction trans(conn, mysqlpp::Transaction::serializable,
         mysqlpp::Transaction::session);
 
+    // restore rewards
+    bool isUndo = true;
+    CAmount nFees = DEFAULT_TRANSACTION_MAXFEE * block.vtx.size();
+    if (!UpdateRewards2(block, nFees, pindex->nHeight-1, isUndo))
+    {
+        trans.rollback();
+        return error("DisconnectBlock(): UpdateRewards failed");
+    }
+    for (int k = block.vtx.size() - 1; k >= 0; k--)
+    {
+        const CTransaction &tx = block.vtx[k];
+        if (!UpdateRewards(tx, nFees, pindex->nHeight-1, isUndo))
+        {
+            trans.rollback();
+            return error("DisconnectBlock(): UpdateRewards step2 failed");
+        }
+    }
+    RewardManager::GetInstance()->currentHeight = pindex->nHeight-1;
+
     // undo entrust relationship in reverse order
     int nSize = vecTxInfo.size();
     ISNDB* pdb = ISNDB::GetInstance();
@@ -2825,24 +2844,6 @@ bool DisconnectBlock(CBlock& block, CValidationState& state, CBlockIndex* pindex
     // move best block pointer to prevout block
     view.SetBestBlock(pindex->pprev->GetBlockHash());
 
-    // restore rewards
-    bool isUndo = true;
-    CAmount nFees = DEFAULT_TRANSACTION_MAXFEE * block.vtx.size();
-    if (!UpdateRewards2(block, nFees, pindex->nHeight-1, isUndo))
-    {
-        trans.rollback();
-        return error("DisconnectBlock(): UpdateRewards failed");
-    }
-    for (int k = block.vtx.size() - 1; k >= 0; k--)
-    {
-        const CTransaction &tx = block.vtx[k];
-        if (!UpdateRewards(tx, nFees, pindex->nHeight-1, isUndo))
-        {
-            trans.rollback();
-            return error("DisconnectBlock(): UpdateRewards step2 failed");
-        }
-    }
-    RewardManager::GetInstance()->currentHeight = pindex->nHeight-1;
     trans.commit();
 
     if (pfClean) {
