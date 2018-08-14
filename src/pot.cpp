@@ -43,7 +43,7 @@ const uint256 DiffAdjustNumeratorHalf = uint256S("0x0100000000");
 const uint256 DiffAdjustNumeratorfor55 = uint256S("0x80000000000000");
 const arith_uint256 Arith256DiffAdjustNumeratorHalf = UintToArith256(DiffAdjustNumeratorHalf);
 
-const static bool fDebugPODS = false;
+const static bool fDebugPODS = true;
 
 #if 1
 std::string getLatestBlockGenerationSignature(){
