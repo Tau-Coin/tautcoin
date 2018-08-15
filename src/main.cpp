@@ -2619,232 +2619,234 @@ bool DisconnectBlock(CBlock& block, CValidationState& state, CBlockIndex* pindex
         }
     }
 
-    //read entrust change graphic
-    TxInfo tx;
-    std::vector<TxInfo> vecTxInfo;
-    std::ifstream ifile;
-    char fileName[16];
-    snprintf(fileName, sizeof(fileName), "%03d.txt", pindex->nHeight%1000);
-    boost::filesystem::path path = GetDataDir() / "minerclub" / fileName;
-    ifile.open(path.string());
-    if(ifile.is_open()){
-        ifile >> tx.vin >> tx.vout >> tx.lastFather >> tx.flag;
-        while(ifile.good()){
-            std::cout << tx.vin << "  " << tx.vout << "  " << tx.lastFather << "  " << tx.flag << std::endl;
-            vecTxInfo.push_back(tx);
+    if (fClean)
+    {
+        //read entrust change graphic
+        TxInfo tx;
+        std::vector<TxInfo> vecTxInfo;
+        std::ifstream ifile;
+        char fileName[16];
+        snprintf(fileName, sizeof(fileName), "%03d.txt", pindex->nHeight%1000);
+        boost::filesystem::path path = GetDataDir() / "minerclub" / fileName;
+        ifile.open(path.string());
+        if(ifile.is_open()){
             ifile >> tx.vin >> tx.vout >> tx.lastFather >> tx.flag;
+            while(ifile.good()){
+                std::cout << tx.vin << "  " << tx.vout << "  " << tx.lastFather << "  " << tx.flag << std::endl;
+                vecTxInfo.push_back(tx);
+                ifile >> tx.vin >> tx.vout >> tx.lastFather >> tx.flag;
+            }
         }
-    }
-    else {
-        std::cout << "Error opening file!" << std::endl;
-    }
-    ifile.close();
-
-    // Construct db transactions, clubinfo and memeber must be updated
-    // together or not.
-    mysqlpp::Connection conn;
-    ISNDB::GetInstance()->GetConnection(conn);
-    mysqlpp::Transaction trans(conn, mysqlpp::Transaction::serializable,
-        mysqlpp::Transaction::session);
-
-    // restore rewards
-    bool isUndo = true;
-    CAmount nFees = DEFAULT_TRANSACTION_MAXFEE * block.vtx.size();
-    if (!UpdateRewards2(block, nFees, pindex->nHeight-1, isUndo))
-    {
-        trans.rollback();
-        return error("DisconnectBlock(): UpdateRewards failed");
-    }
-    for (int k = block.vtx.size() - 1; k >= 0; k--)
-    {
-        const CTransaction &tx = block.vtx[k];
-        if (!UpdateRewards(tx, nFees, pindex->nHeight-1, isUndo))
-        {
-            trans.rollback();
-            return error("DisconnectBlock(): UpdateRewards step2 failed");
+        else {
+            std::cout << "Error opening file!" << std::endl;
         }
-    }
-    RewardManager::GetInstance()->currentHeight = pindex->nHeight-1;
+        ifile.close();
 
-    // undo entrust relationship in reverse order
-    int nSize = vecTxInfo.size();
-    ISNDB* pdb = ISNDB::GetInstance();
-    std::vector<std::string> field, values;
-    for (int i = nSize - 1; i >= 0; i--) {
-        TxInfo &txInfo = vecTxInfo[i];
-        field.clear();
-        field.push_back(memFieldID);
-        field.push_back(memFieldClub);
-        field.push_back(memFieldFather);
-        field.push_back(memFieldCount);
-        mysqlpp::StoreQueryResult voutData = pdb->ISNSqlSelectAA(tableMember, field, memFieldAddress, txInfo.vout);
-        switch (txInfo.flag) {
-        case TX_NON_MINER_ENTRUST_SELF://a non miner entrust himself
+        // Construct db transactions, clubinfo and memeber must be updated
+        // together or not.
+        mysqlpp::Connection conn;
+        ISNDB::GetInstance()->GetConnection(conn);
+        mysqlpp::Transaction trans(conn, mysqlpp::Transaction::serializable,
+            mysqlpp::Transaction::session);
+
+        // restore rewards
+        bool isUndo = true;
+        CAmount nFees = DEFAULT_TRANSACTION_MAXFEE * block.vtx.size();
+        if (!UpdateRewards2(block, nFees, pindex->nHeight-1, isUndo))
         {
-            //tc--
-            field.clear();
-            field.push_back(memFieldCount);
-            pdb->ISNSqlMinusOne(tableMember, field, memFieldAddress, txInfo.vout);
-            //get last father's id and clubid
+            return error("DisconnectBlock(): UpdateRewards failed");
+        }
+        for (int k = block.vtx.size() - 1; k >= 0; k--)
+        {
+            const CTransaction &tx = block.vtx[k];
+            if (!UpdateRewards(tx, nFees, pindex->nHeight-1, isUndo))
+            {
+                trans.rollback();
+                return error("DisconnectBlock(): UpdateRewards step2 failed");
+            }
+        }
+        RewardManager::GetInstance()->currentHeight = pindex->nHeight-1;
+
+        // undo entrust relationship in reverse order
+        int nSize = vecTxInfo.size();
+        ISNDB* pdb = ISNDB::GetInstance();
+        std::vector<std::string> field, values;
+        for (int i = nSize - 1; i >= 0; i--) {
+            TxInfo &txInfo = vecTxInfo[i];
             field.clear();
             field.push_back(memFieldID);
             field.push_back(memFieldClub);
-            mysqlpp::StoreQueryResult lastFatherData = pdb->ISNSqlSelectAA(tableMember, field, memFieldAddress, txInfo.lastFather);
-            //get last father's club ttc
-            field.clear();
-            field.push_back(clubFieldCount);
-            mysqlpp::StoreQueryResult lastFatherClubData = pdb->ISNSqlSelectAA(tableClub, field, clubFieldID, lastFatherData[0]["club_id"].c_str());
-            //get vin's id
-            field.clear();
-            field.push_back(memFieldID);
-            mysqlpp::StoreQueryResult vinData = pdb->ISNSqlSelectAA(tableMember, field, memFieldAddress, txInfo.vin);
-            //update vin tree clubid,vin fatherid, calculate club ttc0
-            unsigned long ttc0 = BreadthFirstUpdate(pdb, vinData[0]["address_id"].c_str(), lastFatherData[0]["address_id"].c_str(), atoi(lastFatherData[0]["club_id"].c_str()));
-            //update last father club ttc, ttc += ttc0
-            unsigned long lastFatherTTC = atoi(lastFatherClubData[0]["ttc"].c_str()) + ttc0;
-            field.clear();
-            field.push_back(clubFieldCount);
-            values.clear();
-            values.push_back(std::to_string(lastFatherTTC));
-            pdb->ISNSqlUpdate(tableClub, field, values, clubFieldID, lastFatherData[0]["club_id"].c_str());
-            //delete vin from tableClub
-            pdb->ISNSqlDelete(tableClub, clubFieldAddress, txInfo.vin);
-            break;
-        }
-        case TX_MINER_ENTRUST_SELF://a miner entrust himself
-        {
-            field.clear();
+            field.push_back(memFieldFather);
             field.push_back(memFieldCount);
-            pdb->ISNSqlMinusOne(tableMember, field, memFieldAddress, txInfo.vout);
-            field.clear();
-            field.push_back(clubFieldCount);
-            pdb->ISNSqlMinusOne(tableClub, field, clubFieldAddress, txInfo.vout);
-            break;
-        }
-        case TX_NON_MINER_ENTRUST_MINER://a non miner entrust a miner(including itself club or another club)
-        {
-            //vout tc--
-            field.clear();
-            field.push_back(memFieldCount);
-            pdb->ISNSqlMinusOne(tableMember, field, memFieldAddress, txInfo.vout);
-            //get last father address_id, clubid
-            field.clear();
-            field.push_back(memFieldID);
-            field.push_back(memFieldClub);
-            mysqlpp::StoreQueryResult lastFatherMemberData = pdb->ISNSqlSelectAA(tableMember, field, memFieldAddress, txInfo.lastFather);
-            //get last father club ttc
-            field.clear();
-            field.push_back(clubFieldCount);
-            mysqlpp::StoreQueryResult lastFatherClubData = pdb->ISNSqlSelectAA(tableClub, field, clubFieldID, lastFatherMemberData[0]["club_id"].c_str());
-            //get vin addressid
-            field.clear();
-            field.push_back(memFieldID);
-            mysqlpp::StoreQueryResult vinData = pdb->ISNSqlSelectAA(tableMember, field, memFieldAddress, txInfo.vin);
-            //update vin tree as last father's club clubid, and get vin tree ttc0
-            unsigned long ttc0 = BreadthFirstUpdate(pdb, vinData[0]["address_id"].c_str(), lastFatherMemberData[0]["address_id"].c_str(), atoi(lastFatherMemberData[0]["club_id"].c_str()));
-            //update last father club ttc, ttc += ttc0
-            unsigned long lastFatherTTC = atoi(lastFatherClubData[0]["ttc"].c_str()) + ttc0;
-            field.clear();
-            field.push_back(clubFieldCount);
-            values.clear();
-            values.push_back(std::to_string(lastFatherTTC));
-            pdb->ISNSqlUpdate(tableClub, field, values, clubFieldID, lastFatherMemberData[0]["club_id"].c_str());
+            mysqlpp::StoreQueryResult voutData = pdb->ISNSqlSelectAA(tableMember, field, memFieldAddress, txInfo.vout);
+            switch (txInfo.flag) {
+            case TX_NON_MINER_ENTRUST_SELF://a non miner entrust himself
+            {
+                //tc--
+                field.clear();
+                field.push_back(memFieldCount);
+                pdb->ISNSqlMinusOne(tableMember, field, memFieldAddress, txInfo.vout);
+                //get last father's id and clubid
+                field.clear();
+                field.push_back(memFieldID);
+                field.push_back(memFieldClub);
+                mysqlpp::StoreQueryResult lastFatherData = pdb->ISNSqlSelectAA(tableMember, field, memFieldAddress, txInfo.lastFather);
+                //get last father's club ttc
+                field.clear();
+                field.push_back(clubFieldCount);
+                mysqlpp::StoreQueryResult lastFatherClubData = pdb->ISNSqlSelectAA(tableClub, field, clubFieldID, lastFatherData[0]["club_id"].c_str());
+                //get vin's id
+                field.clear();
+                field.push_back(memFieldID);
+                mysqlpp::StoreQueryResult vinData = pdb->ISNSqlSelectAA(tableMember, field, memFieldAddress, txInfo.vin);
+                //update vin tree clubid,vin fatherid, calculate club ttc0
+                unsigned long ttc0 = BreadthFirstUpdate(pdb, vinData[0]["address_id"].c_str(), lastFatherData[0]["address_id"].c_str(), atoi(lastFatherData[0]["club_id"].c_str()));
+                //update last father club ttc, ttc += ttc0
+                unsigned long lastFatherTTC = atoi(lastFatherClubData[0]["ttc"].c_str()) + ttc0;
+                field.clear();
+                field.push_back(clubFieldCount);
+                values.clear();
+                values.push_back(std::to_string(lastFatherTTC));
+                pdb->ISNSqlUpdate(tableClub, field, values, clubFieldID, lastFatherData[0]["club_id"].c_str());
+                //delete vin from tableClub
+                pdb->ISNSqlDelete(tableClub, clubFieldAddress, txInfo.vin);
+                break;
+            }
+            case TX_MINER_ENTRUST_SELF://a miner entrust himself
+            {
+                field.clear();
+                field.push_back(memFieldCount);
+                pdb->ISNSqlMinusOne(tableMember, field, memFieldAddress, txInfo.vout);
+                field.clear();
+                field.push_back(clubFieldCount);
+                pdb->ISNSqlMinusOne(tableClub, field, clubFieldAddress, txInfo.vout);
+                break;
+            }
+            case TX_NON_MINER_ENTRUST_MINER://a non miner entrust a miner(including itself club or another club)
+            {
+                //vout tc--
+                field.clear();
+                field.push_back(memFieldCount);
+                pdb->ISNSqlMinusOne(tableMember, field, memFieldAddress, txInfo.vout);
+                //get last father address_id, clubid
+                field.clear();
+                field.push_back(memFieldID);
+                field.push_back(memFieldClub);
+                mysqlpp::StoreQueryResult lastFatherMemberData = pdb->ISNSqlSelectAA(tableMember, field, memFieldAddress, txInfo.lastFather);
+                //get last father club ttc
+                field.clear();
+                field.push_back(clubFieldCount);
+                mysqlpp::StoreQueryResult lastFatherClubData = pdb->ISNSqlSelectAA(tableClub, field, clubFieldID, lastFatherMemberData[0]["club_id"].c_str());
+                //get vin addressid
+                field.clear();
+                field.push_back(memFieldID);
+                mysqlpp::StoreQueryResult vinData = pdb->ISNSqlSelectAA(tableMember, field, memFieldAddress, txInfo.vin);
+                //update vin tree as last father's club clubid, and get vin tree ttc0
+                unsigned long ttc0 = BreadthFirstUpdate(pdb, vinData[0]["address_id"].c_str(), lastFatherMemberData[0]["address_id"].c_str(), atoi(lastFatherMemberData[0]["club_id"].c_str()));
+                //update last father club ttc, ttc += ttc0
+                unsigned long lastFatherTTC = atoi(lastFatherClubData[0]["ttc"].c_str()) + ttc0;
+                field.clear();
+                field.push_back(clubFieldCount);
+                values.clear();
+                values.push_back(std::to_string(lastFatherTTC));
+                pdb->ISNSqlUpdate(tableClub, field, values, clubFieldID, lastFatherMemberData[0]["club_id"].c_str());
 
-            //get vout club ttc
-            field.clear();
-            field.push_back(clubFieldCount);
-            mysqlpp::StoreQueryResult voutClubData = pdb->ISNSqlSelectAA(tableClub, field, clubFieldAddress, txInfo.vout);
-            //update vout club ttc, ttc -= (ttc0 + 1)
-            unsigned long voutClubTTC = atoi(voutClubData[0]["ttc"].c_str()) - ttc0 - 1;
-            field.clear();
-            field.push_back(clubFieldCount);
-            values.clear();
-            values.push_back(std::to_string(voutClubTTC));
-            pdb->ISNSqlUpdate(tableClub, field, values, clubFieldAddress, txInfo.vout);
-            break;
+                //get vout club ttc
+                field.clear();
+                field.push_back(clubFieldCount);
+                mysqlpp::StoreQueryResult voutClubData = pdb->ISNSqlSelectAA(tableClub, field, clubFieldAddress, txInfo.vout);
+                //update vout club ttc, ttc -= (ttc0 + 1)
+                unsigned long voutClubTTC = atoi(voutClubData[0]["ttc"].c_str()) - ttc0 - 1;
+                field.clear();
+                field.push_back(clubFieldCount);
+                values.clear();
+                values.push_back(std::to_string(voutClubTTC));
+                pdb->ISNSqlUpdate(tableClub, field, values, clubFieldAddress, txInfo.vout);
+                break;
+            }
+            case TX_MINER_ENTRUST_ANOTHER://a miner entrust another
+            {
+                //vout tc--
+                field.clear();
+                field.push_back(memFieldCount);
+                pdb->ISNSqlMinusOne(tableMember, field, memFieldAddress, txInfo.vout);
+                //insert a new miner, and get its clubid
+                values.clear();
+                values.push_back(txInfo.vin);
+                values.push_back("1");
+                long clubId = pdb->ISNSqlInsert(tableClub, values);
+                //get vin address_id
+                field.clear();
+                field.push_back(memFieldID);
+                mysqlpp::StoreQueryResult vinData = pdb->ISNSqlSelectAA(tableMember, field, memFieldAddress, txInfo.vin);
+                //update vin tree as a new club clubid, and get vin tree ttc0
+                unsigned long ttc0 = BreadthFirstUpdate(pdb, vinData[0]["address_id"].c_str(), "0", clubId);
+                //update vin new club ttc, ttc = ttc0
+                field.clear();
+                field.push_back(clubFieldCount);
+                values.clear();
+                values.push_back(std::to_string(ttc0));
+                pdb->ISNSqlUpdate(tableClub, field, values, clubFieldID, std::to_string(clubId));
+                //get vout club ttc
+                field.clear();
+                field.push_back(clubFieldCount);
+                mysqlpp::StoreQueryResult voutClubData = pdb->ISNSqlSelectAA(tableClub, field, clubFieldAddress, txInfo.vout);
+                //update vout club ttc, ttc -= (ttc0 + 1)
+                field.clear();
+                field.push_back(clubFieldCount);
+                values.clear();
+                values.push_back(std::to_string(atoi(voutClubData[0]["ttc"].c_str()) - ttc0 - 1));
+                pdb->ISNSqlUpdate(tableClub, field, values, clubFieldAddress, txInfo.vout);
+                break;
+            }
+            case TX_ENTRUST_NON_MINER://entrust a non miner
+            {
+                field.clear();
+                field.push_back(memFieldCount);
+                pdb->ISNSqlMinusOne(tableMember, field, memFieldAddress, txInfo.vout);
+                field.clear();
+                field.push_back(clubFieldCount);
+                pdb->ISNSqlMinusOne(tableClub, field, clubFieldID, voutData[0]["club_id"].c_str());
+                break;
+            }
+            case TX_ENTRUST_NEW_ADDRESS://entrust a new address (invalid)
+            {
+                //do nothing
+                break;
+            }
+            case TX_TRANSFER_TO_NEW_ADDRESS://transfer to a new address, vin and vout are in the same club
+            {
+                //delete from tableMember
+                pdb->ISNSqlDelete(tableMember, memFieldAddress, txInfo.vout);
+                //ttc-- depend on clubid
+                field.clear();
+                field.push_back(clubFieldCount);
+                pdb->ISNSqlMinusOne(tableClub, field, clubFieldID, voutData[0]["club_id"].c_str());
+                break;
+            }
+            case TX_TRANSFER_TO_EXISTED_ADDRESS://transfer to an existed address
+            {
+                //tc--
+                field.clear();
+                field.push_back(memFieldCount);
+                pdb->ISNSqlMinusOne(tableMember, field, memFieldAddress, txInfo.vout);
+                //ttc--
+                field.clear();
+                field.push_back(clubFieldCount);
+                pdb->ISNSqlMinusOne(tableClub, field, clubFieldID, voutData[0]["club_id"].c_str());
+                break;
+            }
+            default:
+                std::cout << "What the fuck is it!!!" << std::endl;
+                break;
+            }
         }
-        case TX_MINER_ENTRUST_ANOTHER://a miner entrust another
-        {
-            //vout tc--
-            field.clear();
-            field.push_back(memFieldCount);
-            pdb->ISNSqlMinusOne(tableMember, field, memFieldAddress, txInfo.vout);
-            //insert a new miner, and get its clubid
-            values.clear();
-            values.push_back(txInfo.vin);
-            values.push_back("1");
-            long clubId = pdb->ISNSqlInsert(tableClub, values);
-            //get vin address_id
-            field.clear();
-            field.push_back(memFieldID);
-            mysqlpp::StoreQueryResult vinData = pdb->ISNSqlSelectAA(tableMember, field, memFieldAddress, txInfo.vin);
-            //update vin tree as a new club clubid, and get vin tree ttc0
-            unsigned long ttc0 = BreadthFirstUpdate(pdb, vinData[0]["address_id"].c_str(), "0", clubId);
-            //update vin new club ttc, ttc = ttc0
-            field.clear();
-            field.push_back(clubFieldCount);
-            values.clear();
-            values.push_back(std::to_string(ttc0));
-            pdb->ISNSqlUpdate(tableClub, field, values, clubFieldID, std::to_string(clubId));
-            //get vout club ttc
-            field.clear();
-            field.push_back(clubFieldCount);
-            mysqlpp::StoreQueryResult voutClubData = pdb->ISNSqlSelectAA(tableClub, field, clubFieldAddress, txInfo.vout);
-            //update vout club ttc, ttc -= (ttc0 + 1)
-            field.clear();
-            field.push_back(clubFieldCount);
-            values.clear();
-            values.push_back(std::to_string(atoi(voutClubData[0]["ttc"].c_str()) - ttc0 - 1));
-            pdb->ISNSqlUpdate(tableClub, field, values, clubFieldAddress, txInfo.vout);
-            break;
-        }
-        case TX_ENTRUST_NON_MINER://entrust a non miner
-        {
-            field.clear();
-            field.push_back(memFieldCount);
-            pdb->ISNSqlMinusOne(tableMember, field, memFieldAddress, txInfo.vout);
-            field.clear();
-            field.push_back(clubFieldCount);
-            pdb->ISNSqlMinusOne(tableClub, field, clubFieldID, voutData[0]["club_id"].c_str());
-            break;
-        }
-        case TX_ENTRUST_NEW_ADDRESS://entrust a new address (invalid)
-        {
-            //do nothing
-            break;
-        }
-        case TX_TRANSFER_TO_NEW_ADDRESS://transfer to a new address, vin and vout are in the same club
-        {
-            //delete from tableMember
-            pdb->ISNSqlDelete(tableMember, memFieldAddress, txInfo.vout);
-            //ttc-- depend on clubid
-            field.clear();
-            field.push_back(clubFieldCount);
-            pdb->ISNSqlMinusOne(tableClub, field, clubFieldID, voutData[0]["club_id"].c_str());
-            break;
-        }
-        case TX_TRANSFER_TO_EXISTED_ADDRESS://transfer to an existed address
-        {
-            //tc--
-            field.clear();
-            field.push_back(memFieldCount);
-            pdb->ISNSqlMinusOne(tableMember, field, memFieldAddress, txInfo.vout);
-            //ttc--
-            field.clear();
-            field.push_back(clubFieldCount);
-            pdb->ISNSqlMinusOne(tableClub, field, clubFieldID, voutData[0]["club_id"].c_str());
-            break;
-        }
-        default:
-            std::cout << "What the fuck is it!!!" << std::endl;
-            break;
-        };
+
+        // move best block pointer to prevout block
+        view.SetBestBlock(pindex->pprev->GetBlockHash());
+
+        trans.commit();
     }
-
-    // move best block pointer to prevout block
-    view.SetBestBlock(pindex->pprev->GetBlockHash());
-
-    trans.commit();
 
     if (pfClean) {
         *pfClean = fClean;
@@ -5308,8 +5310,8 @@ bool CVerifyDB::VerifyDB(const CChainParams& chainparams, CCoinsView *coinsview,
     if (pindexFailure)
         return error("VerifyDB(): *** coin database inconsistencies found (last %i blocks, %i good transactions before that)\n", chainActive.Height() - pindexFailure->nHeight + 1, nGoodTransactions);
 
-    // check level 4: try reconnecting blocks
-    if (nCheckLevel >= 4) {
+    // check level 3: try reconnecting blocks
+    if (nCheckLevel >= 3) {
         CBlockIndex *pindex = pindexState;
         while (pindex != chainActive.Tip()) {
             boost::this_thread::interruption_point();

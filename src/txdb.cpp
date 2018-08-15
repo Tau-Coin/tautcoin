@@ -723,7 +723,7 @@ bool CRewardRateViewDB::WriteDB(int nHeight, std::string address, double value)
 
     std::stringstream ssHeight;
     std::string strHeight;
-    ssHeight << nHeight;
+    ssHeight << nHeight - 1;
     ssHeight >> strHeight;
 
     leveldb::Status status = pdb->Put(leveldb::WriteOptions(), strHeight, address+"_"+strValue);
