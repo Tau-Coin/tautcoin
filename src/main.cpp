@@ -2185,6 +2185,21 @@ bool UpdateRewards2(const CBlock& block, CAmount blockReward, int nHeight, bool 
     return true;
 }
 
+bool UpdateFatherAndTC(const CBlock& block, const CCoinsViewCache& view, int nHeight, bool isUndo)
+{
+    prbalancedbview->ClearCache();
+
+    for (unsigned int i = 0; i < block.vtx.size(); i++)
+    {
+        if (!prbalancedbview->UpdateFatherTCByTX(block.vtx[i], view, nHeight, isUndo))
+            return false;
+    }
+
+    prbalancedbview->ClearCache();
+
+    return true;
+}
+
 bool CScriptCheck::operator()() {
     const CScript &scriptSig = ptxTo->vin[nIn].scriptSig;
     const CScriptWitness *witness = (nIn < ptxTo->wit.vtxinwit.size()) ? &ptxTo->wit.vtxinwit[nIn].scriptWitness : NULL;

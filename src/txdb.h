@@ -154,7 +154,11 @@ private:
 
     bool RewardChangeUpdate(CAmount rewardChange, std::string address, int nHeight, bool isUndo);
 
+    bool TcAddOneByAddress(std::string address, int nHeight, std::string father, bool isUndo);
+
     bool WriteDB(std::string key, int nHeight, std::string father, uint64_t tc, CAmount value);
+
+    bool WriteDB(std::string key, int nHeight, std::string strValue);
 
     bool ReadDB(std::string key, int nHeight, std::string father, uint64_t tc, CAmount& value);
 
@@ -170,11 +174,14 @@ public:
     //! Clear the rwdbalance cache
     void ClearCache();
 
+    //! Commit the database transaction
+    bool Commit(int nHeight);
+
     //! Parse the record
     bool ParseRecord(std::string inputStr, std::string& father, uint64_t& tc, CAmount& value);
 
     //! Generate a record
-    void GenerateRecord(std::string father, uint64_t tc, CAmount value, std::string& outputStr);
+    std::string GenerateRecord(std::string father, uint64_t tc, CAmount value);
 
     //! Retrieve the CBalance for a given address
     CAmount GetRwdBalance(std::string address, int nHeight);
@@ -186,10 +193,13 @@ public:
     uint64_t GetTXCnt(std::string address, int nHeight);
 
     //! Retrieve a full record for a given address
-    bool GetFullRecord(std::string address, int nHeight, std::string& father, uint64_t& tc, CAmount& value);
+    void GetFullRecord(std::string address, int nHeight, std::string& father, uint64_t& tc, CAmount& value);
 
     //! Update the Balance dataset
     bool UpdateRewardsByTX(const CTransaction& tx, CAmount blockReward, int nHeight, bool isUndo);
+
+    //! Update the TX count and the father
+    bool UpdateFatherTCByTX(const CTransaction& tx, const CCoinsViewCache &view, int nHeight, bool isUndo);
 };
 
 /** View on the open reward rate dataset. */
