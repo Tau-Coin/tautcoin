@@ -2638,13 +2638,12 @@ bool DisconnectBlock(CBlock& block, CValidationState& state, CBlockIndex* pindex
         if(ifile.is_open()){
             ifile >> tx.vin >> tx.vout >> tx.lastFather >> tx.flag;
             while(ifile.good()){
-                std::cout << tx.vin << "  " << tx.vout << "  " << tx.lastFather << "  " << tx.flag << std::endl;
                 vecTxInfo.push_back(tx);
                 ifile >> tx.vin >> tx.vout >> tx.lastFather >> tx.flag;
             }
         }
         else {
-            std::cout << "Error opening file!" << std::endl;
+            error("DisconnectBlock(): open file failed");
         }
         ifile.close();
 
@@ -2843,7 +2842,7 @@ bool DisconnectBlock(CBlock& block, CValidationState& state, CBlockIndex* pindex
                 break;
             }
             default:
-                std::cout << "What the fuck is it!!!" << std::endl;
+                LogPrint("undo_relationship", "unknown type\n");
                 break;
             }
         }
