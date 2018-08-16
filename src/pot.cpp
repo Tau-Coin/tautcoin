@@ -199,8 +199,8 @@ bool CheckProofOfTransaction(const std::string& prevGenerationSignature, const s
     }
 
     if (fDebugPODS) {
-        LogPrintf("POT, signature:%s, pubkey:%s\n", prevGenerationSignature, currPubKey);
-        LogPrintf("POT, height:%d, time:%d, baseTarget:%d\n", nHeight, nTime, baseTarget);
+        LogPrint("pot", "signature:%s, pubkey:%s\n", prevGenerationSignature, currPubKey);
+        LogPrint("pot", "height:%d, time:%d, baseTarget:%d\n", nHeight, nTime, baseTarget);
     }
 
     // Note: in block header public key is compressed, but get hit value with uncompressed
@@ -220,9 +220,9 @@ bool CheckProofOfTransaction(const std::string& prevGenerationSignature, const s
     thresold *= arith_uint256((uint64_t)nTime);
     thresold *= arith_uint256((uint64_t)harverstPower);
 
-    LogPrintf("POT, harvest Power:%d\n", harverstPower);
-    LogPrintf("POT, hit     :%s\n", arith_uint256(hit).ToString());
-    LogPrintf("POT, thresold:%s\n", thresold.ToString());
+    LogPrint("pot", "harvest Power:%d\n", harverstPower);
+    LogPrint("pot", "hit     :%s\n", arith_uint256(hit).ToString());
+    LogPrint("pot", "thresold:%s\n", thresold.ToString());
     if (thresold.CompareTo(arith_uint256(hit)) > 0) {
         return true;
     }
