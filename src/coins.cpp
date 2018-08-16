@@ -254,7 +254,7 @@ const CTxOut &CCoinsViewCache::GetOutputFor(const CTxIn& input) const
             }
         }
     }
-    //assert(coins && coins->IsAvailable(input.prevout.n));
+    assert(coins && coins->IsAvailable(input.prevout.n));
     return coins->vout[input.prevout.n];
 }
 

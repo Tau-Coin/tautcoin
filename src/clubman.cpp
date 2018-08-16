@@ -27,8 +27,6 @@ ClubManager* ClubManager::GetInstance()
 
 uint64_t ClubManager::GetHarvestPowerByAddress(std::string& address, int nHeight)
 {
-    nHeight = Params().GetConsensus().PodsAheadTargetHeight(nHeight);
-
     std::vector<string> fields;
 	fields.push_back(clubFieldCount);
 	mysqlpp::StoreQueryResult bLocal = backendDb->ISNSqlSelectAA(tableClub, fields, clubFieldAddress, address);
@@ -77,7 +75,6 @@ bool ClubManager::IsForgeScript(const CScript& script, CBitcoinAddress& addr, ui
         LOCK(cs_main);
         nHeight = chainActive.Height();
     }
-    nHeight = Params().GetConsensus().PodsAheadTargetHeight(nHeight);
 
     std::string strAddr;
     if (!addr.ScriptPub2Addr(script, strAddr)) {

@@ -49,7 +49,6 @@ struct Params {
     std::string genesislockCoinAddr[GENESISLOCK_ADDRCNT];
     std::string genesisAddr[GENESISCOIN_CNT];
     int genesislockCoinHeight;
-    int nSubsidyHalvingInterval;
     /** Used to check majorities for block version upgrade */
     int nMajorityEnforceBlockUpgrade;
     int nMajorityRejectBlockOutdated;
@@ -66,24 +65,8 @@ struct Params {
     uint32_t nMinerConfirmationWindow;
     BIP9Deployment vDeployments[MAX_VERSION_BITS_DEPLOYMENTS];
 
-    /** Proof of dry stake parameters */
-    int64_t nPodsTargetSpacing;
-    uint32_t nPodsAheadTargetDistance;
-
-    /** Proof of work parameters */
-    uint256 powLimit;
-    bool fPowAllowMinDifficultyBlocks;
-    bool fPowNoRetargeting;
-    int64_t nPowTargetSpacing;
-    int64_t nPowTargetTimespan;
-    int64_t DifficultyAdjustmentInterval() const { return nPowTargetTimespan / nPowTargetSpacing; }
-
-    int PodsAheadTargetHeight(int nHeight) const {
-        int ret = nHeight - nPodsAheadTargetDistance;
-
-        if (ret < 0 ) ret = 0;
-        return ret;
-    }
+    /** Proof of transaction parameters */
+    int64_t nPotTargetSpacing;
 };
 } // namespace Consensus
 
