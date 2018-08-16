@@ -223,7 +223,7 @@ testAddr[GENESISCOIN_CNT] = {"03ee5724d56eba1451d9b380d8b2bc1f45cc97119e24f0319f
                             };
 
 static CBlock CreateGenesisBlock(const CScript& genesisInputScript, const std::vector<CScript>& genesisOutputScript,
-                                 uint32_t nTime, uint32_t nNonce, uint32_t nBits, int32_t nVersion,
+                                 uint32_t nTime, int32_t nVersion,
                                  const std::vector<CAmount>& genesisReward)
 {
     CMutableTransaction txNew;
@@ -242,8 +242,6 @@ static CBlock CreateGenesisBlock(const CScript& genesisInputScript, const std::v
 
     CBlock genesis;
     genesis.nTime    = nTime;
-    genesis.nBits    = nBits;
-    genesis.nNonce   = nNonce;
     genesis.nVersion = nVersion;
     genesis.vtx.push_back(txNew);
     genesis.hashPrevBlock.SetNull();
@@ -264,7 +262,7 @@ static CBlock CreateGenesisBlock(const CScript& genesisInputScript, const std::v
  * transaction cannot be spent since it did not originally exist in the
  * database.
  */
-static CBlock CreateGenesisBlock(uint32_t nTime, uint32_t nNonce, uint32_t nBits, int32_t nVersion,
+static CBlock CreateGenesisBlock(uint32_t nTime, int32_t nVersion,
                                  const std::vector<CAmount>& genesisReward)
 {
     const char* pszTimestamp = "... choose what comes next.  Lives of your own, or a return to chains. -- V";
@@ -278,14 +276,14 @@ static CBlock CreateGenesisBlock(uint32_t nTime, uint32_t nNonce, uint32_t nBits
 
     }
 
-    return CreateGenesisBlock(genesisInputScript, genesisOutputScripts, nTime, nNonce, nBits, nVersion, genesisReward);
+    return CreateGenesisBlock(genesisInputScript, genesisOutputScripts, nTime, nVersion, genesisReward);
 }
 
 /**
  * Build genesis block for testnet.  In TAUcoin, it has a changed timestamp
  * and output script (it uses Bitcoin's).
  */
-static CBlock CreateTestnetGenesisBlock(uint32_t nTime, uint32_t nNonce, uint32_t nBits, int32_t nVersion,
+static CBlock CreateTestnetGenesisBlock(uint32_t nTime,int32_t nVersion,
                                         const std::vector<CAmount>& genesisReward)
 {
     const char* pszTimestamp = "The Times 14/June/2009 2018 FIFA World Cup Russia Starts.";
@@ -299,7 +297,7 @@ static CBlock CreateTestnetGenesisBlock(uint32_t nTime, uint32_t nNonce, uint32_
 
     }
 
-    return CreateGenesisBlock(genesisInputScript, genesisOutputScripts, nTime, nNonce, nBits, nVersion, genesisReward);
+    return CreateGenesisBlock(genesisInputScript, genesisOutputScripts, nTime,nVersion, genesisReward);
 }
 
 /**
@@ -368,13 +366,13 @@ public:
         }
         consensus.genesislockCoinHeight = GENESISLOCK_MATURITY;
 
-        genesis = CreateGenesisBlock(1529042124, 225044, 0x1f00ffff, 1, genesisReward);
+        genesis = CreateGenesisBlock(1529042124, 225044,genesisReward);
         consensus.hashGenesisBlock = genesis.GetHash();
         consensus.hashGenesisTx = genesis.hashMerkleRoot;
         consensus.genesisCumulativeDifficulty = genesis.cumulativeDifficulty;
         consensus.genesisBaseTarget = genesis.baseTarget;
         consensus.genesisharvestPower = genesis.harvestPower;
-        assert(consensus.hashGenesisBlock == uint256S("0000033f7b82eb64ccb231fce50fe214476a41cf8e7c38b17e1366531afafe78"));
+        assert(consensus.hashGenesisBlock == uint256S("d70fd9d81b708fe4e592755cfb9abcecec23d6d64eed06b9c9446a849b5bce94"));
         assert(genesis.hashMerkleRoot == uint256S("a9da8df30aa8c4d26d9ca33568a5235b193d65446297cdded39058cbee51d36b"));
 
         vSeeds.push_back(CDNSSeedData("taucoin.io", "dnsseed1.taucoin.io", true));
@@ -397,10 +395,9 @@ public:
 
         checkpointData = (CCheckpointData) {
                 boost::assign::map_list_of
-                ( 0, uint256S("0000033f7b82eb64ccb231fce50fe214476a41cf8e7c38b17e1366531afafe78")),
+                ( 0, uint256S("d70fd9d81b708fe4e592755cfb9abcecec23d6d64eed06b9c9446a849b5bce94")),
                 1529042124, // * UNIX timestamp of last checkpoint block
                 1441814,   // * total number of transactions between genesis and last checkpoint
-                //   (the tx=... number in the SetBestChain debug.log lines)
                 60000.0     // * estimated number of transactions per day after checkpoint
     };
     }
@@ -461,7 +458,7 @@ public:
         }
         consensus.genesislockCoinHeight = GENESISLOCK_MATURITY;
 
-        genesis = CreateTestnetGenesisBlock(1529042124, 34932, 0x1f00ffff, 1, genesisReward);
+        genesis = CreateTestnetGenesisBlock(1529042124, 34932,genesisReward);
         consensus.hashGenesisBlock = genesis.GetHash();
         consensus.hashGenesisTx = genesis.hashMerkleRoot;
 
@@ -551,7 +548,7 @@ public:
         }
         consensus.genesislockCoinHeight = GENESISLOCK_MATURITY;
 
-        genesis = CreateTestnetGenesisBlock(1296688602, 2, 0x207fffff, 1, genesisReward);
+        genesis = CreateTestnetGenesisBlock(1296688602, 2,genesisReward);
         consensus.hashGenesisBlock = genesis.GetHash();
         consensus.genesisCumulativeDifficulty = genesis.cumulativeDifficulty;
         consensus.genesisBaseTarget = genesis.baseTarget;

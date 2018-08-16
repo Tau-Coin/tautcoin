@@ -22,7 +22,6 @@
 #include "net.h"
 #include "policy/fees.h"
 #include "policy/policy.h"
-#include "pow.h"
 #include "primitives/block.h"
 #include "primitives/transaction.h"
 #include "random.h"
@@ -5492,6 +5491,17 @@ bool InitBlockIndex(const CChainParams& chainparams)
     if (!fReindex) {
         try {
             CBlock &block = const_cast<CBlock&>(chainparams.GenesisBlock());
+ /*           {
+                  uint256 hashGenesisBlock;
+                  //LogPrintf("ProofOfWorkLimit %s\n", Params().ProofOfWorkLimit().ToString());
+                  block.nTime = 1529042124;
+                  LogPrintf("block.nTime %d\n", block.nTime);
+                  hashGenesisBlock = block.GetHash();
+                  LogPrintf("hashGenesisBlock******** %s\n", hashGenesisBlock.ToString());
+                  LogPrintf("hashMerkleRoot******** %s\n", block.hashMerkleRoot.ToString());
+                  return false;
+              }
+ */
             // Start new block file
             unsigned int nBlockSize = ::GetSerializeSize(block, SER_DISK, CLIENT_VERSION);
             CDiskBlockPos blockPos;

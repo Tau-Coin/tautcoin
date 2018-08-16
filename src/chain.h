@@ -8,10 +8,9 @@
 
 #include "arith_uint256.h"
 #include "primitives/block.h"
-#include "pow.h"
 #include "tinyformat.h"
 #include "uint256.h"
-
+#include "pot.h"
 #include <vector>
 
 class CBlockFileInfo
@@ -196,10 +195,8 @@ public:
     int nVersion;
     uint256 hashMerkleRoot;
     unsigned int nTime;
-    unsigned int nBits;
-    unsigned int nNonce;
 
-    // add some data structure associated pos
+    // add some data structure associated pot
     uint64_t baseTarget;
     uint64_t harvestPower;
     std::string generationSignature;
@@ -227,8 +224,6 @@ public:
         nVersion       = 0;
         hashMerkleRoot = uint256();
         nTime          = 0;
-        nBits          = 0;
-        nNonce         = 0;
 
         baseTarget     = 0;
         harvestPower   = 0;
@@ -247,8 +242,6 @@ public:
         nVersion       = block.nVersion;
         hashMerkleRoot = block.hashMerkleRoot;
         nTime          = block.nTime;
-        nBits          = block.nBits;
-        nNonce         = block.nNonce;
         //here maybe some conflict when verify a accepted block,but it in header not in cblock
         baseTarget     = block.baseTarget;
         harvestPower   = block.harvestPower;
@@ -283,8 +276,6 @@ public:
             block.hashPrevBlock = pprev->GetBlockHash();
         block.hashMerkleRoot = hashMerkleRoot;
         block.nTime          = nTime;
-        block.nBits          = nBits;
-        block.nNonce         = nNonce;
         block.baseTarget           = baseTarget;
         block.harvestPower         = harvestPower;
         block.generationSignature  = generationSignature;
@@ -409,8 +400,6 @@ public:
         READWRITE(hashPrev);
         READWRITE(hashMerkleRoot);
         READWRITE(nTime);
-        READWRITE(nBits);
-        READWRITE(nNonce);
 
         READWRITE(baseTarget);
         READWRITE(harvestPower);
@@ -426,8 +415,6 @@ public:
         block.hashPrevBlock   = hashPrev;
         block.hashMerkleRoot  = hashMerkleRoot;
         block.nTime           = nTime;
-        block.nBits           = nBits;
-        block.nNonce          = nNonce;
 
         block.baseTarget           = baseTarget;
         block.harvestPower         = harvestPower;

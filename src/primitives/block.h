@@ -25,8 +25,7 @@ public:
     uint256 hashPrevBlock;
     uint256 hashMerkleRoot;
     uint32_t nTime;
-    uint32_t nBits;
-    uint32_t nNonce;
+
     
     // add some data structure associated pot, wheather this safety?
     uint64_t baseTarget;
@@ -48,8 +47,6 @@ public:
         READWRITE(hashPrevBlock);
         READWRITE(hashMerkleRoot);
         READWRITE(nTime);
-        READWRITE(nBits);
-        READWRITE(nNonce);
         //serialization pot data
         READWRITE(baseTarget);
         READWRITE(harvestPower);
@@ -64,13 +61,12 @@ public:
         hashPrevBlock.SetNull();
         hashMerkleRoot.SetNull();
         nTime = 0;
-        nBits = 0;
-        nNonce = 0;
+        baseTarget = 0;
     }
 
     bool IsNull() const
     {
-        return (nBits == 0);
+        return (baseTarget == 0);
     }
 
     uint256 GetHash() const;
@@ -124,8 +120,6 @@ public:
         block.hashPrevBlock  = hashPrevBlock;
         block.hashMerkleRoot = hashMerkleRoot;
         block.nTime          = nTime;
-        block.nBits          = nBits;
-        block.nNonce         = nNonce;
         block.baseTarget     = baseTarget;
         block.harvestPower   = harvestPower;
         block.generationSignature  = generationSignature;

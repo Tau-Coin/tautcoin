@@ -114,7 +114,6 @@ BITCOIN_CORE_H = \
   policy/fees.h \
   policy/policy.h \
   policy/rbf.h \
-  pow.h \
   protocol.h \
   random.h \
   reverselock.h \
@@ -185,7 +184,6 @@ libbitcoin_server_a_SOURCES = \
   noui.cpp \
   policy/fees.cpp \
   policy/policy.cpp \
-  pow.cpp \
   pot.cpp \
   rest.cpp \
   rpc/blockchain.cpp \
