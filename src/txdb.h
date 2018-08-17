@@ -154,6 +154,8 @@ private:
 
     bool RewardChangeUpdate(CAmount rewardChange, std::string address, int nHeight, bool isUndo);
 
+    bool EntrustByAddress(std::string inputAddr, std::string voutAddress, int nHeight, bool isUndo);
+
     bool TcAddOneByAddress(std::string address, int nHeight, std::string father, bool isUndo);
 
     bool WriteDB(std::string key, int nHeight, std::string father, uint64_t tc, CAmount value);
@@ -177,13 +179,16 @@ public:
     //! Commit the database transaction
     bool Commit(int nHeight);
 
+    //! Init the packer, father and tc of the address from genesis block
+    bool InitGenesisDB(std::vector<std::string> addresses);
+
     //! Parse the record
     bool ParseRecord(std::string inputStr, std::string& father, uint64_t& tc, CAmount& value);
 
     //! Generate a record
     std::string GenerateRecord(std::string father, uint64_t tc, CAmount value);
 
-    //! Retrieve the CBalance for a given address
+    //! Retrieve the reward balance for a given address
     CAmount GetRwdBalance(std::string address, int nHeight);
 
     //! Retrieve the father for a given address

@@ -488,7 +488,7 @@ bool CRwdBalanceViewDB::WriteDB(std::string key, int nHeight, string strValue)
     return true;
 }
 
-bool CRwdBalanceViewDB::WriteDB(std::string key, int nHeight, std::string father, uint64_t tc, CAmount value)
+bool CRwdBalanceViewDB::WriteDB(std::string key, int nHeight, string father, uint64_t tc, CAmount value)
 {
     return WriteDB(key, nHeight, GenerateRecord(father, tc, value));
 }
@@ -564,6 +564,19 @@ bool CRwdBalanceViewDB::Commit(int nHeight)
     return true;
 }
 
+bool CRwdBalanceViewDB::InitGenesisDB(std::vector<std::string> addresses)
+{
+    for(uint i = 0; i < addresses.size(); i++)
+    {
+        CAmount rewardbalance = 0;
+        string ft = "0";
+        uint64_t tc = 1;
+        if (!WriteDB(addresses[i], 0, ft, tc, rewardbalance))
+            return false;
+    }
+    return true;
+}
+
 bool CRwdBalanceViewDB::ParseRecord(string inputStr, string& father, uint64_t& tc, CAmount& value)
 {
     vector<string> splitedStr;
@@ -595,7 +608,7 @@ string CRwdBalanceViewDB::GenerateRecord(string father, uint64_t tc, CAmount val
 
 CAmount CRwdBalanceViewDB::GetRwdBalance(std::string address, int nHeight)
 {
-    string ft;
+    string ft = " ";
     uint64_t tc;
     CAmount value = 0;
     GetFullRecord(address, nHeight, ft, tc, value);
@@ -604,7 +617,7 @@ CAmount CRwdBalanceViewDB::GetRwdBalance(std::string address, int nHeight)
 
 string CRwdBalanceViewDB::GetFather(string address, int nHeight)
 {
-    string ft = "";
+    string ft = " ";
     uint64_t tc;
     CAmount value;
     GetFullRecord(address, nHeight, ft, tc, value);
@@ -620,7 +633,7 @@ uint64_t CRwdBalanceViewDB::GetTXCnt(string address, int nHeight)
     return tc;
 }
 
-void CRwdBalanceViewDB::GetFullRecord(string address, int nHeight, std::string& father, uint64_t& tc, CAmount& value)
+void CRwdBalanceViewDB::GetFullRecord(string address, int nHeight, string& father, uint64_t& tc, CAmount& value)
 {
     if (cacheRecord.find(address) != cacheRecord.end())
     {
@@ -663,8 +676,8 @@ bool CRwdBalanceViewDB::RewardChangeUpdate(CAmount rewardChange, string address,
     else
         cacheRecord[address] = newRecord;
 
-    if (!WriteDB(address, nHeight, ft, tc, newValue))
-        return false;
+    //if (!WriteDB(address, nHeight, ft, tc, newValue))
+    //    return false;
     //LogPrintf("%s, member:%s, rw:%d\n", __func__, member, rewardbalance_old);
 
     return true;
@@ -727,6 +740,49 @@ bool CRwdBalanceViewDB::UpdateRewardsByTX(const CTransaction& tx, CAmount blockR
     return ret;
 }
 
+bool CRwdBalanceViewDB::EntrustByAddress(string inputAddr, string voutAddress, int nHeight, bool isUndo)
+{
+    if (isUndo)
+    {
+        if (GetFather(voutAddress, nHeight-1).compare("0") == 0)
+        {
+            if (!DeleteDB(inputAddr, nHeight+1))
+                return false;
+            //UpdateMemberDB(voutAddress, isAdd, inputAddr, isUndo);
+            //UpdateMemberDB(inputAddr, isDel, voutAddress, isUndo);
+        }
+        if (!DeleteDB(voutAddress, nHeight+1))
+            return false;
+        return true;
+    }
+
+    if (GetFather(voutAddress, nHeight-1).compare("0") == 0)
+    {
+        // Input address update
+        CAmount rwdbalanceInput = 0;
+        string ftInput = " ";
+        uint64_t tcInput = 1;
+        GetFullRecord(inputAddr, nHeight-1, ftInput, tcInput, rwdbalanceInput);
+        ftInput = voutAddress;
+        string newRecordInput = GenerateRecord(ftInput, tcInput, rwdbalanceInput);
+        cacheRecord[inputAddr] = newRecordInput;
+
+        //UpdateMemberDB(voutAddress, isAdd, inputAddr, isUndo);
+        //UpdateMemberDB(inputAddr, isDel, voutAddress, isUndo);
+    }
+
+    // Address of vout update
+    CAmount rwdbalanceVout = 0;
+    string ftVout = " ";
+    uint64_t tcVout = 1;
+    GetFullRecord(voutAddress, nHeight-1, ftVout, tcVout, rwdbalanceVout);
+    tcVout++;
+    string newRecordVout = GenerateRecord(ftVout, tcVout, rwdbalanceVout);
+    cacheRecord[voutAddress] = newRecordVout;
+
+    return true;
+}
+
 bool CRwdBalanceViewDB::TcAddOneByAddress(string address, int nHeight, string father, bool isUndo)
 {
     if (isUndo)
@@ -750,8 +806,8 @@ bool CRwdBalanceViewDB::TcAddOneByAddress(string address, int nHeight, string fa
     else
         cacheRecord[address] = newRecord;
 
-    if (!WriteDB(address, nHeight, ft, tc, rewardbalance))
-        return false;
+    //if (!WriteDB(address, nHeight, ft, tc, rewardbalance))
+    //    return false;
     //LogPrintf("%s, member:%s, rw:%d\n", __func__, member, rewardbalance_old);
 
     return true;
@@ -795,15 +851,23 @@ bool CRwdBalanceViewDB::UpdateFatherTCByTX(const CTransaction& tx, const CCoinsV
             }
         }
 
-        // update father and tc
+        // update packer, father and tc
         for(unsigned int i = 0; i < tx.vout.size(); i++)
         {
             CTxDestination dst;
             ExtractDestinationFromP2PKAndP2PKH(tx.vout[i].scriptPubKey, dst);
             string voutAddress = CBitcoinAddress(dst).ToString();
 
-            if (!TcAddOneByAddress(voutAddress, nHeight, bestFather, isUndo))
-                return false;
+            if (tx.vout[i].nValue == 0)
+            {
+                if (!EntrustByAddress(bestFather, voutAddress, nHeight, isUndo))
+                    return false;
+            }
+            else
+            {
+                if (!TcAddOneByAddress(voutAddress, nHeight, bestFather, isUndo))
+                    return false;
+            }
 
         }
     }

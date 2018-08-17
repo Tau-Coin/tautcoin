@@ -2171,6 +2171,7 @@ bool UpdateRewards2(const CBlock& block, CAmount blockReward, int nHeight, bool 
     if (!prbalancedbview->UpdateRewardsByTX(coinbase, blockReward, nHeight, isUndo))
         return false;
 
+    prbalancedbview->Commit(nHeight);
     prbalancedbview->ClearCache();
 
     return true;
@@ -2996,12 +2997,14 @@ bool ConnectBlock(const CBlock& block, CValidationState& state, CBlockIndex* pin
             view.SetBestBlock(pindex->GetBlockHash());
 
             long clubId;
+            std::vector<std::string> addresses;
             for(uint i = 0; i < GENESISCOIN_CNT; i++)
             {
                 CTxDestination address;
                 std::vector<std::string> values;
                 const CScript genesisOutputScript = CScript() << ParseHex(chainparams.GetConsensus().genesisAddr[i]) << OP_CHECKSIG;
                 ExtractDestination(genesisOutputScript, address);
+                addresses.push_back(CBitcoinAddress(address).ToString());
                 values.push_back(CBitcoinAddress(address).ToString());
                 values.push_back("1");
                 clubId = pdb->ISNSqlInsert(tableClub, values);
@@ -3014,6 +3017,9 @@ bool ConnectBlock(const CBlock& block, CValidationState& state, CBlockIndex* pin
                 values.push_back("0");
                 pdb->ISNSqlInsert(tableMember, values);
             }
+
+            if (!prbalancedbview->InitGenesisDB(addresses))
+                return error("%s: prbalancedbview::InitGenesisDB error", __func__);
         }
 
         UpdateCoins(block.vtx[0], view, 0);
