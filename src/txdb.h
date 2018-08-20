@@ -179,7 +179,7 @@ public:
     //! Commit the database transaction
     bool Commit(int nHeight);
 
-    //! Init the packer, father and tc of the address from genesis block
+    //! Init the father and tc of the address from genesis block
     bool InitGenesisDB(std::vector<std::string> addresses);
 
     //! Parse the record

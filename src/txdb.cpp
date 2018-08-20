@@ -671,10 +671,7 @@ bool CRwdBalanceViewDB::RewardChangeUpdate(CAmount rewardChange, string address,
     //std::cout<<" = "<<newValue<<std::endl;
 
     string newRecord = GenerateRecord(ft, tc, newValue);
-    if (cacheRecord.find(address) == cacheRecord.end())
-        cacheRecord.insert(pair<string, string>(address, newRecord));
-    else
-        cacheRecord[address] = newRecord;
+    cacheRecord[address] = newRecord;
 
     //if (!WriteDB(address, nHeight, ft, tc, newValue))
     //    return false;
@@ -801,10 +798,7 @@ bool CRwdBalanceViewDB::TcAddOneByAddress(string address, int nHeight, string fa
     tc++;
 
     string newRecord = GenerateRecord(ft, tc, rewardbalance);
-    if (cacheRecord.find(address) == cacheRecord.end())
-        cacheRecord.insert(pair<string, string>(address, newRecord));
-    else
-        cacheRecord[address] = newRecord;
+    cacheRecord[address] = newRecord;
 
     //if (!WriteDB(address, nHeight, ft, tc, rewardbalance))
     //    return false;
