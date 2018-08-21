@@ -942,7 +942,7 @@ static bool parseStringIntoReceivers(const string &rawStr, map<string, CAmount>&
             return false;
 
         string address = fields[0];
-        double amount;
+        double amount = 0;
         stringstream stream(fields[1]);
         stream>>amount;
 
@@ -950,8 +950,14 @@ static bool parseStringIntoReceivers(const string &rawStr, map<string, CAmount>&
 
         map<string, CAmount>::iterator itmap = receivers.find(address);
         if (itmap != receivers.end())
-            amount += itmap->second;
-        receivers.insert(map<string, CAmount>::value_type(address, CAmount(amount * COIN)));
+        {
+            itmap->second += CAmount(amount * COIN);
+            LogPrintf("%s: %d\n", fields[0], itmap->second);
+        }
+        else
+        {
+            receivers.insert(map<string, CAmount>::value_type(address, CAmount(amount * COIN)));
+        }
     }
 
     return true;
