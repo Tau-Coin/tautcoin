@@ -162,7 +162,8 @@ private:
 
     bool WriteDB(std::string key, int nHeight, std::string strValue);
 
-    bool ReadDB(std::string key, int nHeight, std::string father, uint64_t tc, CAmount& value);
+    bool ReadDB(std::string key, int nHeight, std::string& father, uint64_t& tc, CAmount& value);
+    bool ReadDB(std::string key, int nHeight, std::string& strValue);
 
     bool DeleteDB(std::string key, int nHeight);
 
@@ -199,6 +200,7 @@ public:
 
     //! Retrieve a full record for a given address
     void GetFullRecord(std::string address, int nHeight, std::string& father, uint64_t& tc, CAmount& value);
+    std::string GetFullRecord(std::string address, int nHeight);
 
     //! Update the Balance dataset
     bool UpdateRewardsByTX(const CTransaction& tx, CAmount blockReward, int nHeight, bool isUndo);

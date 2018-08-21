@@ -493,7 +493,7 @@ bool CRwdBalanceViewDB::WriteDB(std::string key, int nHeight, string father, uin
     return WriteDB(key, nHeight, GenerateRecord(father, tc, value));
 }
 
-bool CRwdBalanceViewDB::ReadDB(std::string key, int nHeight, string father, uint64_t tc, CAmount& value)
+bool CRwdBalanceViewDB::ReadDB(std::string key, int nHeight, string& father, uint64_t& tc, CAmount& value)
 {
     std::stringstream ssHeight;
     std::string strHeight;
@@ -520,6 +520,29 @@ bool CRwdBalanceViewDB::ReadDB(std::string key, int nHeight, string father, uint
 
     if (!ParseRecord(strValue, father, tc, value))
         return false;
+
+    return true;
+}
+
+bool CRwdBalanceViewDB::ReadDB(std::string key, int nHeight, std::string& strValue)
+{
+    std::stringstream ssHeight;
+    std::string strHeight;
+    ssHeight << nHeight;
+    ssHeight >> strHeight;
+
+    leveldb::Status status = pdb->Get(leveldb::ReadOptions(), key+DBSEPECTATOR+strHeight, &strValue);
+    if(!status.ok())
+    {
+        if (status.IsNotFound())
+            strValue = " _0_0";
+        else
+        {
+            LogPrintf("LevelDB read failure in rwdbalance module: %s\n", status.ToString());
+            dbwrapper_private::HandleError(status);
+        }
+        return false;
+    }
 
     return true;
 }
@@ -650,6 +673,26 @@ void CRwdBalanceViewDB::GetFullRecord(string address, int nHeight, string& fathe
     }
 }
 
+string CRwdBalanceViewDB::GetFullRecord(std::string address, int nHeight)
+{
+    string strValue;
+    if (cacheRecord.find(address) != cacheRecord.end())
+    {
+        strValue = cacheRecord[address];
+        return strValue;
+    }
+    else
+    {
+        for (int h = nHeight; h >= 0; h--)
+        {
+            if (ReadDB(address, h, strValue))
+                return strValue;
+        }
+    }
+
+    return strValue;
+}
+
 bool CRwdBalanceViewDB::RewardChangeUpdate(CAmount rewardChange, string address, int nHeight, bool isUndo)
 {
     if (rewardChange >= MAX_MONEY || rewardChange <= -MAX_MONEY)
@@ -741,7 +784,7 @@ bool CRwdBalanceViewDB::EntrustByAddress(string inputAddr, string voutAddress, i
 {
     if (isUndo)
     {
-        if (GetFather(voutAddress, nHeight-1).compare("0") == 0)
+        if (GetFather(voutAddress, nHeight).compare("0") == 0)
         {
             if (!DeleteDB(inputAddr, nHeight+1))
                 return false;
@@ -753,6 +796,7 @@ bool CRwdBalanceViewDB::EntrustByAddress(string inputAddr, string voutAddress, i
         return true;
     }
 
+    // Address of vout must be have father of "0" in database
     if (GetFather(voutAddress, nHeight-1).compare("0") == 0)
     {
         // Input address update
@@ -768,7 +812,7 @@ bool CRwdBalanceViewDB::EntrustByAddress(string inputAddr, string voutAddress, i
         //UpdateMemberDB(inputAddr, isDel, voutAddress, isUndo);
     }
 
-    // Address of vout update
+    // Address of vout update by transaction count
     CAmount rwdbalanceVout = 0;
     string ftVout = " ";
     uint64_t tcVout = 1;
@@ -818,7 +862,10 @@ bool CRwdBalanceViewDB::UpdateFatherTCByTX(const CTransaction& tx, const CCoinsV
             CAmount maxValue = 0;
             for(unsigned int j = 0; j < tx.vin.size(); j++)
             {
+                //const CCoins* coins = view.AccessCoins(tx.vin[j].prevout.hash);
+                //assert(coins);
                 CTxOut out = view.GetOutputFor(tx.vin[j]);
+                //CTxOut out = coins->vout[tx.vin[j].prevout.n];
                 CAmount val = out.nValue;
                 if (val > maxValue)
                 {
@@ -862,6 +909,9 @@ bool CRwdBalanceViewDB::UpdateFatherTCByTX(const CTransaction& tx, const CCoinsV
                 if (!TcAddOneByAddress(voutAddress, nHeight, bestFather, isUndo))
                     return false;
             }
+
+//            cout<<"==================="<<voutAddress<<": "<<
+//                  prbalancedbview->GetFullRecord(voutAddress, nHeight)<<endl;
 
         }
     }

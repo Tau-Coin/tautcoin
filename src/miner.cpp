@@ -197,6 +197,17 @@ CBlockTemplate* BlockAssembler::CreateNewBlock(const CScript& scriptPubKeyIn,std
     }
 
     // Recompute nFees
+    //////////////////////////////only for test//////////////////////////////
+//    uint64_t ttc = 0;
+//    std::string addrStr1;
+//    assert(ConvertPubkeyToAddress(pubkeyString, addrStr1));
+//    ttc += prbalancedbview->GetTXCnt(addrStr1, pindexPrev->nHeight);
+//    for(uint i = 0; i < members.size(); i++)
+//    {
+//        ttc += prbalancedbview->GetTXCnt(members[i], pindexPrev->nHeight);
+//        assert((prbalancedbview->GetFather(members[i], pindexPrev->nHeight)).compare(addrStr1) == 0);
+//    }
+    //////////////////////////////only for test//////////////////////////////
     if (members.size() > 0)
     {
         if (mapArgs.count("-leaderreward") && mapMultiArgs["-leaderreward"].size() > 0)
@@ -232,6 +243,7 @@ CBlockTemplate* BlockAssembler::CreateNewBlock(const CScript& scriptPubKeyIn,std
     std::string addrStr;
     assert(ConvertPubkeyToAddress(pubkeyString,addrStr));
     pblock->harvestPower   = ClubManager::GetInstance()->GetHarvestPowerByAddress(addrStr, 0);
+    //assert(ttc == pblock->harvestPower);//////////////////////////////only for test//////////////////////////////
     pblock->generationSignature = raiseGenerationSignature(pubkeyString);
     pblock->pubKeyOfpackager = pubkeyString;
     pblock->cumulativeDifficulty = GetNextCumulativeDifficulty(pindexPrev, pblock->baseTarget, chainparams.GetConsensus());

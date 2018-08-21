@@ -2153,7 +2153,7 @@ bool UpdateRewards(const CTransaction& tx, CAmount blockReward, int nHeight, boo
 
 bool UpdateRewards2(const CBlock& block, CAmount blockReward, int nHeight, bool isUndo)
 {
-    prbalancedbview->ClearCache();
+    //prbalancedbview->ClearCache();
 
     for (unsigned int j = 0; j < block.vtx.size(); j++)
     {
@@ -2179,7 +2179,7 @@ bool UpdateRewards2(const CBlock& block, CAmount blockReward, int nHeight, bool 
 
 bool UpdateFatherAndTC(const CBlock& block, const CCoinsViewCache& view, int nHeight, bool isUndo)
 {
-    prbalancedbview->ClearCache();
+    //prbalancedbview->ClearCache();
 
     for (unsigned int i = 0; i < block.vtx.size(); i++)
     {
@@ -2187,6 +2187,7 @@ bool UpdateFatherAndTC(const CBlock& block, const CCoinsViewCache& view, int nHe
             return false;
     }
 
+    prbalancedbview->Commit(nHeight);
     prbalancedbview->ClearCache();
 
     return true;
@@ -2659,12 +2660,13 @@ bool DisconnectBlock(CBlock& block, CValidationState& state, CBlockIndex* pindex
         bool isUndo = true;
         CAmount nFees = DEFAULT_TRANSACTION_MAXFEE * block.vtx.size();
         if (!UpdateRewards2(block, nFees, pindex->nHeight-1, isUndo))
-        {
             return error("DisconnectBlock(): UpdateRewards failed");
-        }
         for (int k = block.vtx.size() - 1; k >= 0; k--)
         {
             const CTransaction &tx = block.vtx[k];
+            if (!prbalancedbview->UpdateFatherTCByTX(tx, view, pindex->nHeight-1, isUndo))
+                return error("DisconnectBlock(): UpdateFatherAndTC failed");
+
             if (!UpdateRewards(tx, nFees, pindex->nHeight-1, isUndo))
             {
                 trans.rollback();
@@ -3163,6 +3165,12 @@ bool ConnectBlock(const CBlock& block, CValidationState& state, CBlockIndex* pin
         nInputs += tx.vin.size();
         nInputs += tx.vreward.size();
 
+        if (!fJustCheck)
+        {
+            if (!prbalancedbview->UpdateFatherTCByTX(tx, view, pindex->nHeight, false))
+                return error("ConnectBlock(): UpdateFatherAndTC failed");
+        }
+
         if (!tx.IsCoinBase())
         {
             if (!view.HaveInputs(tx))
@@ -3437,10 +3445,7 @@ bool ConnectBlock(const CBlock& block, CValidationState& state, CBlockIndex* pin
     if (!fJustCheck)
     {
         if (!UpdateRewards2(block, nFees, pindex->nHeight))
-        {
-            trans.rollback();
             return error("ConnectBlock(): UpdateRewards failed");
-        }
 
         for (unsigned int j = 0; j < block.vtx.size(); j++)
         {

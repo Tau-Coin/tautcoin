@@ -389,7 +389,7 @@ bool InitRewardsDist(CAmount memberTotalRewards, const CScript& scriptPubKey, st
                      CAmount& distributedRewards, map<string, CAmount> &memberRewards);
 bool ComputeMemberReward(const uint64_t& txCnt, const uint64_t& totalTXCnt,
                          const CAmount& totalRewards, CAmount& memberReward);
-bool UpdateFatherAndTC(const CBlock& block, const CCoinsViewCache& view, int nHeight, bool isUndo);
+bool UpdateFatherAndTC(const CBlock& block, const CCoinsViewCache& view, int nHeight, bool isUndo=false);
 
 /** Context-independent validity checks */
 bool CheckTransaction(const CTransaction& tx, CValidationState& state);
