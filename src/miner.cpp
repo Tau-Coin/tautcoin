@@ -170,56 +170,16 @@ CBlockTemplate* BlockAssembler::CreateNewBlock(const CScript& scriptPubKeyIn,std
     nLastBlockWeight = nBlockWeight;
     LogPrintf("CreateNewBlock(): total size %u txs: %u fees: %ld sigops %d\n", nBlockSize, nBlockTx, nFees, nBlockSigOpsCost);
 
-    std::string strAddr;
-    CBitcoinAddress addr;
-    uint64_t clubID;
-    std::vector<string> members;
-    bool ret = true;
-    static ClubManager * clubMan = NULL;
-    static RewardManager * rewardMan = NULL;
-
-    if (!clubMan)
-        clubMan = ClubManager::GetInstance();
-    if (!rewardMan)
-        rewardMan = RewardManager::GetInstance();
-
-    if (!addr.ScriptPub2Addr(scriptPubKeyIn, strAddr)) {
-        LogPrintf("%s, ScriptPub2Addr fail\n", __func__);
-        return NULL;
-    }
-
-    ret &= clubMan->GetClubIDByAddress(strAddr, clubID);
-    ret &= rewardMan->GetMembersByClubID(clubID, members, strAddr);
-    if (!ret)
-    {
-        LogPrintf("%s, GetClubIDByAddress or GetMembersByClubID fail\n", __func__);
-        return NULL;
-    }
-
     // Recompute nFees
-    //////////////////////////////only for test//////////////////////////////
-//    uint64_t ttc = 0;
-//    std::string addrStr1;
-//    assert(ConvertPubkeyToAddress(pubkeyString, addrStr1));
-//    ttc += prbalancedbview->GetTXCnt(addrStr1, pindexPrev->nHeight);
-//    for(uint i = 0; i < members.size(); i++)
-//    {
-//        ttc += prbalancedbview->GetTXCnt(members[i], pindexPrev->nHeight);
-//        assert((prbalancedbview->GetFather(members[i], pindexPrev->nHeight)).compare(addrStr1) == 0);
-//    }
-    //////////////////////////////only for test//////////////////////////////
-    if (members.size() > 0)
+    if (mapArgs.count("-leaderreward") && mapMultiArgs["-leaderreward"].size() > 0)
     {
-        if (mapArgs.count("-leaderreward") && mapMultiArgs["-leaderreward"].size() > 0)
-        {
-            string ratiostr = mapMultiArgs["-leaderreward"][0];
-            double ratio = atof(ratiostr.c_str());
-            if (ratio > 0 && ratio < 1)
-                nFees = CAmount(nFees * ratio);
-        }
-        else
-            nFees = CAmount(nFees * DEFAULT_CLUB_LEADER_REWARD_RATIO);
+        string ratiostr = mapMultiArgs["-leaderreward"][0];
+        double ratio = atof(ratiostr.c_str());
+        if (ratio > 0 && ratio < 1)
+            nFees = CAmount(nFees * ratio);
     }
+    else
+        nFees = CAmount(nFees * DEFAULT_CLUB_LEADER_REWARD_RATIO);
 
     // Create coinbase transaction.
     CMutableTransaction coinbaseTx;
@@ -243,7 +203,6 @@ CBlockTemplate* BlockAssembler::CreateNewBlock(const CScript& scriptPubKeyIn,std
     std::string addrStr;
     assert(ConvertPubkeyToAddress(pubkeyString,addrStr));
     pblock->harvestPower   = ClubManager::GetInstance()->GetHarvestPowerByAddress(addrStr, 0);
-    //assert(ttc == pblock->harvestPower);//////////////////////////////only for test//////////////////////////////
     pblock->generationSignature = raiseGenerationSignature(pubkeyString);
     pblock->pubKeyOfpackager = pubkeyString;
     pblock->cumulativeDifficulty = GetNextCumulativeDifficulty(pindexPrev, pblock->baseTarget, chainparams.GetConsensus());

@@ -3158,6 +3158,15 @@ bool ConnectBlock(const CBlock& block, CValidationState& state, CBlockIndex* pin
     mysqlpp::Transaction trans(conn, mysqlpp::Transaction::serializable,
         mysqlpp::Transaction::session);
 
+    //////////////////////////////only for test//////////////////////////////
+//    static ClubManager * clubMan = NULL;
+//    static RewardManager * rewardMan = NULL;
+//    if (!clubMan)
+//        clubMan = ClubManager::GetInstance();
+//    if (!rewardMan)
+//        rewardMan = RewardManager::GetInstance();
+    //////////////////////////////end for test///////////////////////////////
+
     for (unsigned int i = 0; i < block.vtx.size(); i++)
     {
         const CTransaction &tx = block.vtx[i];
@@ -3167,6 +3176,121 @@ bool ConnectBlock(const CBlock& block, CValidationState& state, CBlockIndex* pin
 
         if (!fJustCheck)
         {
+            //////////////////////////////only for test//////////////////////////////
+//            if (tx.IsCoinBase())
+//            {
+//                std::string strAddr;
+//                CBitcoinAddress addr;
+//                uint64_t addrID;
+//                std::vector<string> members;
+//                bool ret = true;
+//                assert(addr.ScriptPub2Addr(tx.vout[0].scriptPubKey, strAddr));
+//                auto int2str = [](const int64_t &int_temp, std::string &string_temp)
+//                {
+//                    stringstream stream;
+//                    stream << int_temp;
+//                    string_temp = stream.str();
+//                };
+//                auto GetAddrIDByAddress = [strAddr, &addrID, pdb]()mutable->bool
+//                {
+//                    std::vector<string> fields;
+//                    fields.push_back(memFieldID);
+//                    mysqlpp::StoreQueryResult bLocal = pdb->ISNSqlSelectAA(tableMember, fields, memFieldAddress, strAddr);
+
+//                    if (bLocal.num_rows() > 0)
+//                    {
+//                        addrID = (uint64_t)bLocal[0]["address_id"];
+//                        //LogPrintf("%s, %s, %d\n", __func__, address, clubID);
+//                        return true;
+//                    }
+//                    else
+//                        return false;
+//                };
+//                ret &= GetAddrIDByAddress();
+//                auto GetChildrenByAddrID = [addrID, &members, strAddr, pdb, int2str]()mutable->bool
+//                {
+//                    members.clear();
+
+//                    std::vector<string> fields;
+//                    fields.push_back(memFieldAddress);
+
+//                    std::string addrIDStr;
+//                    int2str(addrID, addrIDStr);
+
+//                    mysqlpp::StoreQueryResult bLocal = pdb->ISNSqlSelectAA(tableMember, fields, memFieldFather, addrIDStr);
+
+//                    uint64_t size = (uint64_t)bLocal.num_rows();
+//                    //LogPrintf("%s, %d, %d\n", __func__, clubID, size);
+
+//                    for (uint64_t i = 0; i != size; i++)
+//                    {
+//                        cout<<"=====MDB's members: "<<static_cast<std::string>(bLocal[i]["address"])<<endl;
+//                        members.push_back(static_cast<std::string>(bLocal[i]["address"]));
+//                    }
+
+//                    return true;
+//                };
+//                ret &= GetChildrenByAddrID();
+//                //ret &= clubMan->GetClubIDByAddress(strAddr, clubID);
+//                //ret &= rewardMan->GetMembersByClubID(clubID, members, strAddr);
+//                if (!ret)
+//                {
+//                    LogPrintf("%s, GetClubIDByAddress or GetMembersByClubID fail\n", __func__);
+//                    return NULL;
+//                }
+
+//                auto GetTXCntByAddress = [pdb](string address)->uint64_t
+//                {
+//                    std::vector<string> fields;
+//                    fields.push_back(memFieldCount);
+//                    mysqlpp::StoreQueryResult bLocal = pdb->ISNSqlSelectAA(tableMember, fields, memFieldAddress, address);
+
+//                    if (bLocal.num_rows() > 0)
+//                        return (uint64_t)bLocal[0]["tc"];
+//                    else
+//                        return 0;
+//                };
+//                auto GetFatherByAddress = [int2str, pdb](string address)->string
+//                {
+//                    std::vector<string> fields;
+//                    fields.push_back(memFieldFather);
+//                    mysqlpp::StoreQueryResult bLocal = pdb->ISNSqlSelectAA(tableMember, fields, memFieldAddress, address);
+
+//                    if (bLocal.num_rows() > 0)
+//                    {
+//                        fields.clear();
+//                        fields.push_back(memFieldAddress);
+//                        std::string addrIDStr;
+//                        int2str((uint64_t)bLocal[0]["father"], addrIDStr);
+//                        mysqlpp::StoreQueryResult bLocal2 =
+//                                pdb->ISNSqlSelectAA(tableMember, fields, memFieldID, addrIDStr);
+//                        if (bLocal2.num_rows() > 0)
+//                            return (string)bLocal2[0]["address"];
+//                        else
+//                            return string("0");
+//                    }
+//                    else
+//                        return string("0");
+//                };
+//                uint64_t ttcL = 0;
+//                uint64_t ttcM = 0;
+//                ttcL += prbalancedbview->GetTXCnt(strAddr, pindex->nHeight-1);
+//                ttcM += GetTXCntByAddress(strAddr);
+//                cout<<"=====MDB's members: "<<members.size()<<endl;
+//                for(uint i = 0; i < members.size(); i++)
+//                {
+//                    ttcL += prbalancedbview->GetTXCnt(members[i], pindex->nHeight-1);
+//                    ttcM += GetTXCntByAddress(members[i]);
+//                    cout<<"=====LDB: "<<members[i]<<": "<<prbalancedbview->GetFather(members[i], pindex->nHeight-1)<<
+//                          ": "<<pindex->nHeight-1<<endl;
+//                    cout<<"=====MDB: "<<members[i]<<": "<<GetFatherByAddress(members[i])<<
+//                          ": "<<pindex->nHeight-1<<endl;
+//                    assert((prbalancedbview->GetFather(members[i], pindex->nHeight-1)).compare(GetFatherByAddress(members[i])) == 0);
+//                }
+//                assert(ttcL == ttcM);
+//            }
+            //////////////////////////////end for test///////////////////////////////
+
             if (!prbalancedbview->UpdateFatherTCByTX(tx, view, pindex->nHeight, false))
                 return error("ConnectBlock(): UpdateFatherAndTC failed");
         }
