@@ -3200,7 +3200,6 @@ bool ConnectBlock(const CBlock& block, CValidationState& state, CBlockIndex* pin
 //                    if (bLocal.num_rows() > 0)
 //                    {
 //                        addrID = (uint64_t)bLocal[0]["address_id"];
-//                        //LogPrintf("%s, %s, %d\n", __func__, address, clubID);
 //                        return true;
 //                    }
 //                    else
@@ -3223,10 +3222,7 @@ bool ConnectBlock(const CBlock& block, CValidationState& state, CBlockIndex* pin
 //                    //LogPrintf("%s, %d, %d\n", __func__, clubID, size);
 
 //                    for (uint64_t i = 0; i != size; i++)
-//                    {
-//                        cout<<"=====MDB's members: "<<static_cast<std::string>(bLocal[i]["address"])<<endl;
 //                        members.push_back(static_cast<std::string>(bLocal[i]["address"]));
-//                    }
 
 //                    return true;
 //                };
@@ -3276,6 +3272,12 @@ bool ConnectBlock(const CBlock& block, CValidationState& state, CBlockIndex* pin
 //                uint64_t ttcM = 0;
 //                ttcL += prbalancedbview->GetTXCnt(strAddr, pindex->nHeight-1);
 //                ttcM += GetTXCntByAddress(strAddr);
+//                cout<<"=====LDB: "<<strAddr<<": "<<prbalancedbview->GetFather(strAddr, pindex->nHeight-1)<<
+//                      ": "<<pindex->nHeight-1<<endl;
+//                cout<<"=====MDB: "<<strAddr<<": "<<GetFatherByAddress(strAddr)<<
+//                      ": "<<pindex->nHeight-1<<endl;
+//                if ((prbalancedbview->GetFather(strAddr, pindex->nHeight-1)).compare(GetFatherByAddress(strAddr)) != 0)
+//                    cerr<<"prbalancedbview->GetFather(strAddr, pindex->nHeight-1)).compare(GetFatherByAddress(strAddr)) != 0"<<endl;
 //                cout<<"=====MDB's members: "<<members.size()<<endl;
 //                for(uint i = 0; i < members.size(); i++)
 //                {
@@ -3285,9 +3287,11 @@ bool ConnectBlock(const CBlock& block, CValidationState& state, CBlockIndex* pin
 //                          ": "<<pindex->nHeight-1<<endl;
 //                    cout<<"=====MDB: "<<members[i]<<": "<<GetFatherByAddress(members[i])<<
 //                          ": "<<pindex->nHeight-1<<endl;
-//                    assert((prbalancedbview->GetFather(members[i], pindex->nHeight-1)).compare(GetFatherByAddress(members[i])) == 0);
+//                    if ((prbalancedbview->GetFather(members[i], pindex->nHeight-1)).compare(GetFatherByAddress(members[i])) != 0)
+//                        cerr<<"prbalancedbview->GetFather(members[i], pindex->nHeight-1)).compare(GetFatherByAddress(members[i])) != 0"<<endl;
 //                }
-//                assert(ttcL == ttcM);
+//                if (ttcL != ttcM)
+//                    cerr<<"ttcL != ttcM"<<endl;
 //            }
             //////////////////////////////end for test///////////////////////////////
 

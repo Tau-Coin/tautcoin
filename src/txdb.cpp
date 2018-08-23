@@ -570,6 +570,39 @@ void CRwdBalanceViewDB::ClearCache()
     cacheRecord.clear();
 }
 
+void CRwdBalanceViewDB::UpdateCacheFather(string address, int inputHeight, string newFather)
+{
+    CAmount rwdbalanceInput = 0;
+    string ftInput = " ";
+    uint64_t tcInput = 1;
+    GetFullRecord(address, inputHeight, ftInput, tcInput, rwdbalanceInput);
+    ftInput = newFather;
+    string newRecordInput = GenerateRecord(ftInput, tcInput, rwdbalanceInput);
+    cacheRecord[address] = newRecordInput;
+}
+
+void CRwdBalanceViewDB::UpdateCacheTcAddOne(string address, int inputHeight)
+{
+    CAmount rwdbalanceVout = 0;
+    string ftVout = " ";
+    uint64_t tcVout = 1;
+    GetFullRecord(address, inputHeight, ftVout, tcVout, rwdbalanceVout);
+    tcVout++;
+    string newRecordVout = GenerateRecord(ftVout, tcVout, rwdbalanceVout);
+    cacheRecord[address] = newRecordVout;
+}
+
+void CRwdBalanceViewDB::UpdateCacheRewardChange(string address, int inputHeight, CAmount rewardChange)
+{
+    CAmount rewardbalance_old = 0;
+    string ft = " ";
+    uint64_t tc = 1;
+    GetFullRecord(address, inputHeight, ft, tc, rewardbalance_old);
+    CAmount newValue = rewardbalance_old + rewardChange;
+    string newRecord = GenerateRecord(ft, tc, newValue);
+    cacheRecord[address] = newRecord;
+}
+
 bool CRwdBalanceViewDB::Commit(int nHeight)
 {
     if (cacheRecord.size() == 0)
@@ -704,17 +737,10 @@ bool CRwdBalanceViewDB::RewardChangeUpdate(CAmount rewardChange, string address,
         return true;
     }
 
-    CAmount rewardbalance_old = 0;
-    string ft = " ";
-    uint64_t tc = 1;
-    GetFullRecord(address, nHeight-1, ft, tc, rewardbalance_old);
-    CAmount newValue = rewardbalance_old + rewardChange;
+    UpdateCacheRewardChange(address, nHeight-1, rewardChange);
 
     //std::cout<<"====="<<address<<":   "<<rewardbalance_old<<" + "<<rewardChange;
     //std::cout<<" = "<<newValue<<std::endl;
-
-    string newRecord = GenerateRecord(ft, tc, newValue);
-    cacheRecord[address] = newRecord;
 
     //if (!WriteDB(address, nHeight, ft, tc, newValue))
     //    return false;
@@ -796,30 +822,26 @@ bool CRwdBalanceViewDB::EntrustByAddress(string inputAddr, string voutAddress, i
         return true;
     }
 
-    // Address of vout must be have father of "0" in database
-    if (GetFather(voutAddress, nHeight-1).compare("0") == 0)
+    // Address of vout must have father of "0" in database or entrust itself
+    if ((voutAddress.compare(inputAddr) != 0) && (GetFather(voutAddress, nHeight-1).compare("0") == 0))
     {
         // Input address update
-        CAmount rwdbalanceInput = 0;
-        string ftInput = " ";
-        uint64_t tcInput = 1;
-        GetFullRecord(inputAddr, nHeight-1, ftInput, tcInput, rwdbalanceInput);
-        ftInput = voutAddress;
-        string newRecordInput = GenerateRecord(ftInput, tcInput, rwdbalanceInput);
-        cacheRecord[inputAddr] = newRecordInput;
+        UpdateCacheFather(inputAddr, nHeight-1, voutAddress);
+
+        //UpdateMemberDB(voutAddress, isAdd, inputAddr, isUndo);
+        //UpdateMemberDB(inputAddr, isDel, voutAddress, isUndo);
+    }
+    else if((voutAddress.compare(inputAddr) == 0) && (GetFather(voutAddress, nHeight-1).compare("0") != 0))
+    {
+        // Input address update
+        UpdateCacheFather(inputAddr, nHeight-1, "0");
 
         //UpdateMemberDB(voutAddress, isAdd, inputAddr, isUndo);
         //UpdateMemberDB(inputAddr, isDel, voutAddress, isUndo);
     }
 
     // Address of vout update by transaction count
-    CAmount rwdbalanceVout = 0;
-    string ftVout = " ";
-    uint64_t tcVout = 1;
-    GetFullRecord(voutAddress, nHeight-1, ftVout, tcVout, rwdbalanceVout);
-    tcVout++;
-    string newRecordVout = GenerateRecord(ftVout, tcVout, rwdbalanceVout);
-    cacheRecord[voutAddress] = newRecordVout;
+    UpdateCacheTcAddOne(voutAddress, nHeight-1);
 
     return true;
 }
@@ -838,7 +860,10 @@ bool CRwdBalanceViewDB::TcAddOneByAddress(string address, int nHeight, string fa
     uint64_t tc = 1;
     GetFullRecord(address, nHeight-1, ft, tc, rewardbalance);
     if (ft.compare(" ") == 0)
+    {
         ft = father;
+        //UpdateMemberDB(voutAddress, isAdd, inputAddr, isUndo);
+    }
     tc++;
 
     string newRecord = GenerateRecord(ft, tc, rewardbalance);
@@ -862,10 +887,7 @@ bool CRwdBalanceViewDB::UpdateFatherTCByTX(const CTransaction& tx, const CCoinsV
             CAmount maxValue = 0;
             for(unsigned int j = 0; j < tx.vin.size(); j++)
             {
-                //const CCoins* coins = view.AccessCoins(tx.vin[j].prevout.hash);
-                //assert(coins);
                 CTxOut out = view.GetOutputFor(tx.vin[j]);
-                //CTxOut out = coins->vout[tx.vin[j].prevout.n];
                 CAmount val = out.nValue;
                 if (val > maxValue)
                 {
@@ -909,10 +931,6 @@ bool CRwdBalanceViewDB::UpdateFatherTCByTX(const CTransaction& tx, const CCoinsV
                 if (!TcAddOneByAddress(voutAddress, nHeight, bestFather, isUndo))
                     return false;
             }
-
-//            cout<<"==================="<<voutAddress<<": "<<
-//                  prbalancedbview->GetFullRecord(voutAddress, nHeight)<<endl;
-
         }
     }
 

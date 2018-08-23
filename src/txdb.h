@@ -167,6 +167,12 @@ private:
 
     bool DeleteDB(std::string key, int nHeight);
 
+    void UpdateCacheFather(std::string address, int inputHeight, std::string newFather);
+
+    void UpdateCacheTcAddOne(std::string address, int inputHeight);
+
+    void UpdateCacheRewardChange(std::string address, int inputHeight, CAmount rewardChange);
+
 public:
     //! Constructor
     CRwdBalanceViewDB();
