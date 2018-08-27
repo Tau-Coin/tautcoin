@@ -73,7 +73,7 @@ UniValue generateBlocksWithPot(boost::shared_ptr<CReserveScript> coinbaseScript,
 
      uint64_t harverstPower = ClubManager::DEFAULT_HARVEST_POWER;
 
-     while (nHeight < nHeightEnd)
+     while (nHeight < nHeightEnd && !ShutdownRequested())
      {
          CBlockIndex *prevIndex = NULL;
          {
