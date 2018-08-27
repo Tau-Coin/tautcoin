@@ -1,0 +1,108 @@
+#ifndef TAUCOIN_MEMBERINFODB_H
+#define TAUCOIN_MEMBERINFODB_H
+
+#include "coins.h"
+#include "coinsbyscript.h"
+#include "dbwrapper.h"
+#include "chain.h"
+#include "base58.h"
+#include "leveldb/db.h"
+#include "clubinfodb.h"
+#include <stdio.h>
+
+#include <map>
+#include <string>
+#include <utility>
+#include <vector>
+
+/** View on the reward balance dataset. */
+#define RWDBALDBPATH "/rwdbalance"
+class CRwdBalanceViewDB
+{
+private:
+    //! the database itself
+    leveldb::DB* pdb;
+
+    //! database options used
+    leveldb::Options options;
+
+    //! cache for multi-transaction balance updating
+    std::map<std::string, std::string> cacheRecord;
+
+    //! clubinfo database used
+    CClubInfoDB* _pclubinfodb;
+
+    bool RewardChangeUpdateByPubkey(CAmount rewardChange, std::string pubKey, int nHeight, bool isUndo);
+
+    bool RewardChangeUpdate(CAmount rewardChange, std::string address, int nHeight, bool isUndo);
+
+    bool EntrustByAddress(std::string inputAddr, std::string voutAddress, int nHeight, bool isUndo);
+
+    bool TcAddOneByAddress(std::string address, int nHeight, std::string father, bool isUndo);
+
+    bool WriteDB(std::string key, int nHeight, std::string father, uint64_t tc, CAmount value);
+
+    bool WriteDB(std::string key, int nHeight, std::string strValue);
+
+    bool ReadDB(std::string key, int nHeight, std::string& father, uint64_t& tc, CAmount& value);
+    bool ReadDB(std::string key, int nHeight, std::string& strValue);
+
+    bool DeleteDB(std::string key, int nHeight);
+
+    void UpdateCacheFather(std::string address, int inputHeight, std::string newFather);
+
+    void UpdateCacheTcAddOne(std::string address, int inputHeight);
+
+    void UpdateCacheRewardChange(std::string address, int inputHeight, CAmount rewardChange);
+
+public:
+    //! Constructor
+    CRwdBalanceViewDB(CClubInfoDB* pclubinfodb);
+
+    //! As we use CBalanceViews polymorphically, have a destructor
+    ~CRwdBalanceViewDB();
+
+    //! Clear the rwdbalance cache
+    void ClearCache();
+
+    //! Commit the database transaction
+    bool Commit(int nHeight);
+
+    //! Init the father and tc of the address from genesis block
+    bool InitGenesisDB(std::vector<std::string> addresses);
+
+    //! Init the distribution of the reward and check if everything is ok
+    bool InitRewardsDist(CAmount memberTotalRewards, const CScript& scriptPubKey, int nHeight, std::string& clubLeaderAddress,
+                         CAmount& distributedRewards, std::map<std::string, CAmount>& memberRewards);
+
+    //! Compute the reward of each member
+    bool ComputeMemberReward(const uint64_t& txCnt, const uint64_t& totalTXCnt,
+                             const CAmount& totalRewards, CAmount& memberReward);
+
+    //! Parse the record
+    bool ParseRecord(std::string inputStr, std::string& father, uint64_t& tc, CAmount& value);
+
+    //! Generate a record
+    std::string GenerateRecord(std::string father, uint64_t tc, CAmount value);
+
+    //! Retrieve the reward balance for a given address
+    CAmount GetRwdBalance(std::string address, int nHeight);
+
+    //! Retrieve the father for a given address
+    std::string GetFather(std::string address, int nHeight);
+
+    //! Retrieve the transaction count for a given address
+    uint64_t GetTXCnt(std::string address, int nHeight);
+
+    //! Retrieve a full record for a given address
+    void GetFullRecord(std::string address, int nHeight, std::string& father, uint64_t& tc, CAmount& value);
+    std::string GetFullRecord(std::string address, int nHeight);
+
+    //! Update the Balance dataset
+    bool UpdateRewardsByTX(const CTransaction& tx, CAmount blockReward, int nHeight, bool isUndo);
+
+    //! Update the TX count and the father
+    bool UpdateFatherTCByTX(const CTransaction& tx, const CCoinsViewCache &view, int nHeight, bool isUndo);
+};
+
+#endif // TAUCOIN_MEMBERINFODB_H
