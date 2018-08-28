@@ -58,7 +58,7 @@ CAmount RewardManager::GetRewardsByAddress(std::string& address)
 
     if (bLocal.num_rows() > 0)
     {
-        LogPrintf("%s, %s, %d\n", __func__, address, (CAmount)bLocal[0]["balance"]);
+        LogPrint("reward", "%s, %s, %d\n", __func__, address, (CAmount)bLocal[0]["balance"]);
 	    return bLocal[0]["balance"];
     }
     else
@@ -82,7 +82,7 @@ bool RewardManager::UpdateRewardsByAddress(std::string& address, CAmount newRewa
 
     mysqlpp::SimpleResult bLocal = backendDb->ISNSqlUpdate(tableMember, fields, values, memFieldAddress, address);
 
-    LogPrintf("%s, %s, %d, %d\n", __func__, address, newRewards, bLocal.rows());
+    LogPrint("reward", "%s, %s, %d, %d\n", __func__, address, newRewards, bLocal.rows());
 
     if (bLocal.rows() > 0)
     {
@@ -133,13 +133,13 @@ bool RewardManager::GetMembersByClubID(uint64_t clubID, std::vector<std::string>
 	mysqlpp::StoreQueryResult bLocal = backendDb->ISNSqlSelectAA(tableMember, fields, memFieldClub, clubIDStr);
 
     uint64_t size = (uint64_t)bLocal.num_rows();
-    LogPrintf("%s, %d, %d\n", __func__, clubID, size);
+    LogPrint("reward", "%s, %d, %d\n", __func__, clubID, size);
 
     for (uint64_t i = 0; i != size; i++)
     {
         if (leaderAddr != static_cast<std::string>(bLocal[i]["address"]))
         {
-            LogPrintf("%s, db record:%s\n", __func__, static_cast<std::string>(bLocal[i]["address"]));
+            LogPrint("reward", "%s, db record:%s\n", __func__, static_cast<std::string>(bLocal[i]["address"]));
             addresses.push_back(static_cast<std::string>(bLocal[i]["address"]));
         }
     }
@@ -162,7 +162,7 @@ bool RewardManager::GetMembersTxCountByClubID(uint64_t clubID, std::map<std::str
     mysqlpp::StoreQueryResult bLocal = backendDb->ISNSqlSelectAA(tableMember, fields, memFieldClub, clubIDStr);
 
     uint64_t size = (uint64_t)bLocal.num_rows();
-    LogPrintf("%s, %d, %d\n", __func__, clubID, size);
+    LogPrint("reward", "%s, %d, %d\n", __func__, clubID, size);
 
     for (uint64_t i = 0; i != size; i++)
     {

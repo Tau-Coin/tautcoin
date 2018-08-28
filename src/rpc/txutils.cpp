@@ -102,18 +102,6 @@ static void ApproximateBestSubset(std::vector<std::pair<CAmount, COutPoint> >vVa
     }
 }
 
-static void DumpUTXOs(std::set<COutPoint>& setCoins)
-{
-    LogPrintf("begin dumping utxos\n");
-
-    for (std::set<COutPoint>::iterator i = setCoins.begin(); i != setCoins.end(); i++)
-    {
-        LogPrintf("%s\t\%d\n", (*i).hash.ToString(), (*i).n);
-    }
-
-    LogPrintf("end dumping utxos\n");
-}
-
 int CTransactionUtils::GetDepthInMainChain(CCoins& coins)
 {
     LOCK(cs_main);
@@ -130,7 +118,7 @@ int CTransactionUtils::GetBlocksToMaturity(CCoins& coins)
 bool CTransactionUtils::SelectCoinsMinConf(const CAmount& nTargetValue, int nConf, std::vector<COutPoint>& vCoins,
         std::set<COutPoint>& setCoinsRet, CAmount& nValueRet)
 {
-    LogPrintf("%s entry\n", __func__);
+    LogPrint("selectcoins", "%s entry\n", __func__);
 
     setCoinsRet.clear();
     nValueRet = 0;
@@ -185,7 +173,7 @@ bool CTransactionUtils::SelectCoinsMinConf(const CAmount& nTargetValue, int nCon
         }
     }
 
-    LogPrintf("total lower:%d, target:%d\n", nTotalLower, nTargetValue);
+    LogPrint("selectcoins", "total lower:%d, target:%d\n", nTotalLower, nTargetValue);
 
     if (nTotalLower == nTargetValue)
     {
@@ -263,7 +251,7 @@ bool CTransactionUtils::AvailableCoins(const std::string& pubKey, std::vector<CO
     std::string addrStr;
     if (ConvertPubkeyToAddress(pubKey, addrStr))
     {
-        LogPrintf("%s addr:%s\n", __func__, addrStr);
+        LogPrint("selectcoins", "%s addr:%s\n", __func__, addrStr);
     }
 
     CScript script;
@@ -334,7 +322,7 @@ bool CTransactionUtils::AvailableRewards(const std::string& pubKey, std::vector<
     std::string addrStr;
     if (ConvertPubkeyToAddress(pubKey, addrStr))
     {
-        LogPrintf("%s addr:%s\n", __func__, addrStr);
+        LogPrint("selectcoins", "%s addr:%s\n", __func__, addrStr);
     }
 
     CAmount rewards = RewardManager::GetInstance()->GetRewardsByPubkey(pubKey);
@@ -363,7 +351,7 @@ CAmount CTransactionUtils::GetMinimumFee(unsigned int nTxBytes, unsigned int nCo
 bool CTransactionUtils::CreateTransaction(std::map<std::string, CAmount>& receipts, const std::string& pubKey,
         const std::string& prvKey, CFeeRate& userFee, CMutableTransaction& tx, CAmount& nFeeRet, std::string& strFailReason)
 {
-    LogPrintf("%s entry\n", __func__);
+    LogPrint("rpc", "%s entry\n", __func__);
 
     // Firstly, construct recipinets
     std::vector<CRecipient> vecSend;
@@ -371,7 +359,7 @@ bool CTransactionUtils::CreateTransaction(std::map<std::string, CAmount>& receip
     for (std::map<std::string, CAmount> ::iterator i = receipts.begin();
             i != receipts.end(); i++)
     {
-        LogPrintf("receipt address: %s\n", i->first);
+        LogPrint("rpc", "receipt address: %s\n", i->first);
         CBitcoinAddress addr(i->first);
         if (!addr.IsValid())
         {
@@ -432,12 +420,12 @@ bool CTransactionUtils::CreateTransaction(std::map<std::string, CAmount>& receip
         return false;
     }
 
-    LogPrintf("available coins:[\n");
+    LogPrint("selectcoins", "available coins:[\n");
     BOOST_FOREACH(const COutPoint& c, coins)
     {
-        LogPrintf("\t%s,\t%d\n", c.hash.ToString(), c.n);
+        LogPrint("selectcoins", "\t%s,\t%d\n", c.hash.ToString(), c.n);
     }
-    LogPrintf("]\n");
+    LogPrint("selectcoins", "]\n");
 
     CAmount nValue = nTotal;
     unsigned int nSubtractFeeFromAmount = 0;
@@ -493,7 +481,7 @@ bool CTransactionUtils::CreateTransaction(std::map<std::string, CAmount>& receip
         std::vector<CTxReward> setRewards;
         CAmount nValueIn = 0;
         CAmount nRewardIn = 0;
-        LogPrintf("selected value:%d\n", nValueToSelect);
+        LogPrint("selectcoins", "selected value:%d\n", nValueToSelect);
         if (!SelectCoins(coins, nValueToSelect, setCoins, nValueIn))
         {
             if (vAvailableRewards.size() == 0)
@@ -502,7 +490,7 @@ bool CTransactionUtils::CreateTransaction(std::map<std::string, CAmount>& receip
             }
 
             CAmount nRewardTargetValue = nValueToSelect - nValueIn;
-            LogPrintf("selected reward target value:%d  [\n", nRewardTargetValue);
+            LogPrint("selectcoins", "selected reward target value:%d  [\n", nRewardTargetValue);
             if (!SelectRewards(vAvailableRewards, nRewardTargetValue, setRewards, nRewardIn))
             {
                 strFailReason = _("Insufficient funds");
@@ -510,19 +498,19 @@ bool CTransactionUtils::CreateTransaction(std::map<std::string, CAmount>& receip
             }
         }
 
-        LogPrintf("selected coins value:%d  [\n", nValueIn);
+        LogPrint("selectcoins", "selected coins value:%d  [\n", nValueIn);
         BOOST_FOREACH(const COutPoint& c, setCoins)
         {
-            LogPrintf("\t%s,\t%d\n", c.hash.ToString(), c.n);
+            LogPrint("selectcoins", "\t%s,\t%d\n", c.hash.ToString(), c.n);
         }
-        LogPrintf("]\n");
+        LogPrint("selectcoins", "]\n");
 
-        LogPrintf("selected rewards value:%d  [\n", nRewardIn);
+        LogPrint("selectcoins", "selected rewards value:%d  [\n", nRewardIn);
         BOOST_FOREACH(const CTxReward& rw, setRewards)
         {
-            LogPrintf("\t%s,\t%d\n", rw.senderPubkey, rw.rewardBalance);
+            LogPrint("selectcoins", "\t%s,\t%d\n", rw.senderPubkey, rw.rewardBalance);
         }
-        LogPrintf("]\n");
+        LogPrint("selectcoins", "]\n");
 
         nValueIn += nRewardIn;
         const CAmount nChange = nValueIn - nValueToSelect;
@@ -641,7 +629,7 @@ bool CTransactionUtils::CreateTransaction(std::map<std::string, CAmount>& receip
                 bool signSuccess;
                 bool bCheckReward = true;
                 const CScript scriptPubKey = CScript() << ParseHex(reward.senderPubkey) << OP_CHECKREWARDSIG;
-                LogPrintf("sign rewards pubkey:%s \n", reward.senderPubkey);
+                LogPrint("rpc", "sign rewards pubkey:%s \n", reward.senderPubkey);
                 SignatureData sigdata;
 
                 signSuccess = ProduceSignatureForRewards(TransactionSignatureCreator(&keystore, &txNewConst, nReward, reward.rewardBalance, SIGHASH_ALL, bCheckReward), scriptPubKey, sigdata);
@@ -700,7 +688,7 @@ bool CTransactionUtils::CreateTransaction(std::map<std::string, CAmount>& receip
         continue;
     }
 
-    LogPrintf("create transaction successfully\n");
+    LogPrint("rpc", "create transaction successfully\n");
     return true;
 }
 
