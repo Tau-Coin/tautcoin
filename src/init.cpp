@@ -232,6 +232,10 @@ void Shutdown()
         prbalancedbview = NULL;
         delete prewardratedbview;
         prewardratedbview = NULL;
+        delete pmemberinfodb;
+        pmemberinfodb = NULL;
+        delete pclubinfodb;
+        pclubinfodb = NULL;
     }
 #ifdef ENABLE_WALLET
     if (pwalletMain)
@@ -590,11 +594,25 @@ void ThreadImport(std::vector<boost::filesystem::path> vImportFiles)
         // First of all, remove mysql db records
         ISNDB::GetInstance()->TruncateTables();
         // Then, remove rewards balance db records
-        std::string db_path = GetDataDir(true).string() + std::string(RWDBLDBPATH);
-        if (boost::filesystem::exists(db_path))
+        std::string clubinfodb_path = GetDataDir(true).string() + std::string(CLUBINFOPATH);
+        if (boost::filesystem::exists(clubinfodb_path))
+        {
+            delete pclubinfodb;
+            boost::filesystem::remove_all(clubinfodb_path);
+            pclubinfodb = new CClubInfoDB();
+        }
+        std::string memberinfodb_path = GetDataDir(true).string() + std::string(MEMBERINFODBPATH);
+        if (boost::filesystem::exists(memberinfodb_path))
+        {
+            delete pmemberinfodb;
+            boost::filesystem::remove_all(memberinfodb_path);
+            pmemberinfodb = new CMemberInfoDB(pclubinfodb);
+        }
+        std::string prbalancedbview_path = GetDataDir(true).string() + std::string(RWDBLDBPATH);
+        if (boost::filesystem::exists(prbalancedbview_path))
         {
             delete prbalancedbview;
-            boost::filesystem::remove_all(db_path);
+            boost::filesystem::remove_all(prbalancedbview_path);
             prbalancedbview = new CRwdBalanceViewDB();
         }
 
@@ -1282,12 +1300,16 @@ bool AppInit2(boost::thread_group& threadGroup, CScheduler& scheduler)
                 delete pblocktree;
                 delete prbalancedbview;
                 delete prewardratedbview;
+                delete pmemberinfodb;
+                delete pclubinfodb;
 
                 pblocktree = new CBlockTreeDB(nBlockTreeDBCache, false, fReindex);
                 pcoinsdbview = new CCoinsViewDB(nCoinDBCache, false, fReindex || fReindexChainState);
                 pcoinscatcher = new CCoinsViewErrorCatcher(pcoinsdbview);
                 pcoinsTip = new CCoinsViewCache(pcoinscatcher);
                 prbalancedbview = new CRwdBalanceViewDB();
+                pclubinfodb = new CClubInfoDB();
+                pmemberinfodb = new CMemberInfoDB(pclubinfodb);
                 if (mapArgs.count("-updaterewardrate") && mapMultiArgs["-updaterewardrate"].size() > 0)
                 {
                     string flag = mapMultiArgs["-updaterewardrate"][0];

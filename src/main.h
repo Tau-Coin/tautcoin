@@ -22,6 +22,8 @@
 #include "versionbits.h"
 #include "txdb.h"
 #include "isndb.h"
+#include "rewarddb/memberinfodb.h"
+#include "rewarddb/clubinfodb.h"
 
 #include <algorithm>
 #include <exception>
@@ -205,6 +207,8 @@ static const uint64_t nMinDiskSpace = 52428800;
 
 extern CRwdBalanceViewDB *prbalancedbview;
 extern CRewardRateViewDB *prewardratedbview;
+extern CMemberInfoDB *pmemberinfodb;
+extern CClubInfoDB *pclubinfodb;
 
 /** Pruning-related variables and constants */
 /** True if any block files have ever been pruned. */

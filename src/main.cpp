@@ -89,6 +89,8 @@ int64_t nMaxTipAge = DEFAULT_MAX_TIP_AGE;
 bool fEnableReplacement = DEFAULT_ENABLE_REPLACEMENT;
 CRwdBalanceViewDB *prbalancedbview = NULL;
 CRewardRateViewDB *prewardratedbview = NULL;
+CClubInfoDB *pclubinfodb = NULL;
+CMemberInfoDB *pmemberinfodb = NULL;
 
 struct TxInfo
 {
@@ -3022,6 +3024,8 @@ bool ConnectBlock(const CBlock& block, CValidationState& state, CBlockIndex* pin
 
             if (!prbalancedbview->InitGenesisDB(addresses))
                 return error("%s: prbalancedbview::InitGenesisDB error", __func__);
+            if (!pmemberinfodb->InitGenesisDB(addresses))
+                return error("%s: pmemberinfodb::InitGenesisDB error", __func__);
         }
 
         UpdateCoins(block.vtx[0], view, 0);
@@ -3037,6 +3041,10 @@ bool ConnectBlock(const CBlock& block, CValidationState& state, CBlockIndex* pin
 
     if (!fJustCheck)
     {
+//        std::string addrStr;
+//        assert(ConvertPubkeyToAddress(block.pubKeyOfpackager, addrStr));
+//        if (block.harvestPower != pmemberinfodb->GetHarvestPowerByAddress(addrStr, pindex->nHeight-1))
+//            return error("%s: harvest power check:%s", __func__, FormatStateMessage(state));
         if (!CheckBlockHarvestPower(block, state, chainparams.GetConsensus()))
         {
             return error("%s: harvest power check:%s", __func__, FormatStateMessage(state));
@@ -3270,33 +3278,54 @@ bool ConnectBlock(const CBlock& block, CValidationState& state, CBlockIndex* pin
 //                };
 //                uint64_t ttcL = 0;
 //                uint64_t ttcM = 0;
-//                ttcL += prbalancedbview->GetTXCnt(strAddr, pindex->nHeight-1);
+//                ttcL += pmemberinfodb->GetTXCnt(strAddr, pindex->nHeight-1);
 //                ttcM += GetTXCntByAddress(strAddr);
-//                cout<<"=====LDB: "<<strAddr<<": "<<prbalancedbview->GetFather(strAddr, pindex->nHeight-1)<<
+//                cout<<"=====LDB: "<<strAddr<<": "<<pmemberinfodb->GetFather(strAddr, pindex->nHeight-1)<<
 //                      ": "<<pindex->nHeight-1<<endl;
 //                cout<<"=====MDB: "<<strAddr<<": "<<GetFatherByAddress(strAddr)<<
 //                      ": "<<pindex->nHeight-1<<endl;
-//                if ((prbalancedbview->GetFather(strAddr, pindex->nHeight-1)).compare(GetFatherByAddress(strAddr)) != 0)
-//                    cerr<<"prbalancedbview->GetFather(strAddr, pindex->nHeight-1)).compare(GetFatherByAddress(strAddr)) != 0"<<endl;
+//                if ((pmemberinfodb->GetFather(strAddr, pindex->nHeight-1)).compare(GetFatherByAddress(strAddr)) != 0)
+//                    cerr<<"pmemberinfodb->GetFather(strAddr, pindex->nHeight-1)).compare(GetFatherByAddress(strAddr)) != 0"<<endl;
 //                cout<<"=====MDB's members: "<<members.size()<<endl;
 //                for(uint i = 0; i < members.size(); i++)
 //                {
-//                    ttcL += prbalancedbview->GetTXCnt(members[i], pindex->nHeight-1);
+//                    ttcL += pmemberinfodb->GetTXCnt(members[i], pindex->nHeight-1);
 //                    ttcM += GetTXCntByAddress(members[i]);
-//                    cout<<"=====LDB: "<<members[i]<<": "<<prbalancedbview->GetFather(members[i], pindex->nHeight-1)<<
+//                    cout<<"=====LDB: "<<members[i]<<": "<<pmemberinfodb->GetFather(members[i], pindex->nHeight-1)<<
 //                          ": "<<pindex->nHeight-1<<endl;
 //                    cout<<"=====MDB: "<<members[i]<<": "<<GetFatherByAddress(members[i])<<
 //                          ": "<<pindex->nHeight-1<<endl;
-//                    if ((prbalancedbview->GetFather(members[i], pindex->nHeight-1)).compare(GetFatherByAddress(members[i])) != 0)
-//                        cerr<<"prbalancedbview->GetFather(members[i], pindex->nHeight-1)).compare(GetFatherByAddress(members[i])) != 0"<<endl;
+//                    if ((pmemberinfodb->GetFather(members[i], pindex->nHeight-1)).compare(GetFatherByAddress(members[i])) != 0)
+//                        cerr<<"pmemberinfodb->GetFather(members[i], pindex->nHeight-1)).compare(GetFatherByAddress(members[i])) != 0"<<endl;
 //                }
 //                if (ttcL != ttcM)
 //                    cerr<<"ttcL != ttcM"<<endl;
-//            }
-            //////////////////////////////end for test///////////////////////////////
 
-            if (!prbalancedbview->UpdateFatherTCByTX(tx, view, pindex->nHeight, false))
+//                if (pindex->nHeight-1 >= 1724)
+//                    cout<<"haha"<<endl;
+//                uint64_t clubID = 0;
+//                map<string, uint64_t> addrToTC;
+//                assert(clubMan->GetClubIDByAddress(strAddr, clubID));
+//                assert(rewardMan->GetMembersTxCountByClubID(clubID, addrToTC, strAddr));
+//                uint64_t hPowerL = 0;//pmemberinfodb->GetHarvestPowerByAddress(strAddr, pindex->nHeight-1);
+//                vector<string> clubMembers = pclubinfodb->GetClubMembersByAddress(strAddr, pindex->nHeight-1);
+//                hPowerL += pmemberinfodb->GetTXCnt(strAddr, pindex->nHeight-1);
+//                for(size_t i = 0; i < clubMembers.size(); i++)
+//                    hPowerL += pmemberinfodb->GetTXCnt(clubMembers[i], pindex->nHeight-1);
+//                if (addrToTC.size() != clubMembers.size())
+//                    cerr<<"addrToTC.size() != clubMembers.size(), nHeight-1: "<<pindex->nHeight-1<<endl;
+//                uint64_t hPowerM = clubMan->GetHarvestPowerByAddress(strAddr, pindex->nHeight-1);
+//                cout<<"=====LDB power: "<<hPowerL<<", nHeight: "<<pindex->nHeight-1<<endl;
+//                cout<<"=====MDB power: "<<hPowerM<<", nHeight: "<<pindex->nHeight-1<<endl;
+//                if (hPowerL != hPowerM)
+//                    cerr<<"hPowerL != hPowerM, nHeight-1: "<<pindex->nHeight-1<<endl;
+//            }
+            if (!pmemberinfodb->UpdateFatherTCByTX(tx, view, pindex->nHeight, false))
                 return error("ConnectBlock(): UpdateFatherAndTC failed");
+
+//            if (!prbalancedbview->UpdateFatherTCByTX(tx, view, pindex->nHeight, false))
+//                return error("ConnectBlock(): UpdateFatherAndTC failed");
+            //////////////////////////////end for test///////////////////////////////
         }
 
         if (!tx.IsCoinBase())
@@ -3585,6 +3614,8 @@ bool ConnectBlock(const CBlock& block, CValidationState& state, CBlockIndex* pin
             }
         }
         RewardManager::GetInstance()->currentHeight = pindex->nHeight;
+        pclubinfodb->Commit(pindex->nHeight);
+        pclubinfodb->ClearCache();
     }
 
     if (!fJustCheck) {

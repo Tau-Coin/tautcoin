@@ -12,33 +12,33 @@
 #include <vector>
 
 /** View on the reward rate dataset. */
-#define RWDBALDBRATEPATH "/rewardrate"
-class CRewardRateViewDB
-{
-private:
-    //! the database itself
-    leveldb::DB* pdb;
+//#define RWDBALDBRATEPATH "/rewardrate"
+//class CRewardRateViewDB
+//{
+//private:
+//    //! the database itself
+//    leveldb::DB* pdb;
 
-    //! database options used
-    leveldb::Options options;
+//    //! database options used
+//    leveldb::Options options;
 
-    bool WriteDB(int nHeight, std::string address, double value);
+//    bool WriteDB(int nHeight, std::string address, double value);
 
-    bool ReadDB(int nHeight, std::string& address_value);
+//    bool ReadDB(int nHeight, std::string& address_value);
 
-public:
-    //! Constructor
-    CRewardRateViewDB();
+//public:
+//    //! Constructor
+//    CRewardRateViewDB();
 
-    //! Destructor
-    ~CRewardRateViewDB();
+//    //! Destructor
+//    ~CRewardRateViewDB();
 
-    //! Retrieve the reward rate for a given address
-    bool GetRewardRate(int nHeight, std::string& addr_rate);
+//    //! Retrieve the reward rate for a given address
+//    bool GetRewardRate(int nHeight, std::string& addr_rate);
 
-    //! Update the reward rate dataset represented by view
-    bool UpdateRewardRate(std::string leaderAddress, double val, int nHeight);
-};
+//    //! Update the reward rate dataset represented by view
+//    bool UpdateRewardRate(std::string leaderAddress, double val, int nHeight);
+//};
 
 /** View on the club info dataset. */
 #define DBSEPECTATOR "_"
@@ -82,7 +82,7 @@ public:
     std::string GetTrieStrByFatherAddress(std::string fatherAddress, int nHeight);
 
     //! Retrieve the merbers' addresses
-    std::vector<std::string> GetMembersByFatherAddress(std::string fatherAddress, int nHeight);
+    std::vector<std::string> GetClubMembersByAddress(std::string fatherAddress, int nHeight);
 };
 
 #endif // TAUCOIN_CLUBINFODB_H

@@ -4,11 +4,11 @@
 
 using namespace std;
 
-CRwdBalanceViewDB::CRwdBalanceViewDB(CClubInfoDB *pclubinfodb) : _pclubinfodb(pclubinfodb)
+CMemberInfoDB::CMemberInfoDB(CClubInfoDB *pclubinfodb) : _pclubinfodb(pclubinfodb)
 {
     options.create_if_missing = true;
 
-    std::string db_path = GetDataDir(true).string() + std::string(RWDBALDBPATH);
+    std::string db_path = GetDataDir(true).string() + std::string(MEMBERINFODBPATH);
     LogPrintf("Opening LevelDB in %s\n", db_path);
 
     leveldb::Status status = leveldb::DB::Open(options, db_path, &pdb);
@@ -17,14 +17,14 @@ CRwdBalanceViewDB::CRwdBalanceViewDB(CClubInfoDB *pclubinfodb) : _pclubinfodb(pc
     LogPrintf("Opened LevelDB successfully\n");
 }
 
-CRwdBalanceViewDB::~CRwdBalanceViewDB()
+CMemberInfoDB::~CMemberInfoDB()
 {
     delete pdb;
     pdb = NULL;
     _pclubinfodb = NULL;
 }
 
-bool CRwdBalanceViewDB::WriteDB(std::string key, int nHeight, string strValue)
+bool CMemberInfoDB::WriteDB(std::string key, int nHeight, string strValue)
 {
     std::stringstream ssHeight;
     std::string strHeight;
@@ -42,12 +42,12 @@ bool CRwdBalanceViewDB::WriteDB(std::string key, int nHeight, string strValue)
     return true;
 }
 
-bool CRwdBalanceViewDB::WriteDB(std::string key, int nHeight, string father, uint64_t tc, CAmount value)
+bool CMemberInfoDB::WriteDB(std::string key, int nHeight, string father, uint64_t tc, CAmount value)
 {
     return WriteDB(key, nHeight, GenerateRecord(father, tc, value));
 }
 
-bool CRwdBalanceViewDB::ReadDB(std::string key, int nHeight, string& father, uint64_t& tc, CAmount& value)
+bool CMemberInfoDB::ReadDB(std::string key, int nHeight, string& father, uint64_t& tc, CAmount& value)
 {
     std::stringstream ssHeight;
     std::string strHeight;
@@ -78,7 +78,7 @@ bool CRwdBalanceViewDB::ReadDB(std::string key, int nHeight, string& father, uin
     return true;
 }
 
-bool CRwdBalanceViewDB::ReadDB(std::string key, int nHeight, std::string& strValue)
+bool CMemberInfoDB::ReadDB(std::string key, int nHeight, std::string& strValue)
 {
     std::stringstream ssHeight;
     std::string strHeight;
@@ -101,7 +101,7 @@ bool CRwdBalanceViewDB::ReadDB(std::string key, int nHeight, std::string& strVal
     return true;
 }
 
-bool CRwdBalanceViewDB::DeleteDB(std::string key, int nHeight)
+bool CMemberInfoDB::DeleteDB(std::string key, int nHeight)
 {
     std::stringstream ssHeight;
     std::string strHeight;
@@ -119,12 +119,12 @@ bool CRwdBalanceViewDB::DeleteDB(std::string key, int nHeight)
     return true;
 }
 
-void CRwdBalanceViewDB::ClearCache()
+void CMemberInfoDB::ClearCache()
 {
     cacheRecord.clear();
 }
 
-void CRwdBalanceViewDB::UpdateCacheFather(string address, int inputHeight, string newFather)
+void CMemberInfoDB::UpdateCacheFather(string address, int inputHeight, string newFather)
 {
     CAmount rwdbalanceInput = 0;
     string ftInput = " ";
@@ -135,7 +135,7 @@ void CRwdBalanceViewDB::UpdateCacheFather(string address, int inputHeight, strin
     cacheRecord[address] = newRecordInput;
 }
 
-void CRwdBalanceViewDB::UpdateCacheTcAddOne(string address, int inputHeight)
+void CMemberInfoDB::UpdateCacheTcAddOne(string address, int inputHeight)
 {
     CAmount rwdbalanceVout = 0;
     string ftVout = " ";
@@ -146,7 +146,7 @@ void CRwdBalanceViewDB::UpdateCacheTcAddOne(string address, int inputHeight)
     cacheRecord[address] = newRecordVout;
 }
 
-void CRwdBalanceViewDB::UpdateCacheRewardChange(string address, int inputHeight, CAmount rewardChange)
+void CMemberInfoDB::UpdateCacheRewardChange(string address, int inputHeight, CAmount rewardChange)
 {
     CAmount rewardbalance_old = 0;
     string ft = " ";
@@ -157,7 +157,7 @@ void CRwdBalanceViewDB::UpdateCacheRewardChange(string address, int inputHeight,
     cacheRecord[address] = newRecord;
 }
 
-bool CRwdBalanceViewDB::Commit(int nHeight)
+bool CMemberInfoDB::Commit(int nHeight)
 {
     if (cacheRecord.size() == 0)
         return true;
@@ -174,7 +174,7 @@ bool CRwdBalanceViewDB::Commit(int nHeight)
     return true;
 }
 
-bool CRwdBalanceViewDB::InitGenesisDB(std::vector<std::string> addresses)
+bool CMemberInfoDB::InitGenesisDB(std::vector<std::string> addresses)
 {
     for(uint i = 0; i < addresses.size(); i++)
     {
@@ -187,7 +187,7 @@ bool CRwdBalanceViewDB::InitGenesisDB(std::vector<std::string> addresses)
     return true;
 }
 
-bool CRwdBalanceViewDB::ParseRecord(string inputStr, string& father, uint64_t& tc, CAmount& value)
+bool CMemberInfoDB::ParseRecord(string inputStr, string& father, uint64_t& tc, CAmount& value)
 {
     vector<string> splitedStr;
     boost::split(splitedStr, inputStr, boost::is_any_of(DBSEPECTATOR));
@@ -202,7 +202,7 @@ bool CRwdBalanceViewDB::ParseRecord(string inputStr, string& father, uint64_t& t
     return true;
 }
 
-string CRwdBalanceViewDB::GenerateRecord(string father, uint64_t tc, CAmount value)
+string CMemberInfoDB::GenerateRecord(string father, uint64_t tc, CAmount value)
 {
     string outputStr;
     std::stringstream ssVal;
@@ -216,7 +216,7 @@ string CRwdBalanceViewDB::GenerateRecord(string father, uint64_t tc, CAmount val
     return outputStr;
 }
 
-CAmount CRwdBalanceViewDB::GetRwdBalance(std::string address, int nHeight)
+CAmount CMemberInfoDB::GetRwdBalance(std::string address, int nHeight)
 {
     string ft = " ";
     uint64_t tc;
@@ -225,7 +225,7 @@ CAmount CRwdBalanceViewDB::GetRwdBalance(std::string address, int nHeight)
     return value;
 }
 
-string CRwdBalanceViewDB::GetFather(string address, int nHeight)
+string CMemberInfoDB::GetFather(string address, int nHeight)
 {
     string ft = " ";
     uint64_t tc;
@@ -234,7 +234,7 @@ string CRwdBalanceViewDB::GetFather(string address, int nHeight)
     return ft;
 }
 
-uint64_t CRwdBalanceViewDB::GetTXCnt(string address, int nHeight)
+uint64_t CMemberInfoDB::GetTXCnt(string address, int nHeight)
 {
     string ft;
     uint64_t tc = 0;
@@ -243,7 +243,7 @@ uint64_t CRwdBalanceViewDB::GetTXCnt(string address, int nHeight)
     return tc;
 }
 
-void CRwdBalanceViewDB::GetFullRecord(string address, int nHeight, string& father, uint64_t& tc, CAmount& value)
+void CMemberInfoDB::GetFullRecord(string address, int nHeight, string& father, uint64_t& tc, CAmount& value)
 {
     if (cacheRecord.find(address) != cacheRecord.end())
     {
@@ -260,7 +260,7 @@ void CRwdBalanceViewDB::GetFullRecord(string address, int nHeight, string& fathe
     }
 }
 
-string CRwdBalanceViewDB::GetFullRecord(std::string address, int nHeight)
+string CMemberInfoDB::GetFullRecord(std::string address, int nHeight)
 {
     string strValue;
     if (cacheRecord.find(address) != cacheRecord.end())
@@ -280,7 +280,7 @@ string CRwdBalanceViewDB::GetFullRecord(std::string address, int nHeight)
     return strValue;
 }
 
-bool CRwdBalanceViewDB::RewardChangeUpdate(CAmount rewardChange, string address, int nHeight, bool isUndo)
+bool CMemberInfoDB::RewardChangeUpdate(CAmount rewardChange, string address, int nHeight, bool isUndo)
 {
     if (rewardChange >= MAX_MONEY || rewardChange <= -MAX_MONEY)
         return false;
@@ -298,7 +298,7 @@ bool CRwdBalanceViewDB::RewardChangeUpdate(CAmount rewardChange, string address,
     return true;
 }
 
-bool CRwdBalanceViewDB::RewardChangeUpdateByPubkey(CAmount rewardChange, string pubKey, int nHeight, bool isUndo)
+bool CMemberInfoDB::RewardChangeUpdateByPubkey(CAmount rewardChange, string pubKey, int nHeight, bool isUndo)
 {
     string address;
 
@@ -315,7 +315,7 @@ bool CRwdBalanceViewDB::RewardChangeUpdateByPubkey(CAmount rewardChange, string 
     return true;
 }
 
-bool CRwdBalanceViewDB::ComputeMemberReward(const uint64_t& txCnt, const uint64_t& totalTXCnt,
+bool CMemberInfoDB::ComputeMemberReward(const uint64_t& txCnt, const uint64_t& totalTXCnt,
                                             const CAmount& totalRewards, CAmount& memberReward)
 {
     if (totalTXCnt < txCnt || totalTXCnt == 0 || totalRewards < 0)
@@ -346,25 +346,21 @@ bool CRwdBalanceViewDB::ComputeMemberReward(const uint64_t& txCnt, const uint64_
         return false;
 }
 
-bool CRwdBalanceViewDB::InitRewardsDist(CAmount memberTotalRewards, const CScript& scriptPubKey, int nHeight, string& clubLeaderAddress,
+bool CMemberInfoDB::InitRewardsDist(CAmount memberTotalRewards, const CScript& scriptPubKey, int nHeight, string& clubLeaderAddress,
                                         CAmount& distributedRewards, map<string, CAmount>& memberRewards)
 {
     if (memberTotalRewards < 0)
         return false;
 
     memberRewards.clear();
-    bool ret = true;
-//    ClubManager* clubMan = ClubManager::GetInstance();
-//    RewardManager* rewardMan = RewardManager::GetInstance();
     CBitcoinAddress addr;
-    uint64_t clubID;
     map<string, uint64_t> addrToTC;
     uint64_t totalmemberTXCnt = 0;
     if (!addr.ScriptPub2Addr(scriptPubKey, clubLeaderAddress))
         return false;
 
     uint64_t harvestPower = 0;
-    vector<string> members = _pclubinfodb->GetMembersByFatherAddress(clubLeaderAddress, nHeight-1);
+    vector<string> members = _pclubinfodb->GetClubMembersByAddress(clubLeaderAddress, nHeight-1);
     for(size_t i = 0; i < members.size(); i++)
     {
         uint64_t tXCnt = GetTXCnt(members[i], nHeight-1);
@@ -397,7 +393,17 @@ bool CRwdBalanceViewDB::InitRewardsDist(CAmount memberTotalRewards, const CScrip
     return true;
 }
 
-bool CRwdBalanceViewDB::UpdateRewardsByTX(const CTransaction& tx, CAmount blockReward, int nHeight, bool isUndo)
+uint64_t CMemberInfoDB::GetHarvestPowerByAddress(std::string address, int nHeight)
+{
+    uint64_t hPower = 0;
+    vector<string> clubMembers = _pclubinfodb->GetClubMembersByAddress(address, nHeight);
+    hPower += GetTXCnt(address, nHeight);
+    for(size_t i = 0; i < clubMembers.size(); i++)
+        hPower += GetTXCnt(clubMembers[i], nHeight);
+    return hPower;
+}
+
+bool CMemberInfoDB::UpdateRewardsByTX(const CTransaction& tx, CAmount blockReward, int nHeight, bool isUndo)
 {
     if (!tx.IsCoinBase())
     {
@@ -434,7 +440,7 @@ bool CRwdBalanceViewDB::UpdateRewardsByTX(const CTransaction& tx, CAmount blockR
     return ret;
 }
 
-bool CRwdBalanceViewDB::EntrustByAddress(string inputAddr, string voutAddress, int nHeight, bool isUndo)
+bool CMemberInfoDB::EntrustByAddress(string inputAddr, string voutAddress, int nHeight, bool isUndo)
 {
     if (isUndo)
     {
@@ -442,8 +448,9 @@ bool CRwdBalanceViewDB::EntrustByAddress(string inputAddr, string voutAddress, i
         {
             if (!DeleteDB(inputAddr, nHeight+1))
                 return false;
-            //UpdateMemberDB(voutAddress, isAdd, inputAddr, isUndo);
-            //UpdateMemberDB(inputAddr, isDel, voutAddress, isUndo);
+
+            _pclubinfodb->UpdateMembersByFatherAddress(voutAddress, true, inputAddr, nHeight, isUndo);
+            _pclubinfodb->UpdateMembersByFatherAddress(GetFather(inputAddr, nHeight), false, inputAddr, nHeight, isUndo);
         }
         if (!DeleteDB(voutAddress, nHeight+1))
             return false;
@@ -453,19 +460,18 @@ bool CRwdBalanceViewDB::EntrustByAddress(string inputAddr, string voutAddress, i
     // Address of vout must have father of "0" in database or entrust itself
     if ((voutAddress.compare(inputAddr) != 0) && (GetFather(voutAddress, nHeight-1).compare("0") == 0))
     {
+        _pclubinfodb->UpdateMembersByFatherAddress(GetFather(inputAddr, nHeight), false, inputAddr, nHeight, isUndo);
+        _pclubinfodb->UpdateMembersByFatherAddress(voutAddress, true, inputAddr, nHeight, isUndo);
+
         // Input address update
         UpdateCacheFather(inputAddr, nHeight-1, voutAddress);
-
-        //UpdateMemberDB(voutAddress, isAdd, inputAddr, isUndo);
-        //UpdateMemberDB(inputAddr, isDel, voutAddress, isUndo);
     }
     else if((voutAddress.compare(inputAddr) == 0) && (GetFather(voutAddress, nHeight-1).compare("0") != 0))
     {
+        _pclubinfodb->UpdateMembersByFatherAddress(GetFather(inputAddr, nHeight), false, inputAddr, nHeight, isUndo);
+
         // Input address update
         UpdateCacheFather(inputAddr, nHeight-1, "0");
-
-        //UpdateMemberDB(voutAddress, isAdd, inputAddr, isUndo);
-        //UpdateMemberDB(inputAddr, isDel, voutAddress, isUndo);
     }
 
     // Address of vout update by transaction count
@@ -474,7 +480,7 @@ bool CRwdBalanceViewDB::EntrustByAddress(string inputAddr, string voutAddress, i
     return true;
 }
 
-bool CRwdBalanceViewDB::TcAddOneByAddress(string address, int nHeight, string father, bool isUndo)
+bool CMemberInfoDB::TcAddOneByAddress(string address, int nHeight, string father, bool isUndo)
 {
     if (isUndo)
     {
@@ -490,7 +496,7 @@ bool CRwdBalanceViewDB::TcAddOneByAddress(string address, int nHeight, string fa
     if (ft.compare(" ") == 0)
     {
         ft = father;
-        //UpdateMemberDB(voutAddress, isAdd, inputAddr, isUndo);
+        _pclubinfodb->UpdateMembersByFatherAddress(father, true, address, nHeight, isUndo);
     }
     tc++;
 
@@ -502,7 +508,7 @@ bool CRwdBalanceViewDB::TcAddOneByAddress(string address, int nHeight, string fa
     return true;
 }
 
-bool CRwdBalanceViewDB::UpdateFatherTCByTX(const CTransaction& tx, const CCoinsViewCache& view, int nHeight, bool isUndo)
+bool CMemberInfoDB::UpdateFatherTCByTX(const CTransaction& tx, const CCoinsViewCache& view, int nHeight, bool isUndo)
 {
     if (!tx.IsCoinBase())
     {

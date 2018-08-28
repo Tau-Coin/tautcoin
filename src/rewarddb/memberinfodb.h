@@ -16,8 +16,8 @@
 #include <vector>
 
 /** View on the reward balance dataset. */
-#define RWDBALDBPATH "/rwdbalance"
-class CRwdBalanceViewDB
+#define MEMBERINFODBPATH "/memberinfo"
+class CMemberInfoDB
 {
 private:
     //! the database itself
@@ -57,10 +57,10 @@ private:
 
 public:
     //! Constructor
-    CRwdBalanceViewDB(CClubInfoDB* pclubinfodb);
+    CMemberInfoDB(CClubInfoDB* pclubinfodb);
 
     //! As we use CBalanceViews polymorphically, have a destructor
-    ~CRwdBalanceViewDB();
+    ~CMemberInfoDB();
 
     //! Clear the rwdbalance cache
     void ClearCache();
@@ -97,6 +97,9 @@ public:
     //! Retrieve a full record for a given address
     void GetFullRecord(std::string address, int nHeight, std::string& father, uint64_t& tc, CAmount& value);
     std::string GetFullRecord(std::string address, int nHeight);
+
+    //! Retrieve the harvest power for a given address if it's a miner
+    uint64_t GetHarvestPowerByAddress(std::string address, int nHeight);
 
     //! Update the Balance dataset
     bool UpdateRewardsByTX(const CTransaction& tx, CAmount blockReward, int nHeight, bool isUndo);
