@@ -3045,10 +3045,6 @@ bool ConnectBlock(const CBlock& block, CValidationState& state, CBlockIndex* pin
 //        assert(ConvertPubkeyToAddress(block.pubKeyOfpackager, addrStr));
 //        if (block.harvestPower != pmemberinfodb->GetHarvestPowerByAddress(addrStr, pindex->nHeight-1))
 //            return error("%s: harvest power check:%s", __func__, FormatStateMessage(state));
-        if (!CheckBlockHarvestPower(block, state, chainparams.GetConsensus()))
-        {
-            return error("%s: harvest power check:%s", __func__, FormatStateMessage(state));
-        }
     }
 
     // verify that the view's current state corresponds to the previous block
@@ -4625,6 +4621,11 @@ bool CheckBlockHeader(const CBlockHeader& block, CValidationState& state, const 
          assert(pindexPrev);
     }
 
+    if (fCheckPOT && !CheckBlockHarvestPower(block, pindexPrev->nHeight, state, consensusParams))
+    {
+        return state.DoS(100, false, REJECT_INVALID, "harvest power", false, "harverst power mismatch");
+    }
+
     // Check proof of stake matches claimed amount
     if (fCheckPOT && !CheckProofOfTransaction(block, state, consensusParams, pindexPrev))
         return state.DoS(50, false, REJECT_INVALID, "high-hit", false, "proof of tx failed");
@@ -4634,7 +4635,7 @@ bool CheckBlockHeader(const CBlockHeader& block, CValidationState& state, const 
 
 // Check whether allowed to forge or not. And check whether harverst power
 // is consistent with database.
-bool CheckBlockHarvestPower(const CBlock& block, CValidationState& state, const Consensus::Params& consensusParams)
+bool CheckBlockHarvestPower(const CBlock& block, int height, CValidationState& state, const Consensus::Params& consensusParams)
 {
     static ClubManager* clubMgr = NULL;
     if (!clubMgr)
@@ -4642,11 +4643,11 @@ bool CheckBlockHarvestPower(const CBlock& block, CValidationState& state, const 
         clubMgr = ClubManager::GetInstance();
     }
 
-    if (block.GetHash() == consensusParams.hashGenesisBlock)
+    if (block.GetHash() == consensusParams.hashGenesisBlock || height == 0)
         return true;
 
     uint64_t harvestPower;
-    if (!clubMgr->IsAllowForge(block.pubKeyOfpackager, 0, harvestPower))
+    if (!clubMgr->IsAllowForge(block.pubKeyOfpackager, height, harvestPower))
         return state.DoS(100, false, REJECT_INVALID, "not allowed to forge", false, "bad forger");
 
     if (block.harvestPower != harvestPower)
@@ -5057,13 +5058,6 @@ bool ProcessNewBlock(CValidationState& state, const CChainParams& chainparams, C
             if (fNewBlock) pfrom->nLastBlockTime = GetTime();
         }
         CheckBlockIndex(chainparams.GetConsensus());
-
-        if (ret && !pindex && !pindex->pprev)
-        {
-            CBlockIndex *tip = chainActive.Tip();
-            if (pindex->pprev->GetBlockHash() == tip->GetBlockHash())
-                ret &= CheckBlockHarvestPower(*pblock, state, chainparams.GetConsensus());
-        }
 
         if (!ret)
             return error("%s: AcceptBlock FAILED", __func__);

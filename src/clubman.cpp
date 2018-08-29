@@ -4,6 +4,7 @@
 
 #include "clubman.h"
 
+#include "main.h"
 #include "util.h"
 #include "sync.h"
 
@@ -27,6 +28,7 @@ ClubManager* ClubManager::GetInstance()
 
 uint64_t ClubManager::GetHarvestPowerByAddress(std::string& address, int nHeight)
 {
+    /*
     std::vector<string> fields;
 	fields.push_back(clubFieldCount);
 	mysqlpp::StoreQueryResult bLocal = backendDb->ISNSqlSelectAA(tableClub, fields, clubFieldAddress, address);
@@ -40,6 +42,8 @@ uint64_t ClubManager::GetHarvestPowerByAddress(std::string& address, int nHeight
     {
         return DEFAULT_HARVEST_POWER;
     }
+    */
+    return pmemberinfodb->GetHarvestPowerByAddress(address, nHeight);
 }
 
 ClubManager::ClubManager()
@@ -69,8 +73,8 @@ bool ClubManager::IsAllowForge(const std::string& pubKey, int nHeight, uint64_t 
     return false;
 }
 
-bool ClubManager::IsForgeScript(const CScript& script, CBitcoinAddress& addr, uint64_t& memCount) {
-    int nHeight = 0;
+bool ClubManager::IsForgeScript(const CScript& script, CBitcoinAddress& addr, uint64_t& memCount, int nHeight) {
+    if (nHeight <= -1)
     {
         LOCK(cs_main);
         nHeight = chainActive.Height();

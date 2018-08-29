@@ -24,7 +24,7 @@ class ClubManager
 
         bool IsAllowForge(const std::string& pubKey, int nHeight, uint64_t &harvestPower);
 
-        bool IsForgeScript(const CScript& script, CBitcoinAddress& addr, uint64_t& memCount);
+        bool IsForgeScript(const CScript& script, CBitcoinAddress& addr, uint64_t& memCount, int nHeight = -1);
 
         bool GetClubIDByAddress(const std::string& address, uint64_t& clubID);
 
