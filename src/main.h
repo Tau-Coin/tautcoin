@@ -488,7 +488,7 @@ bool ReadBlockFromDisk(CBlock& block, const CBlockIndex* pindex, const Consensus
 /** Context-independent validity checks */
 bool CheckBlockHeader(const CBlockHeader& block, CValidationState& state, const Consensus::Params& consensusParams, bool fCheckPOW = true, CBlockIndex* pindexPrev = NULL);
 bool CheckBlock(const CBlock& block, CValidationState& state, const Consensus::Params& consensusParams, bool fCheckPOW = true, bool fCheckMerkleRoot = true);
-bool CheckBlockHarvestPower(const CBlock& block, int height, CValidationState& state, const Consensus::Params& consensusParams);
+bool CheckBlockHarvestPower(const CBlock& block, CValidationState& state, const Consensus::Params& consensusParams, int height = -1);
 
 /** Context-dependent validity checks.
  *  By "context", we mean only the previous block headers, but not the UTXO

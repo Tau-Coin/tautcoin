@@ -6,7 +6,7 @@
 #define TAUCOIN_REWARD_MANAGER_H
 
 #include "amount.h"
-#include "isndb.h"
+//#include "isndb.h"
 
 class RewardManager
 {
@@ -16,19 +16,19 @@ public:
 
     static RewardManager* GetInstance();
 
-    CAmount GetRewardsByAddress(std::string& addr);
+    CAmount GetRewardsByAddress(std::string& addr, int height = -1);
 
     bool UpdateRewardsByAddress(std::string& address, CAmount newRewards, CAmount oldReward);
 
-    CAmount GetRewardsByPubkey(const std::string &pubkey);
+    CAmount GetRewardsByPubkey(const std::string &pubkey, int height = -1);
 
     bool UpdateRewardsByPubkey(const std::string &pubkey, CAmount newRewards, CAmount oldReward);
 
-    bool GetMembersByClubID(uint64_t clubID, std::vector<string> &addresses, std::string& leaderAddr);
+    bool GetMembersByClubID(uint64_t clubID, std::vector<std::string> &addresses, std::string& leaderAddr);
 
     bool GetMembersTxCountByClubID(uint64_t clubID, std::map<std::string, uint64_t>& addrToTC, std::string& leaderAddr);
 
-    uint64_t GetTxCountByAddress(std::string& address);
+    uint64_t GetTxCountByAddress(std::string& address, int height = -1);
 
 protected:
 
@@ -38,6 +38,6 @@ private:
 
     static RewardManager* pSingleton;
 
-    ISNDB* backendDb;
+    //ISNDB* backendDb;
 };
 #endif // TAUCOIN_REWARD_MANAGER_H

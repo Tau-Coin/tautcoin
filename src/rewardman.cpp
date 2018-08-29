@@ -4,19 +4,17 @@
 
 #include "rewardman.h"
 
+#include "main.h"
 #include "util.h"
 #include "sync.h"
 #include <sstream>
 //#include "tool.h"
 
-extern bool ConvertPubkeyToAddress(const std::string& pubKey, std::string& addrStr);
+#include "rewarddb/memberinfodb.h"
 
-static void int2str(const int64_t &int_temp, std::string &string_temp)  
-{  
-    stringstream stream;  
-    stream << int_temp;  
-    string_temp = stream.str(); 
-} 
+extern CMemberInfoDB *pmemberinfodb;
+
+extern bool ConvertPubkeyToAddress(const std::string& pubKey, std::string& addrStr); 
 
 static CCriticalSection cs_rwdman;
 
@@ -34,8 +32,9 @@ RewardManager* RewardManager::GetInstance()
     return pSingleton;
 }
 
-uint64_t RewardManager::GetTxCountByAddress(std::string& address)
+uint64_t RewardManager::GetTxCountByAddress(std::string& address, int height)
 {
+    /*
 	std::vector<string> fields;
 	fields.push_back(memFieldCount);
 	mysqlpp::StoreQueryResult bLocal = backendDb->ISNSqlSelectAA(tableMember, fields, memFieldAddress, address);
@@ -47,11 +46,19 @@ uint64_t RewardManager::GetTxCountByAddress(std::string& address)
     else
     {
         return 0;
+    }*/
+
+    if (height <= -1)
+    {
+        LOCK(cs_main);
+        height = chainActive.Height();
     }
+    return pmemberinfodb->GetTXCnt(address, height);
 }
 
-CAmount RewardManager::GetRewardsByAddress(std::string& address)
+CAmount RewardManager::GetRewardsByAddress(std::string& address, int height)
 {
+    /*
 	std::vector<string> fields;
 	fields.push_back(memFieldBalance);
 	mysqlpp::StoreQueryResult bLocal = backendDb->ISNSqlSelectAA(tableMember, fields, memFieldAddress, address);
@@ -65,10 +72,20 @@ CAmount RewardManager::GetRewardsByAddress(std::string& address)
     {
         return 0;
     }
+    */
+
+    if (height <= -1)
+    {
+        LOCK(cs_main);
+        height = chainActive.Height();
+    }
+    return pmemberinfodb->GetRwdBalance(address, height);
 }
 
 bool RewardManager::UpdateRewardsByAddress(std::string& address, CAmount newRewards, CAmount oldReward)
 {
+    return true;
+    /*
     if (newRewards == oldReward)
         return true;
 
@@ -91,17 +108,17 @@ bool RewardManager::UpdateRewardsByAddress(std::string& address, CAmount newRewa
     else
     {
         return false;
-    }
+    }*/
 }
 
-CAmount RewardManager::GetRewardsByPubkey(const std::string &pubkey)
+CAmount RewardManager::GetRewardsByPubkey(const std::string &pubkey, int height)
 {
     std::string addrStr;
 
     if (!ConvertPubkeyToAddress(pubkey, addrStr))
         return 0;
 
-    return GetRewardsByAddress(addrStr);
+    return GetRewardsByAddress(addrStr, height);
 }
 
 bool RewardManager::UpdateRewardsByPubkey(const std::string &pubkey, CAmount newRewards, CAmount oldReward)
@@ -116,11 +133,12 @@ bool RewardManager::UpdateRewardsByPubkey(const std::string &pubkey, CAmount new
 
 RewardManager::RewardManager()
 {
-    backendDb = ISNDB::GetInstance();
+    //backendDb = ISNDB::GetInstance();
 }
 
 bool RewardManager::GetMembersByClubID(uint64_t clubID, std::vector<std::string>& addresses, std::string& leaderAddr)
 {
+    /*
     addresses.clear();
 
 	std::vector<string> fields;
@@ -142,13 +160,14 @@ bool RewardManager::GetMembersByClubID(uint64_t clubID, std::vector<std::string>
             LogPrint("reward", "%s, db record:%s\n", __func__, static_cast<std::string>(bLocal[i]["address"]));
             addresses.push_back(static_cast<std::string>(bLocal[i]["address"]));
         }
-    }
+    }*/
 
 	return true;
 }
 
 bool RewardManager::GetMembersTxCountByClubID(uint64_t clubID, std::map<std::string, uint64_t>& addrToTC, std::string& leaderAddr)
 {
+    /*
     addrToTC.clear();
 
     std::vector<string> fields;
@@ -172,7 +191,7 @@ bool RewardManager::GetMembersTxCountByClubID(uint64_t clubID, std::map<std::str
         {
             addrToTC.insert(std::map<std::string, uint64_t>::value_type(address, txCnt));
         }
-    }
+    }*/
 
 	return true;
 }

@@ -2653,16 +2653,19 @@ bool DisconnectBlock(CBlock& block, CValidationState& state, CBlockIndex* pindex
 
         // Construct db transactions, clubinfo and memeber must be updated
         // together or not.
+        /*
         mysqlpp::Connection conn;
         ISNDB::GetInstance()->GetConnection(conn);
         mysqlpp::Transaction trans(conn, mysqlpp::Transaction::serializable,
             mysqlpp::Transaction::session);
+         */
 
         // restore rewards
         bool isUndo = true;
         CAmount nFees = DEFAULT_TRANSACTION_MAXFEE * block.vtx.size();
         if (!UpdateRewards2(block, nFees, pindex->nHeight-1, isUndo))
             return error("DisconnectBlock(): UpdateRewards failed");
+        /*
         for (int k = block.vtx.size() - 1; k >= 0; k--)
         {
             const CTransaction &tx = block.vtx[k];
@@ -2675,12 +2678,14 @@ bool DisconnectBlock(CBlock& block, CValidationState& state, CBlockIndex* pindex
                 return error("DisconnectBlock(): UpdateRewards step2 failed");
             }
         }
+        */
         RewardManager::GetInstance()->currentHeight = pindex->nHeight-1;
 
         // undo entrust relationship in reverse order
         int nSize = vecTxInfo.size();
         ISNDB* pdb = ISNDB::GetInstance();
         std::vector<std::string> field, values;
+        /*
         for (int i = nSize - 1; i >= 0; i--) {
             TxInfo &txInfo = vecTxInfo[i];
             field.clear();
@@ -2850,12 +2855,10 @@ bool DisconnectBlock(CBlock& block, CValidationState& state, CBlockIndex* pindex
                 LogPrint("undo_relationship", "unknown type\n");
                 break;
             }
-        }
+        }*/
 
         // move best block pointer to prevout block
         view.SetBestBlock(pindex->pprev->GetBlockHash());
-
-        trans.commit();
     }
 
     if (pfClean) {
@@ -3009,6 +3012,7 @@ bool ConnectBlock(const CBlock& block, CValidationState& state, CBlockIndex* pin
                 const CScript genesisOutputScript = CScript() << ParseHex(chainparams.GetConsensus().genesisAddr[i]) << OP_CHECKSIG;
                 ExtractDestination(genesisOutputScript, address);
                 addresses.push_back(CBitcoinAddress(address).ToString());
+                /*
                 values.push_back(CBitcoinAddress(address).ToString());
                 values.push_back("1");
                 clubId = pdb->ISNSqlInsert(tableClub, values);
@@ -3020,6 +3024,7 @@ bool ConnectBlock(const CBlock& block, CValidationState& state, CBlockIndex* pin
                 values.push_back("1");
                 values.push_back("0");
                 pdb->ISNSqlInsert(tableMember, values);
+                */
             }
 
             if (!prbalancedbview->InitGenesisDB(addresses))
@@ -3045,6 +3050,8 @@ bool ConnectBlock(const CBlock& block, CValidationState& state, CBlockIndex* pin
 //        assert(ConvertPubkeyToAddress(block.pubKeyOfpackager, addrStr));
 //        if (block.harvestPower != pmemberinfodb->GetHarvestPowerByAddress(addrStr, pindex->nHeight-1))
 //            return error("%s: harvest power check:%s", __func__, FormatStateMessage(state));
+        if (!CheckBlockHarvestPower(block, state, chainparams.GetConsensus(), pindex->nHeight - 1))
+            return error("%s: Check harvest power: %s", __func__, FormatStateMessage(state));
     }
 
     // verify that the view's current state corresponds to the previous block
@@ -3157,10 +3164,12 @@ bool ConnectBlock(const CBlock& block, CValidationState& state, CBlockIndex* pin
 
     // Construct db transactions, clubinfo and memeber must be updated
     // together or not.
+    /*
     mysqlpp::Connection conn;
     ISNDB::GetInstance()->GetConnection(conn);
     mysqlpp::Transaction trans(conn, mysqlpp::Transaction::serializable,
         mysqlpp::Transaction::session);
+     */
 
     //////////////////////////////only for test//////////////////////////////
 //    static ClubManager * clubMan = NULL;
@@ -3389,6 +3398,7 @@ bool ConnectBlock(const CBlock& block, CValidationState& state, CBlockIndex* pin
                 //entrust graph, only deal with special tx
                 //extract vin's Address(which offer the most money)
                 //CTxDestination vinAddress;
+                /*
                 std::string maxValueAddress;
                 CAmount maxValue = 0;
                 for (unsigned int i = 0; i < tx.vreward.size(); i++) {
@@ -3412,9 +3422,11 @@ bool ConnectBlock(const CBlock& block, CValidationState& state, CBlockIndex* pin
                         }
                     }
                 }
+                */
 
                 //if an entrustment transaction
                 //bool bEntrustTx = false;
+                /*
                 CTxDestination address;
                 std::string voutAddress;
                 std::vector<std::string> field, values;
@@ -3585,7 +3597,7 @@ bool ConnectBlock(const CBlock& block, CValidationState& state, CBlockIndex* pin
                             ofile << maxValueAddress << "    " << voutAddress << "    " << TX_TRANSFER_TO_EXISTED_ADDRESS << "    " << TX_TRANSFER_TO_EXISTED_ADDRESS << std::endl;
                         }
                     }
-                }
+                }*/
             }
         }
         UpdateCoins(tx, view, i == 0 ? undoDummy : blockundo.vtxundo.back(), pindex->nHeight);
@@ -3600,6 +3612,7 @@ bool ConnectBlock(const CBlock& block, CValidationState& state, CBlockIndex* pin
         if (!UpdateRewards2(block, nFees, pindex->nHeight))
             return error("ConnectBlock(): UpdateRewards failed");
 
+       /*
         for (unsigned int j = 0; j < block.vtx.size(); j++)
         {
             const CTransaction &tx = block.vtx[j];
@@ -3608,14 +3621,14 @@ bool ConnectBlock(const CBlock& block, CValidationState& state, CBlockIndex* pin
                 trans.rollback();
                 return error("ConnectBlock(): UpdateRewards step2 failed");
             }
-        }
+        }*/
         RewardManager::GetInstance()->currentHeight = pindex->nHeight;
         pclubinfodb->Commit(pindex->nHeight);
         pclubinfodb->ClearCache();
     }
 
     if (!fJustCheck) {
-        trans.commit();
+        //trans.commit();
         ofile .close();
     }
 
@@ -4621,11 +4634,6 @@ bool CheckBlockHeader(const CBlockHeader& block, CValidationState& state, const 
          assert(pindexPrev);
     }
 
-    if (fCheckPOT && !CheckBlockHarvestPower(block, pindexPrev->nHeight, state, consensusParams))
-    {
-        return state.DoS(100, false, REJECT_INVALID, "harvest power", false, "harverst power mismatch");
-    }
-
     // Check proof of stake matches claimed amount
     if (fCheckPOT && !CheckProofOfTransaction(block, state, consensusParams, pindexPrev))
         return state.DoS(50, false, REJECT_INVALID, "high-hit", false, "proof of tx failed");
@@ -4635,12 +4643,18 @@ bool CheckBlockHeader(const CBlockHeader& block, CValidationState& state, const 
 
 // Check whether allowed to forge or not. And check whether harverst power
 // is consistent with database.
-bool CheckBlockHarvestPower(const CBlock& block, int height, CValidationState& state, const Consensus::Params& consensusParams)
+bool CheckBlockHarvestPower(const CBlock& block, CValidationState& state, const Consensus::Params& consensusParams, int height)
 {
     static ClubManager* clubMgr = NULL;
     if (!clubMgr)
     {
         clubMgr = ClubManager::GetInstance();
+    }
+
+    if (height <= -1)
+    {
+        LOCK(cs_main);
+        height = chainActive.Height();
     }
 
     if (block.GetHash() == consensusParams.hashGenesisBlock || height == 0)
@@ -5058,6 +5072,13 @@ bool ProcessNewBlock(CValidationState& state, const CChainParams& chainparams, C
             if (fNewBlock) pfrom->nLastBlockTime = GetTime();
         }
         CheckBlockIndex(chainparams.GetConsensus());
+
+        if (ret && !pindex && !pindex->pprev)
+        {
+            CBlockIndex *tip = chainActive.Tip();
+            if (pindex->pprev->GetBlockHash() == tip->GetBlockHash())
+                ret &= CheckBlockHarvestPower(*pblock, state, chainparams.GetConsensus(), pindex->pprev->nHeight);
+        }
 
         if (!ret)
             return error("%s: AcceptBlock FAILED", __func__);
