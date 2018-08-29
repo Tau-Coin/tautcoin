@@ -192,6 +192,7 @@ libbitcoin_server_a_SOURCES = \
   rpc/blockchain.cpp \
   rpc/txutils.cpp \
   rpc/mining.cpp \
+  rpc/clubmember.cpp \
   rpc/misc.cpp \
   rpc/net.cpp \
   rpc/rawtransaction2.cpp \
