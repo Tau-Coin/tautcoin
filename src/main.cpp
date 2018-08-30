@@ -1975,32 +1975,6 @@ void UpdateCoins(const CTransaction& tx, CCoinsViewCache& inputs, int nHeight)
     UpdateCoins(tx, inputs, txundo, nHeight);
 }
 
-bool RewardRateUpdate(CAmount blockReward, CAmount distributedRewards, string clubLeaderAddress, int nHeight, bool isUndo)
-{
-    bool updateRewardRate = false;
-    if (mapArgs.count("-updaterewardrate") && mapMultiArgs["-updaterewardrate"].size() > 0)
-    {
-        string flag = mapMultiArgs["-updaterewardrate"][0];
-        if (flag.compare("true") == 0)
-            updateRewardRate = true;
-    }
-    if (updateRewardRate && !isUndo && blockReward > 0)
-    {
-        arith_uint256 totalval = blockReward;
-        arith_uint256 distributedval = distributedRewards;
-        double rewardRate = distributedval.getdouble() / totalval.getdouble();
-        if (!prewardratedbview->UpdateRewardRate(clubLeaderAddress, rewardRate, nHeight))
-            return false;//LogPrintf("Warning: UpdateRewardRate failed!");
-    }
-    else if(updateRewardRate && !isUndo)
-    {
-        if (!prewardratedbview->UpdateRewardRate(clubLeaderAddress, -1, nHeight))
-            return false;//LogPrintf("Warning: UpdateRewardRate failed!");
-    }
-
-    return true;
-}
-
 bool UpdateRewards(const CBlock& block, CAmount blockReward, int nHeight, bool isUndo)
 {
     //pmemberinfodb->ClearCache();
@@ -2876,10 +2850,6 @@ bool ConnectBlock(const CBlock& block, CValidationState& state, CBlockIndex* pin
 
     if (!fJustCheck)
     {
-//        std::string addrStr;
-//        assert(ConvertPubkeyToAddress(block.pubKeyOfpackager, addrStr));
-//        if (block.harvestPower != pmemberinfodb->GetHarvestPowerByAddress(addrStr, pindex->nHeight-1))
-//            return error("%s: harvest power check:%s", __func__, FormatStateMessage(state));
         if (!CheckBlockHarvestPower(block, state, chainparams.GetConsensus(), pindex->nHeight - 1))
             return error("%s: Check harvest power: %s", __func__, FormatStateMessage(state));
     }
@@ -3293,14 +3263,8 @@ bool ConnectBlock(const CBlock& block, CValidationState& state, CBlockIndex* pin
     {
         if (!UpdateRewards(block, nFees, pindex->nHeight))
             return error("ConnectBlock(): UpdateRewards failed");
-
-        RewardManager::GetInstance()->currentHeight = pindex->nHeight;
         pclubinfodb->Commit(pindex->nHeight);
-        if (pindex->nHeight % (1440 * 7) == 0)
-            pclubinfodb->ClearCache();
-//        pmemberinfodb->Commit(pindex->nHeight);
-//        if (pindex->nHeight % (1440 * 7) == 0)
-//            pmemberinfodb->ClearCache();
+        pclubinfodb->ClearCache();
     }
 
     if (!fJustCheck) {

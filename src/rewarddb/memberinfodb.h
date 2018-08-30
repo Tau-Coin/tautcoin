@@ -120,6 +120,9 @@ public:
 
     //! Update the TX count and the father
     bool UpdateFatherAndTCByTX(const CTransaction& tx, const CCoinsViewCache &view, int nHeight, bool isUndo);
+
+    //! Update the club leader's distribution rate
+    bool RewardRateUpdate(CAmount blockReward, CAmount distributedRewards, std::string clubLeaderAddress, int nHeight);
 };
 
 #endif // TAUCOIN_MEMBERINFODB_H

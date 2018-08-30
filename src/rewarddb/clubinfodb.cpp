@@ -153,10 +153,29 @@ CClubInfoDB::CClubInfoDB()
     LogPrintf("Opened LevelDB successfully\n");
 }
 
+CClubInfoDB::CClubInfoDB(CRewardRateViewDB *prewardratedbview) : _prewardratedbview(prewardratedbview)
+{
+    options.create_if_missing = true;
+
+    std::string db_path = GetDataDir(true).string() + std::string(CLUBINFOPATH);
+    LogPrintf("Opening LevelDB in %s\n", db_path);
+
+    leveldb::Status status = leveldb::DB::Open(options, db_path, &pdb);
+    dbwrapper_private::HandleError(status);
+    assert(status.ok());
+    LogPrintf("Opened LevelDB successfully\n");
+}
+
 CClubInfoDB::~CClubInfoDB()
 {
     delete pdb;
     pdb = NULL;
+    _prewardratedbview = NULL;
+}
+
+CRewardRateViewDB* CClubInfoDB::GetRewardRateDBPointer() const
+{
+    return _prewardratedbview;
 }
 
 void CClubInfoDB::ClearCache()

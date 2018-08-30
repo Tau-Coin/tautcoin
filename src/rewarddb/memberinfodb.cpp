@@ -515,6 +515,9 @@ bool CMemberInfoDB::UpdateRewardsByTX(const CTransaction& tx, CAmount blockRewar
     CAmount remainedReward = memberTotalRewards - distributedRewards;
     ret &= RewardChangeUpdate(remainedReward, clubLeaderAddress, nHeight, isUndo);
 
+    // Update the reward rate dataset(if required)
+    RewardRateUpdate(blockReward, distributedRewards, clubLeaderAddress, nHeight);
+
     return ret;
 }
 
@@ -792,6 +795,39 @@ bool CMemberInfoDB::UpdateFatherAndTCByTX(const CTransaction& tx, const CCoinsVi
                 if (!UpdateTcAndTtcByAddress(voutAddress, nHeight, bestFather, isUndo))
                     return false;
             }
+        }
+    }
+
+    return true;
+}
+
+bool CMemberInfoDB::RewardRateUpdate(CAmount blockReward, CAmount distributedRewards, string clubLeaderAddress, int nHeight)
+{
+    bool updateRewardRate = false;
+    CRewardRateViewDB* prewardratedb = _pclubinfodb->GetRewardRateDBPointer();
+    if (mapArgs.count("-updaterewardrate") && mapMultiArgs["-updaterewardrate"].size() > 0)
+    {
+        string flag = mapMultiArgs["-updaterewardrate"][0];
+        if (flag.compare("true") == 0)
+            updateRewardRate = true;
+    }
+    if (updateRewardRate && blockReward > 0)
+    {
+        arith_uint256 totalval = blockReward;
+        arith_uint256 distributedval = distributedRewards;
+        double rewardRate = distributedval.getdouble() / totalval.getdouble();
+        if (!prewardratedb->UpdateRewardRate(clubLeaderAddress, rewardRate, nHeight))
+        {
+            LogPrintf("Warning: UpdateRewardRate failed!");
+            return false;
+        }
+    }
+    else if(updateRewardRate)
+    {
+        if (!prewardratedb->UpdateRewardRate(clubLeaderAddress, -1, nHeight))
+        {
+            LogPrintf("Warning: UpdateRewardRate failed!");
+            return false;
         }
     }
 

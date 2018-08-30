@@ -228,12 +228,12 @@ void Shutdown()
 		
         delete pblocktree;
         pblocktree = NULL;
-        delete prewardratedbview;
-        prewardratedbview = NULL;
         delete pmemberinfodb;
         pmemberinfodb = NULL;
         delete pclubinfodb;
         pclubinfodb = NULL;
+        delete prewardratedbview;
+        prewardratedbview = NULL;
     }
 #ifdef ENABLE_WALLET
     if (pwalletMain)
@@ -592,20 +592,34 @@ void ThreadImport(std::vector<boost::filesystem::path> vImportFiles)
         // First of all, remove mysql db records
         ISNDB::GetInstance()->TruncateTables();
         // Then, remove rewards balance db records
-        std::string clubinfodb_path = GetDataDir(true).string() + std::string(CLUBINFOPATH);
-        if (boost::filesystem::exists(clubinfodb_path))
-        {
-            delete pclubinfodb;
-            boost::filesystem::remove_all(clubinfodb_path);
-            pclubinfodb = new CClubInfoDB();
-        }
         std::string memberinfodb_path = GetDataDir(true).string() + std::string(MEMBERINFODBPATH);
         if (boost::filesystem::exists(memberinfodb_path))
         {
             delete pmemberinfodb;
             boost::filesystem::remove_all(memberinfodb_path);
-            pmemberinfodb = new CMemberInfoDB(pclubinfodb);
         }
+        std::string clubinfodb_path = GetDataDir(true).string() + std::string(CLUBINFOPATH);
+        if (boost::filesystem::exists(clubinfodb_path))
+        {
+            delete pclubinfodb;
+            boost::filesystem::remove_all(clubinfodb_path);
+        }
+        if ((mapArgs.count("-updaterewardrate")) && (mapMultiArgs["-updaterewardrate"].size() > 0) &&
+            (mapMultiArgs["-updaterewardrate"][0].compare("true") == 0))
+        {
+            std::string rewardratedb_path = GetDataDir(true).string() + std::string(RWDBALDBRATEPATH);
+            if (boost::filesystem::exists(rewardratedb_path))
+            {
+                delete prewardratedbview;
+                boost::filesystem::remove_all(rewardratedb_path);
+                prewardratedbview = new CRewardRateViewDB();
+
+            }
+            pclubinfodb = new CClubInfoDB(prewardratedbview);
+        }
+        else
+            pclubinfodb = new CClubInfoDB();
+        pmemberinfodb = new CMemberInfoDB(pclubinfodb);
 
         int nFile = 0;
         InitBlockIndex(chainparams);
@@ -1289,22 +1303,24 @@ bool AppInit2(boost::thread_group& threadGroup, CScheduler& scheduler)
                 delete pcoinsdbview;
                 delete pcoinscatcher;
                 delete pblocktree;
-                delete prewardratedbview;
                 delete pmemberinfodb;
                 delete pclubinfodb;
+                delete prewardratedbview;
 
                 pblocktree = new CBlockTreeDB(nBlockTreeDBCache, false, fReindex);
                 pcoinsdbview = new CCoinsViewDB(nCoinDBCache, false, fReindex || fReindexChainState);
                 pcoinscatcher = new CCoinsViewErrorCatcher(pcoinsdbview);
                 pcoinsTip = new CCoinsViewCache(pcoinscatcher);
-                pclubinfodb = new CClubInfoDB();
-                pmemberinfodb = new CMemberInfoDB(pclubinfodb);
                 if (mapArgs.count("-updaterewardrate") && mapMultiArgs["-updaterewardrate"].size() > 0)
                 {
                     string flag = mapMultiArgs["-updaterewardrate"][0];
                     if (flag.compare("true") == 0)
                         prewardratedbview = new CRewardRateViewDB();
+                    pclubinfodb = new CClubInfoDB(prewardratedbview);
                 }
+                else
+                    pclubinfodb = new CClubInfoDB();
+                pmemberinfodb = new CMemberInfoDB(pclubinfodb);
 
                 if (fReindex) {
                     pblocktree->WriteReindexing(true);

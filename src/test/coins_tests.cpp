@@ -778,68 +778,68 @@ static string GetRandomAddress()
 //    assert(false);
 //}
 
-BOOST_AUTO_TEST_CASE(RewardRateUpdate_simulation_test)
-{
-    // Init
-    mapArgs["-updaterewardrate"] = "true";
-    mapMultiArgs["-updaterewardrate"].push_back("true");
-    if (prewardratedbview != NULL)
-    {
-        delete prewardratedbview;
-        prewardratedbview = NULL;
-    }
-    prewardratedbview = new CRewardRateViewDB();
+//BOOST_AUTO_TEST_CASE(RewardRateUpdate_simulation_test)
+//{
+//    // Init
+//    mapArgs["-updaterewardrate"] = "true";
+//    mapMultiArgs["-updaterewardrate"].push_back("true");
+//    if (prewardratedbview != NULL)
+//    {
+//        delete prewardratedbview;
+//        prewardratedbview = NULL;
+//    }
+//    prewardratedbview = new CRewardRateViewDB();
 
-    // Create inputs
-    const uint isUndoCase = 2;
-    const uint addressCase = NUM_SIMULATION_ITERATIONS;
-    const uint blockRewardCase = 7;
-    const uint distributedRewardsCase = 7;
-    const bool isUndo[isUndoCase] = {false, true};
-    string address[addressCase];
-    const CAmount blockReward[blockRewardCase] = {
-        0x7fffffffffffffff+1, -43251, 0, 43251, MAX_MONEY-1, 0x7fffffffffffffff, CAmount(0xffffffffffffffff)
-    };
-    const CAmount distributedRewards[distributedRewardsCase] = {
-        0x7fffffffffffffff+1, -43251, 0, 43251, MAX_MONEY-1, 0x7fffffffffffffff, CAmount(0xffffffffffffffff)
-    };
-    const uint testTime = isUndoCase * addressCase;
-    for(uint i = 0; i < addressCase; i++)
-        address[i] = GetRandomAddress();
+//    // Create inputs
+//    const uint isUndoCase = 2;
+//    const uint addressCase = NUM_SIMULATION_ITERATIONS;
+//    const uint blockRewardCase = 7;
+//    const uint distributedRewardsCase = 7;
+//    const bool isUndo[isUndoCase] = {false, true};
+//    string address[addressCase];
+//    const CAmount blockReward[blockRewardCase] = {
+//        0x7fffffffffffffff+1, -43251, 0, 43251, MAX_MONEY-1, 0x7fffffffffffffff, CAmount(0xffffffffffffffff)
+//    };
+//    const CAmount distributedRewards[distributedRewardsCase] = {
+//        0x7fffffffffffffff+1, -43251, 0, 43251, MAX_MONEY-1, 0x7fffffffffffffff, CAmount(0xffffffffffffffff)
+//    };
+//    const uint testTime = isUndoCase * addressCase;
+//    for(uint i = 0; i < addressCase; i++)
+//        address[i] = GetRandomAddress();
 
-    // Create outputs
+//    // Create outputs
 
-    // Execute tests
-    bool ret[testTime];
-    string expAddress[testTime];
-    for(uint i = 0; i < 1/*isUndoCase*/; i++)
-    {
-        for(uint j = 0; j < addressCase; j++)
-        {
-            for(uint k = 0; k < 1; k++)
-            {
-                //uint num = k+rewardChangeCase*j+addressCase*rewardChangeCase*i;
-                assert(RewardRateUpdate(blockReward[4], distributedRewards[3], address[j], j, isUndo[i]));
-                //ret[j] = RewardRateUpdate(blockReward[4], distributedRewards[3], address[j], j, isUndo[i]);
-            }
-        }
-    }
+//    // Execute tests
+//    bool ret[testTime];
+//    string expAddress[testTime];
+//    for(uint i = 0; i < 1/*isUndoCase*/; i++)
+//    {
+//        for(uint j = 0; j < addressCase; j++)
+//        {
+//            for(uint k = 0; k < 1; k++)
+//            {
+//                //uint num = k+rewardChangeCase*j+addressCase*rewardChangeCase*i;
+//                assert(RewardRateUpdate(blockReward[4], distributedRewards[3], address[j], j, isUndo[i]));
+//                //ret[j] = RewardRateUpdate(blockReward[4], distributedRewards[3], address[j], j, isUndo[i]);
+//            }
+//        }
+//    }
 
-    // Verify
-    for(uint j = 0; j < addressCase; j++)
-    {
-        ret[j] = prewardratedbview->GetRewardRate(j, expAddress[j]);
-    }
+//    // Verify
+//    for(uint j = 0; j < addressCase; j++)
+//    {
+//        ret[j] = prewardratedbview->GetRewardRate(j, expAddress[j]);
+//    }
 
-    // Clean
-    if (prewardratedbview != NULL)
-    {
-        delete prewardratedbview;
-        prewardratedbview = NULL;
-    }
+//    // Clean
+//    if (prewardratedbview != NULL)
+//    {
+//        delete prewardratedbview;
+//        prewardratedbview = NULL;
+//    }
 
-    assert(false);
-}
+//    assert(false);
+//}
 
 // This test is similar to the previous test
 // except the emphasis is on testing the functionality of UpdateCoins

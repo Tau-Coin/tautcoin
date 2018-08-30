@@ -384,7 +384,6 @@ void UpdateCoins(const CTransaction& tx, CCoinsViewCache& inputs, int nHeight);
 
 /** Apply the rewards of this transaction on the reward database set */
 bool UpdateRewards(const CBlock& block, CAmount blockReward, int nHeight, bool isUndo=false);
-bool RewardRateUpdate(CAmount blockReward, CAmount distributedRewards, string clubLeaderAddress, int nHeight, bool isUndo);
 
 /** Context-independent validity checks */
 bool CheckTransaction(const CTransaction& tx, CValidationState& state);

@@ -52,6 +52,9 @@ private:
     //! database options used
     leveldb::Options options;
 
+    //! clubinfo database used
+    CRewardRateViewDB* _prewardratedbview;
+
     //! cache for multi-transaction balance updating
     std::map<std::string, std::string> cacheRecord;
 
@@ -64,9 +67,13 @@ private:
 public:
     //! Constructor
     CClubInfoDB();
+    CClubInfoDB(CRewardRateViewDB* prewardratedbview);
 
     //! Destructor
     ~CClubInfoDB();
+
+    //! Retrieve the reward rate dataset pointer
+    CRewardRateViewDB* GetRewardRateDBPointer() const;
 
     //! Clear the rwdbalance cache
     void ClearCache();
