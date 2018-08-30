@@ -198,7 +198,7 @@ UniValue dumpclubmembers(const UniValue& params, bool fHelp)
 
     UniValue ret(UniValue::VOBJ);
     ret.push_back(Pair("Result", "finished"));
-    return result;
+    return ret;
 }
 
 
