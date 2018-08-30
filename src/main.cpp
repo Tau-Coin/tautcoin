@@ -87,7 +87,6 @@ size_t nCoinCacheUsage = 5000 * 300;
 uint64_t nPruneTarget = 0;
 int64_t nMaxTipAge = DEFAULT_MAX_TIP_AGE;
 bool fEnableReplacement = DEFAULT_ENABLE_REPLACEMENT;
-CRwdBalanceViewDB *prbalancedbview = NULL;
 CRewardRateViewDB *prewardratedbview = NULL;
 CClubInfoDB *pclubinfodb = NULL;
 CMemberInfoDB *pmemberinfodb = NULL;
@@ -1976,38 +1975,6 @@ void UpdateCoins(const CTransaction& tx, CCoinsViewCache& inputs, int nHeight)
     UpdateCoins(tx, inputs, txundo, nHeight);
 }
 
-bool RewardChangeUpdate(CAmount rewardChange, string address, bool isUndo, int nHeight)
-{
-    if (rewardChange >= MAX_MONEY || rewardChange <= -MAX_MONEY)
-        return false;
-
-    bool ret = true;
-    RewardManager* rewardMan = RewardManager::GetInstance();
-    CAmount rewardbalance_old = rewardMan->GetRewardsByAddress(address);
-    //LogPrintf("%s, member:%s, rw:%d\n", __func__, member, rewardbalance_old);
-//    if (isUndo)
-//        ret &= rewardMan->UpdateRewardsByAddress(address, rewardbalance_old-rewardChange,
-//                                                 rewardbalance_old);
-//    else
-//        ret &= rewardMan->UpdateRewardsByAddress(address, rewardbalance_old+rewardChange,
-//                                                 rewardbalance_old);
-
-    ret &= rewardMan->UpdateRewardsByAddress(address, prbalancedbview->GetRwdBalance(address, nHeight),
-                                             rewardbalance_old);
-    return ret;
-}
-
-bool RewardChangeUpdateByPubkey(CAmount rewardChange, string pubkey, bool isUndo, int nHeight)
-{
-    bool ret = true;
-    string address;
-    ret &= ConvertPubkeyToAddress(pubkey, address);
-    if (ret)
-        ret &= RewardChangeUpdate(rewardChange, address, isUndo, nHeight);
-
-    return ret;
-}
-
 bool RewardRateUpdate(CAmount blockReward, CAmount distributedRewards, string clubLeaderAddress, int nHeight, bool isUndo)
 {
     bool updateRewardRate = false;
@@ -2034,128 +2001,9 @@ bool RewardRateUpdate(CAmount blockReward, CAmount distributedRewards, string cl
     return true;
 }
 
-bool ComputeMemberReward(const uint64_t& txCnt, const uint64_t& totalTXCnt,
-                         const CAmount& totalRewards, CAmount& memberReward)
+bool UpdateRewards(const CBlock& block, CAmount blockReward, int nHeight, bool isUndo)
 {
-    if (totalTXCnt < txCnt || totalTXCnt == 0 || totalRewards < 0)
-        return false;
-    if (totalRewards >= MAX_MONEY)
-    {
-        LogPrintf("Error: The rewards are too large\n");
-        return false;
-    }
-
-    arith_uint256 ttc = totalTXCnt;
-    arith_uint256 tc = txCnt;
-    arith_uint256 tRwd_1 = totalRewards / (CENT*CENT);
-    arith_uint256 tRwd_2 = totalRewards % (CENT*CENT) / CENT;
-    arith_uint256 tRwd_3 = totalRewards % (CENT*CENT) % CENT;
-    double ratio = tc.getdouble() / ttc.getdouble();
-    CAmount memberReward_1 = ratio * tRwd_1.getdouble() * (CENT*CENT);
-    CAmount memberReward_2 = ratio * tRwd_2.getdouble() * CENT;
-    CAmount memberReward_3 = ratio * tRwd_3.getdouble();
-    memberReward = memberReward_1 + memberReward_2 + memberReward_3;
-    if (memberReward >= 0)
-    {
-        if (memberReward > totalRewards)
-            memberReward = totalRewards;
-        return true;
-    }
-    else
-        return false;
-}
-
-bool InitRewardsDist(CAmount memberTotalRewards, const CScript& scriptPubKey, string& clubLeaderAddress,
-                     CAmount& distributedRewards, map<string, CAmount>& memberRewards)
-{
-    if (memberTotalRewards < 0)
-        return false;
-
-    memberRewards.clear();
-    bool ret = true;
-    ClubManager* clubMan = ClubManager::GetInstance();
-    RewardManager* rewardMan = RewardManager::GetInstance();
-    CBitcoinAddress addr;
-    uint64_t clubID;
-    map<string, uint64_t> addrToTC;
-    uint64_t totalmemberTXCnt = 0;
-    if (!addr.ScriptPub2Addr(scriptPubKey, clubLeaderAddress))
-        return false;
-    totalmemberTXCnt = clubMan->GetHarvestPowerByAddress(clubLeaderAddress, 0) -
-                       rewardMan->GetTxCountByAddress(clubLeaderAddress);
-    distributedRewards = 0;
-    if (totalmemberTXCnt > 0)
-    {
-        ret &= clubMan->GetClubIDByAddress(clubLeaderAddress, clubID);
-        ret &= rewardMan->GetMembersTxCountByClubID(clubID, addrToTC, clubLeaderAddress);
-        if (!ret)
-            return ret;
-        for(std::map<string, uint64_t>::const_iterator it = addrToTC.begin(); it != addrToTC.end(); it++)
-        {
-            uint64_t TXCnt = it->second;
-            CAmount memberReward = 0;
-            if (!ComputeMemberReward(TXCnt, totalmemberTXCnt, memberTotalRewards, memberReward))
-                return false;
-            if (memberReward > 0)
-                memberRewards.insert(pair<string, CAmount>(it->first, memberReward));
-            distributedRewards += memberReward;
-        }
-        CAmount remainedReward = memberTotalRewards - distributedRewards;
-        if (remainedReward < 0)
-        {
-            LogPrintf("Error: The club's totalRewards are less than distributedRewards\n");
-            return false;
-        }
-    }
-
-    return true;
-}
-
-bool UpdateRewards(const CTransaction& tx, CAmount blockReward, int nHeight, bool isUndo)
-{
-    RewardManager* rewardMan = RewardManager::GetInstance();
-    if (rewardMan->currentHeight == nHeight)
-        return true;
-
-    bool ret = true;
-    if (!tx.IsCoinBase())
-    {
-        for(unsigned int i = 0; i < tx.vreward.size(); i++)
-            ret &= RewardChangeUpdateByPubkey(0-tx.vreward[i].rewardBalance,
-                                              tx.vreward[i].senderPubkey, isUndo, nHeight);
-
-        return ret;
-    }
-
-    // Init rewards distribution and check if valid
-    if (tx.vout.size() != 1)
-    {
-        //LogPrintf("Error: The TX's vout size is 0\n");
-        return false;
-    }
-    CAmount distributedRewards = 0;
-    string clubLeaderAddress;
-    map<string, CAmount> memberRewards;
-    CAmount memberTotalRewards = blockReward-tx.vout[0].nValue;
-    if (!InitRewardsDist(memberTotalRewards, tx.vout[0].scriptPubKey, clubLeaderAddress,
-                         distributedRewards, memberRewards))
-        return false;
-
-    // Distribute rewards to member and return remained rewards back to club leader
-    for(std::map<string, CAmount>::const_iterator it = memberRewards.begin(); it != memberRewards.end(); it++)
-        ret &= RewardChangeUpdate(it->second, it->first, isUndo, nHeight);
-    CAmount remainedReward = memberTotalRewards - distributedRewards;
-    ret &= RewardChangeUpdate(remainedReward, clubLeaderAddress, isUndo, nHeight);
-
-    // Update rewards rate
-    RewardRateUpdate(blockReward, distributedRewards, clubLeaderAddress, nHeight, isUndo);
-
-    return ret;
-}
-
-bool UpdateRewards2(const CBlock& block, CAmount blockReward, int nHeight, bool isUndo)
-{
-    //prbalancedbview->ClearCache();
+    //pmemberinfodb->ClearCache();
 
     for (unsigned int j = 0; j < block.vtx.size(); j++)
     {
@@ -2175,22 +2023,6 @@ bool UpdateRewards2(const CBlock& block, CAmount blockReward, int nHeight, bool 
 
     pmemberinfodb->Commit(nHeight);
     pmemberinfodb->ClearCache();
-
-    return true;
-}
-
-bool UpdateFatherAndTC(const CBlock& block, const CCoinsViewCache& view, int nHeight, bool isUndo)
-{
-    //prbalancedbview->ClearCache();
-
-    for (unsigned int i = 0; i < block.vtx.size(); i++)
-    {
-        if (!prbalancedbview->UpdateFatherTCByTX(block.vtx[i], view, nHeight, isUndo))
-            return false;
-    }
-
-    prbalancedbview->Commit(nHeight);
-    prbalancedbview->ClearCache();
 
     return true;
 }
@@ -2663,13 +2495,13 @@ bool DisconnectBlock(CBlock& block, CValidationState& state, CBlockIndex* pindex
         // restore rewards
 //        bool isUndo = true;
 //        CAmount nFees = DEFAULT_TRANSACTION_MAXFEE * block.vtx.size();
-//        if (!UpdateRewards2(block, nFees, pindex->nHeight-1, isUndo))
+//        if (!UpdateRewards(block, nFees, pindex->nHeight-1, isUndo))
 //            return error("DisconnectBlock(): UpdateRewards failed");
         /*
         for (int k = block.vtx.size() - 1; k >= 0; k--)
         {
             const CTransaction &tx = block.vtx[k];
-            if (!prbalancedbview->UpdateFatherTCByTX(tx, view, pindex->nHeight-1, isUndo))
+            if (!pmemberinfodb->UpdateFatherAndTCByTX(tx, view, pindex->nHeight-1, isUndo))
                 return error("DisconnectBlock(): UpdateFatherAndTC failed");
 
             if (!UpdateRewards(tx, nFees, pindex->nHeight-1, isUndo))
@@ -3169,15 +3001,6 @@ bool ConnectBlock(const CBlock& block, CValidationState& state, CBlockIndex* pin
         mysqlpp::Transaction::session);
      */
 
-    //////////////////////////////only for test//////////////////////////////
-//    static ClubManager * clubMan = NULL;
-//    static RewardManager * rewardMan = NULL;
-//    if (!clubMan)
-//        clubMan = ClubManager::GetInstance();
-//    if (!rewardMan)
-//        rewardMan = RewardManager::GetInstance();
-    //////////////////////////////end for test///////////////////////////////
-
     for (unsigned int i = 0; i < block.vtx.size(); i++)
     {
         const CTransaction &tx = block.vtx[i];
@@ -3185,148 +3008,11 @@ bool ConnectBlock(const CBlock& block, CValidationState& state, CBlockIndex* pin
         nInputs += tx.vin.size();
         nInputs += tx.vreward.size();
 
+        // Update the TX count and the father
         if (!fJustCheck)
         {
-            //////////////////////////////only for test//////////////////////////////
-//            if (tx.IsCoinBase())
-//            {
-//                std::string strAddr;
-//                CBitcoinAddress addr;
-//                uint64_t addrID;
-//                std::vector<string> members;
-//                bool ret = true;
-//                assert(addr.ScriptPub2Addr(tx.vout[0].scriptPubKey, strAddr));
-//                auto int2str = [](const int64_t &int_temp, std::string &string_temp)
-//                {
-//                    stringstream stream;
-//                    stream << int_temp;
-//                    string_temp = stream.str();
-//                };
-//                auto GetAddrIDByAddress = [strAddr, &addrID, pdb]()mutable->bool
-//                {
-//                    std::vector<string> fields;
-//                    fields.push_back(memFieldID);
-//                    mysqlpp::StoreQueryResult bLocal = pdb->ISNSqlSelectAA(tableMember, fields, memFieldAddress, strAddr);
-
-//                    if (bLocal.num_rows() > 0)
-//                    {
-//                        addrID = (uint64_t)bLocal[0]["address_id"];
-//                        return true;
-//                    }
-//                    else
-//                        return false;
-//                };
-//                ret &= GetAddrIDByAddress();
-//                auto GetChildrenByAddrID = [addrID, &members, strAddr, pdb, int2str]()mutable->bool
-//                {
-//                    members.clear();
-
-//                    std::vector<string> fields;
-//                    fields.push_back(memFieldAddress);
-
-//                    std::string addrIDStr;
-//                    int2str(addrID, addrIDStr);
-
-//                    mysqlpp::StoreQueryResult bLocal = pdb->ISNSqlSelectAA(tableMember, fields, memFieldFather, addrIDStr);
-
-//                    uint64_t size = (uint64_t)bLocal.num_rows();
-//                    //LogPrintf("%s, %d, %d\n", __func__, clubID, size);
-
-//                    for (uint64_t i = 0; i != size; i++)
-//                        members.push_back(static_cast<std::string>(bLocal[i]["address"]));
-
-//                    return true;
-//                };
-//                ret &= GetChildrenByAddrID();
-//                //ret &= clubMan->GetClubIDByAddress(strAddr, clubID);
-//                //ret &= rewardMan->GetMembersByClubID(clubID, members, strAddr);
-//                if (!ret)
-//                {
-//                    LogPrintf("%s, GetClubIDByAddress or GetMembersByClubID fail\n", __func__);
-//                    return NULL;
-//                }
-
-//                auto GetTXCntByAddress = [pdb](string address)->uint64_t
-//                {
-//                    std::vector<string> fields;
-//                    fields.push_back(memFieldCount);
-//                    mysqlpp::StoreQueryResult bLocal = pdb->ISNSqlSelectAA(tableMember, fields, memFieldAddress, address);
-
-//                    if (bLocal.num_rows() > 0)
-//                        return (uint64_t)bLocal[0]["tc"];
-//                    else
-//                        return 0;
-//                };
-//                auto GetFatherByAddress = [int2str, pdb](string address)->string
-//                {
-//                    std::vector<string> fields;
-//                    fields.push_back(memFieldFather);
-//                    mysqlpp::StoreQueryResult bLocal = pdb->ISNSqlSelectAA(tableMember, fields, memFieldAddress, address);
-
-//                    if (bLocal.num_rows() > 0)
-//                    {
-//                        fields.clear();
-//                        fields.push_back(memFieldAddress);
-//                        std::string addrIDStr;
-//                        int2str((uint64_t)bLocal[0]["father"], addrIDStr);
-//                        mysqlpp::StoreQueryResult bLocal2 =
-//                                pdb->ISNSqlSelectAA(tableMember, fields, memFieldID, addrIDStr);
-//                        if (bLocal2.num_rows() > 0)
-//                            return (string)bLocal2[0]["address"];
-//                        else
-//                            return string("0");
-//                    }
-//                    else
-//                        return string("0");
-//                };
-//                uint64_t ttcL = 0;
-//                uint64_t ttcM = 0;
-//                ttcL += pmemberinfodb->GetTXCnt(strAddr, pindex->nHeight-1);
-//                ttcM += GetTXCntByAddress(strAddr);
-//                cout<<"=====LDB: "<<strAddr<<": "<<pmemberinfodb->GetFather(strAddr, pindex->nHeight-1)<<
-//                      ": "<<pindex->nHeight-1<<endl;
-//                cout<<"=====MDB: "<<strAddr<<": "<<GetFatherByAddress(strAddr)<<
-//                      ": "<<pindex->nHeight-1<<endl;
-//                if ((pmemberinfodb->GetFather(strAddr, pindex->nHeight-1)).compare(GetFatherByAddress(strAddr)) != 0)
-//                    cerr<<"pmemberinfodb->GetFather(strAddr, pindex->nHeight-1)).compare(GetFatherByAddress(strAddr)) != 0"<<endl;
-//                cout<<"=====MDB's members: "<<members.size()<<endl;
-//                for(uint i = 0; i < members.size(); i++)
-//                {
-//                    ttcL += pmemberinfodb->GetTXCnt(members[i], pindex->nHeight-1);
-//                    ttcM += GetTXCntByAddress(members[i]);
-//                    cout<<"=====LDB: "<<members[i]<<": "<<pmemberinfodb->GetFather(members[i], pindex->nHeight-1)<<
-//                          ": "<<pindex->nHeight-1<<endl;
-//                    cout<<"=====MDB: "<<members[i]<<": "<<GetFatherByAddress(members[i])<<
-//                          ": "<<pindex->nHeight-1<<endl;
-//                    if ((pmemberinfodb->GetFather(members[i], pindex->nHeight-1)).compare(GetFatherByAddress(members[i])) != 0)
-//                        cerr<<"pmemberinfodb->GetFather(members[i], pindex->nHeight-1)).compare(GetFatherByAddress(members[i])) != 0"<<endl;
-//                }
-//                if (ttcL != ttcM)
-//                    cerr<<"ttcL != ttcM"<<endl;
-
-//                if (pindex->nHeight-1 >= 1724)
-//                    cout<<"haha"<<endl;
-//                uint64_t clubID = 0;
-//                map<string, uint64_t> addrToTC;
-//                assert(clubMan->GetClubIDByAddress(strAddr, clubID));
-//                assert(rewardMan->GetMembersTxCountByClubID(clubID, addrToTC, strAddr));
-//                uint64_t hPowerL = 0;//pmemberinfodb->GetHarvestPowerByAddress(strAddr, pindex->nHeight-1);
-//                vector<string> clubMembers = pclubinfodb->GetClubMembersByAddress(strAddr, pindex->nHeight-1);
-//                hPowerL += pmemberinfodb->GetTXCnt(strAddr, pindex->nHeight-1);
-//                for(size_t i = 0; i < clubMembers.size(); i++)
-//                    hPowerL += pmemberinfodb->GetTXCnt(clubMembers[i], pindex->nHeight-1);
-//                if (addrToTC.size() != clubMembers.size())
-//                    cerr<<"addrToTC.size() != clubMembers.size(), nHeight-1: "<<pindex->nHeight-1<<endl;
-//                uint64_t hPowerM = clubMan->GetHarvestPowerByAddress(strAddr, pindex->nHeight-1);
-//                cout<<"=====LDB power: "<<hPowerL<<", nHeight: "<<pindex->nHeight-1<<endl;
-//                cout<<"=====MDB power: "<<hPowerM<<", nHeight: "<<pindex->nHeight-1<<endl;
-//                if (hPowerL != hPowerM)
-//                    cerr<<"hPowerL != hPowerM, nHeight-1: "<<pindex->nHeight-1<<endl;
-//            }
-            //////////////////////////////end for test///////////////////////////////
             if (!pmemberinfodb->UpdateFatherAndTCByTX(tx, view, pindex->nHeight, false))
                 return error("ConnectBlock(): UpdateFatherAndTC failed");
-
         }
 
         if (!tx.IsCoinBase())
@@ -3605,22 +3291,16 @@ bool ConnectBlock(const CBlock& block, CValidationState& state, CBlockIndex* pin
     // Update rewards
     if (!fJustCheck)
     {
-        if (!UpdateRewards2(block, nFees, pindex->nHeight))
+        if (!UpdateRewards(block, nFees, pindex->nHeight))
             return error("ConnectBlock(): UpdateRewards failed");
 
-       /*
-        for (unsigned int j = 0; j < block.vtx.size(); j++)
-        {
-            const CTransaction &tx = block.vtx[j];
-            if (!UpdateRewards(tx, nFees, pindex->nHeight))
-            {
-                trans.rollback();
-                return error("ConnectBlock(): UpdateRewards step2 failed");
-            }
-        }*/
         RewardManager::GetInstance()->currentHeight = pindex->nHeight;
         pclubinfodb->Commit(pindex->nHeight);
-        pclubinfodb->ClearCache();
+        if (pindex->nHeight % (1440 * 7) == 0)
+            pclubinfodb->ClearCache();
+//        pmemberinfodb->Commit(pindex->nHeight);
+//        if (pindex->nHeight % (1440 * 7) == 0)
+//            pmemberinfodb->ClearCache();
     }
 
     if (!fJustCheck) {

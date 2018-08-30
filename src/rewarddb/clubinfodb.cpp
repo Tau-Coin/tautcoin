@@ -3,83 +3,83 @@
 
 using namespace std;
 
-//bool CRewardRateViewDB::WriteDB(int nHeight, std::string address, double value)
-//{
-//    std::stringstream ssVal;
-//    ssVal << value;
-//    std::string strValue;
-//    ssVal >> strValue;
+bool CRewardRateViewDB::WriteDB(int nHeight, std::string address, double value)
+{
+    std::stringstream ssVal;
+    ssVal << value;
+    std::string strValue;
+    ssVal >> strValue;
 
-//    std::stringstream ssHeight;
-//    std::string strHeight;
-//    ssHeight << nHeight;
-//    ssHeight >> strHeight;
+    std::stringstream ssHeight;
+    std::string strHeight;
+    ssHeight << nHeight;
+    ssHeight >> strHeight;
 
-//    leveldb::Status status = pdb->Put(leveldb::WriteOptions(), strHeight, address+"_"+strValue);
-//    if(!status.ok())
-//    {
-//        LogPrintf("LevelDB write failure in reward rate module: %s\n", status.ToString());
-//        dbwrapper_private::HandleError(status);
-//        return false;
-//    }
+    leveldb::Status status = pdb->Put(leveldb::WriteOptions(), strHeight, address+"_"+strValue);
+    if(!status.ok())
+    {
+        LogPrintf("LevelDB write failure in reward rate module: %s\n", status.ToString());
+        dbwrapper_private::HandleError(status);
+        return false;
+    }
 
-//    return true;
-//}
+    return true;
+}
 
-//bool CRewardRateViewDB::ReadDB(int nHeight, std::string& address_value)
-//{
-//    std::stringstream ssHeight;
-//    std::string strHeight;
-//    ssHeight << nHeight;
-//    ssHeight >> strHeight;
+bool CRewardRateViewDB::ReadDB(int nHeight, std::string& address_value)
+{
+    std::stringstream ssHeight;
+    std::string strHeight;
+    ssHeight << nHeight;
+    ssHeight >> strHeight;
 
-//    leveldb::Status status = pdb->Get(leveldb::ReadOptions(), strHeight, &address_value);
-//    if(!status.ok())
-//    {
-//        LogPrintf("LevelDB read failure in reward rate module: %s\n", status.ToString());
-//        dbwrapper_private::HandleError(status);
-//        return false;
-//    }
+    leveldb::Status status = pdb->Get(leveldb::ReadOptions(), strHeight, &address_value);
+    if(!status.ok())
+    {
+        LogPrintf("LevelDB read failure in reward rate module: %s\n", status.ToString());
+        dbwrapper_private::HandleError(status);
+        return false;
+    }
 
-//    return true;
-//}
+    return true;
+}
 
-//CRewardRateViewDB::CRewardRateViewDB()
-//{
-//    options.create_if_missing = true;
+CRewardRateViewDB::CRewardRateViewDB()
+{
+    options.create_if_missing = true;
 
-//    std::string db_path = GetDataDir(true).string() + std::string(RWDBALDBRATEPATH);
-//    LogPrintf("Opening LevelDB in %s\n", db_path);
+    std::string db_path = GetDataDir(true).string() + std::string(RWDBALDBRATEPATH);
+    LogPrintf("Opening LevelDB in %s\n", db_path);
 
-//    leveldb::Status status = leveldb::DB::Open(options, db_path, &pdb);
-//    dbwrapper_private::HandleError(status);
-//    assert(status.ok());
-//    LogPrintf("Opened LevelDB successfully\n");
-//}
+    leveldb::Status status = leveldb::DB::Open(options, db_path, &pdb);
+    dbwrapper_private::HandleError(status);
+    assert(status.ok());
+    LogPrintf("Opened LevelDB successfully\n");
+}
 
-//CRewardRateViewDB::~CRewardRateViewDB()
-//{
-//    delete pdb;
-//    pdb = NULL;
-//}
+CRewardRateViewDB::~CRewardRateViewDB()
+{
+    delete pdb;
+    pdb = NULL;
+}
 
-//bool CRewardRateViewDB::GetRewardRate(int nHeight, string& addr_rate)
-//{
-//    if (!ReadDB(nHeight, addr_rate))
-//        return false;
+bool CRewardRateViewDB::GetRewardRate(int nHeight, string& addr_rate)
+{
+    if (!ReadDB(nHeight, addr_rate))
+        return false;
 
-//    return true;
-//}
+    return true;
+}
 
-//bool CRewardRateViewDB::UpdateRewardRate(std::string leaderAddress, double val, int nHeight)
-//{
-//    if ((val < 0 || val > 1.0) && val != -1)
-//        return false;
-//    if (!WriteDB(nHeight, leaderAddress, val))
-//        return false;
+bool CRewardRateViewDB::UpdateRewardRate(std::string leaderAddress, double val, int nHeight)
+{
+    if ((val < 0 || val > 1.0) && val != -1)
+        return false;
+    if (!WriteDB(nHeight, leaderAddress, val))
+        return false;
 
-//    return true;
-//}
+    return true;
+}
 
 bool CClubInfoDB::WriteDB(std::string key, int nHeight, string strValue)
 {

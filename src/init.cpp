@@ -228,8 +228,6 @@ void Shutdown()
 		
         delete pblocktree;
         pblocktree = NULL;
-        delete prbalancedbview;
-        prbalancedbview = NULL;
         delete prewardratedbview;
         prewardratedbview = NULL;
         delete pmemberinfodb;
@@ -607,13 +605,6 @@ void ThreadImport(std::vector<boost::filesystem::path> vImportFiles)
             delete pmemberinfodb;
             boost::filesystem::remove_all(memberinfodb_path);
             pmemberinfodb = new CMemberInfoDB(pclubinfodb);
-        }
-        std::string prbalancedbview_path = GetDataDir(true).string() + std::string(RWDBLDBPATH);
-        if (boost::filesystem::exists(prbalancedbview_path))
-        {
-            delete prbalancedbview;
-            boost::filesystem::remove_all(prbalancedbview_path);
-            prbalancedbview = new CRwdBalanceViewDB();
         }
 
         int nFile = 0;
@@ -1298,7 +1289,6 @@ bool AppInit2(boost::thread_group& threadGroup, CScheduler& scheduler)
                 delete pcoinsdbview;
                 delete pcoinscatcher;
                 delete pblocktree;
-                delete prbalancedbview;
                 delete prewardratedbview;
                 delete pmemberinfodb;
                 delete pclubinfodb;
@@ -1307,7 +1297,6 @@ bool AppInit2(boost::thread_group& threadGroup, CScheduler& scheduler)
                 pcoinsdbview = new CCoinsViewDB(nCoinDBCache, false, fReindex || fReindexChainState);
                 pcoinscatcher = new CCoinsViewErrorCatcher(pcoinsdbview);
                 pcoinsTip = new CCoinsViewCache(pcoinscatcher);
-                prbalancedbview = new CRwdBalanceViewDB();
                 pclubinfodb = new CClubInfoDB();
                 pmemberinfodb = new CMemberInfoDB(pclubinfodb);
                 if (mapArgs.count("-updaterewardrate") && mapMultiArgs["-updaterewardrate"].size() > 0)

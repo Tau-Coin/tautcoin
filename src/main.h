@@ -205,7 +205,6 @@ extern CBlockIndex *pindexBestHeader;
 /** Minimum disk space required - used in CheckDiskSpace() */
 static const uint64_t nMinDiskSpace = 52428800;
 
-extern CRwdBalanceViewDB *prbalancedbview;
 extern CRewardRateViewDB *prewardratedbview;
 extern CMemberInfoDB *pmemberinfodb;
 extern CClubInfoDB *pclubinfodb;
@@ -384,16 +383,8 @@ bool CheckRewards(const CTransaction& tx, CValidationState &state, bool fScriptC
 void UpdateCoins(const CTransaction& tx, CCoinsViewCache& inputs, int nHeight);
 
 /** Apply the rewards of this transaction on the reward database set */
-bool UpdateRewards(const CTransaction& tx, CAmount blockReward, int nHeight, bool isUndo=false);
-bool UpdateRewards2(const CBlock& block, CAmount blockReward, int nHeight, bool isUndo=false);
-bool RewardChangeUpdateByPubkey(CAmount rewardChange, string pubkey, bool isUndo, int nHeight);
-bool RewardChangeUpdate(CAmount rewardChange, string address, bool isUndo, int nHeight);
+bool UpdateRewards(const CBlock& block, CAmount blockReward, int nHeight, bool isUndo=false);
 bool RewardRateUpdate(CAmount blockReward, CAmount distributedRewards, string clubLeaderAddress, int nHeight, bool isUndo);
-bool InitRewardsDist(CAmount memberTotalRewards, const CScript& scriptPubKey, string& clubLeaderAddress,
-                     CAmount& distributedRewards, map<string, CAmount> &memberRewards);
-bool ComputeMemberReward(const uint64_t& txCnt, const uint64_t& totalTXCnt,
-                         const CAmount& totalRewards, CAmount& memberReward);
-bool UpdateFatherAndTC(const CBlock& block, const CCoinsViewCache& view, int nHeight, bool isUndo=false);
 
 /** Context-independent validity checks */
 bool CheckTransaction(const CTransaction& tx, CValidationState& state);
