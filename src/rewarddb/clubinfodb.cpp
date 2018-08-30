@@ -189,12 +189,12 @@ bool CClubInfoDB::UpdateMembersByFatherAddress(std::string fatherAddress, bool a
     else if(fatherAddress.compare(" ") == 0)
         return false;// Error in fatherAddress
 
-    if (isUndo)
-    {
-        if (!DeleteDB(address, nHeight+1))
-            return false;
-        return true;
-    }
+//    if (isUndo)
+//    {
+//        if (!DeleteDB(address, nHeight+1))
+//            return false;
+//        return true;
+//    }
 
     TAUAddrTrie::Trie trie;
     trie.BuildTreeFromStr(GetTrieStrByFatherAddress(fatherAddress, nHeight-1));
@@ -227,7 +227,7 @@ string CClubInfoDB::GetTrieStrByFatherAddress(std::string fatherAddress, int nHe
     return "";
 }
 
-vector<string> CClubInfoDB::GetClubMembersByAddress(std::string fatherAddress, int nHeight)
+vector<string> CClubInfoDB::GetTotalMembersByAddress(std::string fatherAddress, int nHeight)
 {
 
     vector<string> members;
@@ -241,7 +241,7 @@ vector<string> CClubInfoDB::GetClubMembersByAddress(std::string fatherAddress, i
             members = trie.ListAll();
             for(size_t i = 0; i < members.size(); i++)
             {
-                vector<string> childMembers = GetClubMembersByAddress(members[i], nHeight);
+                vector<string> childMembers = GetTotalMembersByAddress(members[i], nHeight);
                 for(size_t k = 0; k < childMembers.size(); k++)
                     members.push_back(childMembers[k]);
             }

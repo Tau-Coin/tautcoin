@@ -82,7 +82,7 @@ public:
     std::string GetTrieStrByFatherAddress(std::string fatherAddress, int nHeight);
 
     //! Retrieve the merbers' addresses
-    std::vector<std::string> GetClubMembersByAddress(std::string fatherAddress, int nHeight);
+    std::vector<std::string> GetTotalMembersByAddress(std::string fatherAddress, int nHeight);
 };
 
 #endif // TAUCOIN_CLUBINFODB_H

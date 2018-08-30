@@ -2162,7 +2162,7 @@ bool UpdateRewards2(const CBlock& block, CAmount blockReward, int nHeight, bool 
         const CTransaction &tx = block.vtx[j];
         if (!tx.IsCoinBase())
         {
-            if (!prbalancedbview->UpdateRewardsByTX(tx, blockReward, nHeight, isUndo))
+            if (!pmemberinfodb->UpdateRewardsByTX(tx, blockReward, nHeight, isUndo))
                 return false;
         }
     }
@@ -2170,11 +2170,11 @@ bool UpdateRewards2(const CBlock& block, CAmount blockReward, int nHeight, bool 
     const CTransaction coinbase = block.vtx[0];
     if (!coinbase.IsCoinBase())
         return false;
-    if (!prbalancedbview->UpdateRewardsByTX(coinbase, blockReward, nHeight, isUndo))
+    if (!pmemberinfodb->UpdateRewardsByTX(coinbase, blockReward, nHeight, isUndo))
         return false;
 
-    prbalancedbview->Commit(nHeight);
-    prbalancedbview->ClearCache();
+    pmemberinfodb->Commit(nHeight);
+    pmemberinfodb->ClearCache();
 
     return true;
 }
@@ -2661,10 +2661,10 @@ bool DisconnectBlock(CBlock& block, CValidationState& state, CBlockIndex* pindex
          */
 
         // restore rewards
-        bool isUndo = true;
-        CAmount nFees = DEFAULT_TRANSACTION_MAXFEE * block.vtx.size();
-        if (!UpdateRewards2(block, nFees, pindex->nHeight-1, isUndo))
-            return error("DisconnectBlock(): UpdateRewards failed");
+//        bool isUndo = true;
+//        CAmount nFees = DEFAULT_TRANSACTION_MAXFEE * block.vtx.size();
+//        if (!UpdateRewards2(block, nFees, pindex->nHeight-1, isUndo))
+//            return error("DisconnectBlock(): UpdateRewards failed");
         /*
         for (int k = block.vtx.size() - 1; k >= 0; k--)
         {
@@ -2679,7 +2679,7 @@ bool DisconnectBlock(CBlock& block, CValidationState& state, CBlockIndex* pindex
             }
         }
         */
-        RewardManager::GetInstance()->currentHeight = pindex->nHeight-1;
+//        RewardManager::GetInstance()->currentHeight = pindex->nHeight-1;
 
         // undo entrust relationship in reverse order
         int nSize = vecTxInfo.size();
@@ -3027,8 +3027,6 @@ bool ConnectBlock(const CBlock& block, CValidationState& state, CBlockIndex* pin
                 */
             }
 
-            if (!prbalancedbview->InitGenesisDB(addresses))
-                return error("%s: prbalancedbview::InitGenesisDB error", __func__);
             if (!pmemberinfodb->InitGenesisDB(addresses))
                 return error("%s: pmemberinfodb::InitGenesisDB error", __func__);
         }
@@ -3325,12 +3323,10 @@ bool ConnectBlock(const CBlock& block, CValidationState& state, CBlockIndex* pin
 //                if (hPowerL != hPowerM)
 //                    cerr<<"hPowerL != hPowerM, nHeight-1: "<<pindex->nHeight-1<<endl;
 //            }
-            if (!pmemberinfodb->UpdateFatherTCByTX(tx, view, pindex->nHeight, false))
+            //////////////////////////////end for test///////////////////////////////
+            if (!pmemberinfodb->UpdateFatherAndTCByTX(tx, view, pindex->nHeight, false))
                 return error("ConnectBlock(): UpdateFatherAndTC failed");
 
-//            if (!prbalancedbview->UpdateFatherTCByTX(tx, view, pindex->nHeight, false))
-//                return error("ConnectBlock(): UpdateFatherAndTC failed");
-            //////////////////////////////end for test///////////////////////////////
         }
 
         if (!tx.IsCoinBase())

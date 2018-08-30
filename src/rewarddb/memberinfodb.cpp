@@ -42,12 +42,14 @@ bool CMemberInfoDB::WriteDB(std::string key, int nHeight, string strValue)
     return true;
 }
 
-bool CMemberInfoDB::WriteDB(std::string key, int nHeight, string father, uint64_t tc, CAmount value)
+bool CMemberInfoDB::WriteDB(std::string key, int nHeight, string packer, string father,
+                            uint64_t tc, uint64_t ttc, CAmount value)
 {
-    return WriteDB(key, nHeight, GenerateRecord(father, tc, value));
+    return WriteDB(key, nHeight, GenerateRecord(packer, father, tc, ttc, value));
 }
 
-bool CMemberInfoDB::ReadDB(std::string key, int nHeight, string& father, uint64_t& tc, CAmount& value)
+bool CMemberInfoDB::ReadDB(std::string key, int nHeight, string &packer, string& father,
+                           uint64_t& tc, uint64_t &ttc, CAmount& value) const
 {
     std::stringstream ssHeight;
     std::string strHeight;
@@ -60,8 +62,10 @@ bool CMemberInfoDB::ReadDB(std::string key, int nHeight, string& father, uint64_
     {
         if (status.IsNotFound())
         {
+            packer = " ";
             father = " ";
             tc = 0;
+            ttc = 0;
             value = 0;
         }
         else
@@ -72,13 +76,13 @@ bool CMemberInfoDB::ReadDB(std::string key, int nHeight, string& father, uint64_
         return false;
     }
 
-    if (!ParseRecord(strValue, father, tc, value))
+    if (!ParseRecord(strValue, packer, father, tc, ttc, value))
         return false;
 
     return true;
 }
 
-bool CMemberInfoDB::ReadDB(std::string key, int nHeight, std::string& strValue)
+bool CMemberInfoDB::ReadDB(std::string key, int nHeight, std::string& strValue) const
 {
     std::stringstream ssHeight;
     std::string strHeight;
@@ -126,34 +130,53 @@ void CMemberInfoDB::ClearCache()
 
 void CMemberInfoDB::UpdateCacheFather(string address, int inputHeight, string newFather)
 {
-    CAmount rwdbalanceInput = 0;
+    CAmount rwdbalance = 0;
+    string packer = " ";
     string ftInput = " ";
-    uint64_t tcInput = 1;
-    GetFullRecord(address, inputHeight, ftInput, tcInput, rwdbalanceInput);
+    uint64_t tc = 0;
+    uint64_t ttc = 0;
+    GetFullRecord(address, inputHeight-1, packer, ftInput, tc, ttc, rwdbalance);
     ftInput = newFather;
-    string newRecordInput = GenerateRecord(ftInput, tcInput, rwdbalanceInput);
+    string newRecordInput = GenerateRecord(packer, ftInput, tc, ttc, rwdbalance);
+    cacheRecord[address] = newRecordInput;
+}
+
+void CMemberInfoDB::UpdateCachePacker(std::string address, int inputHeight, std::string newPacker)
+{
+    CAmount rwdbalance = 0;
+    string packerInput = " ";
+    string ft = " ";
+    uint64_t tc = 0;
+    uint64_t ttc = 0;
+    GetFullRecord(address, inputHeight-1, packerInput, ft, tc, ttc, rwdbalance);
+    packerInput = newPacker;
+    string newRecordInput = GenerateRecord(packerInput, ft, tc, ttc, rwdbalance);
     cacheRecord[address] = newRecordInput;
 }
 
 void CMemberInfoDB::UpdateCacheTcAddOne(string address, int inputHeight)
 {
-    CAmount rwdbalanceVout = 0;
-    string ftVout = " ";
-    uint64_t tcVout = 1;
-    GetFullRecord(address, inputHeight, ftVout, tcVout, rwdbalanceVout);
+    CAmount rwdbalance = 0;
+    string packer = " ";
+    string ft = " ";
+    uint64_t tcVout = 0;
+    uint64_t ttc = 0;
+    GetFullRecord(address, inputHeight-1, packer, ft, tcVout, ttc, rwdbalance);
     tcVout++;
-    string newRecordVout = GenerateRecord(ftVout, tcVout, rwdbalanceVout);
+    string newRecordVout = GenerateRecord(packer, ft, tcVout, ttc, rwdbalance);
     cacheRecord[address] = newRecordVout;
 }
 
 void CMemberInfoDB::UpdateCacheRewardChange(string address, int inputHeight, CAmount rewardChange)
 {
     CAmount rewardbalance_old = 0;
+    string packer = " ";
     string ft = " ";
-    uint64_t tc = 1;
-    GetFullRecord(address, inputHeight, ft, tc, rewardbalance_old);
+    uint64_t tc = 0;
+    uint64_t ttc = 0;
+    GetFullRecord(address, inputHeight-1, packer, ft, tc, ttc, rewardbalance_old);
     CAmount newValue = rewardbalance_old + rewardChange;
-    string newRecord = GenerateRecord(ft, tc, newValue);
+    string newRecord = GenerateRecord(packer, ft, tc, ttc, newValue);
     cacheRecord[address] = newRecord;
 }
 
@@ -179,36 +202,46 @@ bool CMemberInfoDB::InitGenesisDB(std::vector<std::string> addresses)
     for(uint i = 0; i < addresses.size(); i++)
     {
         CAmount rewardbalance = 0;
+        string packer = "0";
         string ft = "0";
         uint64_t tc = 1;
-        if (!WriteDB(addresses[i], 0, ft, tc, rewardbalance))
+        uint64_t ttc = 1;
+        if (!WriteDB(addresses[i], 0, packer, ft, tc, ttc, rewardbalance))
             return false;
     }
     return true;
 }
 
-bool CMemberInfoDB::ParseRecord(string inputStr, string& father, uint64_t& tc, CAmount& value)
+bool CMemberInfoDB::ParseRecord(string inputStr, string& packer, string& father,
+                                uint64_t& tc, uint64_t& ttc, CAmount& value) const
 {
     vector<string> splitedStr;
     boost::split(splitedStr, inputStr, boost::is_any_of(DBSEPECTATOR));
-    if (splitedStr.size() != 3)
+    if (splitedStr.size() != 5)
         return false;
-    father = splitedStr[0];
-    std::istringstream ssVal1(splitedStr[1]);
-    ssVal1 >> tc;
+    packer = splitedStr[0];
+    father = splitedStr[1];
     std::istringstream ssVal2(splitedStr[2]);
-    ssVal2 >> value;
+    ssVal2 >> tc;
+    std::istringstream ssVal3(splitedStr[3]);
+    ssVal3 >> ttc;
+    std::istringstream ssVal4(splitedStr[4]);
+    ssVal4 >> value;
 
     return true;
 }
 
-string CMemberInfoDB::GenerateRecord(string father, uint64_t tc, CAmount value)
+string CMemberInfoDB::GenerateRecord(string packer, string father, uint64_t tc, uint64_t ttc, CAmount value) const
 {
     string outputStr;
     std::stringstream ssVal;
+    ssVal << packer;
+    ssVal << DBSEPECTATOR;
     ssVal << father;
     ssVal << DBSEPECTATOR;
     ssVal << tc;
+    ssVal << DBSEPECTATOR;
+    ssVal << ttc;
     ssVal << DBSEPECTATOR;
     ssVal << value;
     ssVal >> outputStr;
@@ -216,45 +249,74 @@ string CMemberInfoDB::GenerateRecord(string father, uint64_t tc, CAmount value)
     return outputStr;
 }
 
-CAmount CMemberInfoDB::GetRwdBalance(std::string address, int nHeight)
+string CMemberInfoDB::GetPacker(string address, int nHeight)
 {
-    string ft = " ";
-    uint64_t tc;
-    CAmount value = 0;
-    GetFullRecord(address, nHeight, ft, tc, value);
-    return value;
+    string packer;
+    string ft;
+    uint64_t tc = 0;
+    uint64_t ttc = 0;
+    CAmount value;
+    GetFullRecord(address, nHeight, packer, ft, tc, ttc, value);
+    return packer;
 }
 
 string CMemberInfoDB::GetFather(string address, int nHeight)
 {
-    string ft = " ";
-    uint64_t tc;
+    string packer;
+    string ft;
+    uint64_t tc = 0;
+    uint64_t ttc = 0;
     CAmount value;
-    GetFullRecord(address, nHeight, ft, tc, value);
+    GetFullRecord(address, nHeight, packer, ft, tc, ttc, value);
     return ft;
 }
 
 uint64_t CMemberInfoDB::GetTXCnt(string address, int nHeight)
 {
+    string packer;
     string ft;
     uint64_t tc = 0;
+    uint64_t ttc = 0;
     CAmount value;
-    GetFullRecord(address, nHeight, ft, tc, value);
+    GetFullRecord(address, nHeight, packer, ft, tc, ttc, value);
     return tc;
 }
 
-void CMemberInfoDB::GetFullRecord(string address, int nHeight, string& father, uint64_t& tc, CAmount& value)
+uint64_t CMemberInfoDB::GetTotalTXCnt(string address, int nHeight)
+{
+    string packer;
+    string ft;
+    uint64_t tc = 0;
+    uint64_t ttc = 0;
+    CAmount value;
+    GetFullRecord(address, nHeight, packer, ft, tc, ttc, value);
+    return ttc;
+}
+
+CAmount CMemberInfoDB::GetRwdBalance(std::string address, int nHeight)
+{
+    string packer;
+    string ft;
+    uint64_t tc = 0;
+    uint64_t ttc = 0;
+    CAmount value;
+    GetFullRecord(address, nHeight, packer, ft, tc, ttc, value);
+    return value;
+}
+
+void CMemberInfoDB::GetFullRecord(string address, int nHeight, string& packer, string& father,
+                                  uint64_t& tc, uint64_t& ttc, CAmount& value)
 {
     if (cacheRecord.find(address) != cacheRecord.end())
     {
-        ParseRecord(cacheRecord[address], father, tc, value);
+        ParseRecord(cacheRecord[address], packer, father, tc, ttc, value);
         return;
     }
     else
     {
         for (int h = nHeight; h >= 0; h--)
         {
-            if (ReadDB(address, h, father, tc, value))
+            if (ReadDB(address, h, packer, father, tc, ttc, value))
                 return;
         }
     }
@@ -284,14 +346,15 @@ bool CMemberInfoDB::RewardChangeUpdate(CAmount rewardChange, string address, int
 {
     if (rewardChange >= MAX_MONEY || rewardChange <= -MAX_MONEY)
         return false;
-    if (isUndo)
-    {
-        if (!DeleteDB(address, nHeight+1))
-            return false;
-        return true;
-    }
 
-    UpdateCacheRewardChange(address, nHeight-1, rewardChange);
+//    if (isUndo)
+//    {
+//        if (!DeleteDB(address, nHeight+1))
+//            return false;
+//        return true;
+//    }
+
+    UpdateCacheRewardChange(address, nHeight, rewardChange);
 
     //LogPrintf("%s, member:%s, rw:%d\n", __func__, member, rewardbalance_old);
 
@@ -316,7 +379,7 @@ bool CMemberInfoDB::RewardChangeUpdateByPubkey(CAmount rewardChange, string pubK
 }
 
 bool CMemberInfoDB::ComputeMemberReward(const uint64_t& txCnt, const uint64_t& totalTXCnt,
-                                            const CAmount& totalRewards, CAmount& memberReward)
+                                        const CAmount& totalRewards, CAmount& memberReward) const
 {
     if (totalTXCnt < txCnt || totalTXCnt == 0 || totalRewards < 0)
         return false;
@@ -343,11 +406,15 @@ bool CMemberInfoDB::ComputeMemberReward(const uint64_t& txCnt, const uint64_t& t
         return true;
     }
     else
+    {
+        LogPrintf("%s, memberReward < 0, txCnt: %d, totalTXCnt: %d, totalRewards: %d, memberReward: %d\n",
+                  __func__, txCnt, totalTXCnt, totalRewards, memberReward);
         return false;
+    }
 }
 
 bool CMemberInfoDB::InitRewardsDist(CAmount memberTotalRewards, const CScript& scriptPubKey, int nHeight, string& clubLeaderAddress,
-                                        CAmount& distributedRewards, map<string, CAmount>& memberRewards)
+                                    CAmount& distributedRewards, map<string, CAmount>& memberRewards)
 {
     if (memberTotalRewards < 0)
         return false;
@@ -359,13 +426,12 @@ bool CMemberInfoDB::InitRewardsDist(CAmount memberTotalRewards, const CScript& s
     if (!addr.ScriptPub2Addr(scriptPubKey, clubLeaderAddress))
         return false;
 
-    uint64_t harvestPower = 0;
-    vector<string> members = _pclubinfodb->GetClubMembersByAddress(clubLeaderAddress, nHeight-1);
+    uint64_t harvestPower = GetHarvestPowerByAddress(clubLeaderAddress, nHeight-1);
+    vector<string> members = _pclubinfodb->GetTotalMembersByAddress(clubLeaderAddress, nHeight-1);
     for(size_t i = 0; i < members.size(); i++)
     {
         uint64_t tXCnt = GetTXCnt(members[i], nHeight-1);
         addrToTC.insert(pair<string, uint64_t>(members[i], tXCnt));
-        harvestPower += tXCnt;
     }
     totalmemberTXCnt = harvestPower - GetTXCnt(clubLeaderAddress, nHeight-1);
 
@@ -385,7 +451,8 @@ bool CMemberInfoDB::InitRewardsDist(CAmount memberTotalRewards, const CScript& s
         CAmount remainedReward = memberTotalRewards - distributedRewards;
         if (remainedReward < 0)
         {
-            LogPrintf("Error: The club's totalRewards are less than distributedRewards\n");
+            LogPrintf("%s, memberTotalRewards < distributedRewards, memberTotalRewards: %d, distributedRewards: %d\n",
+                      __func__, memberTotalRewards, distributedRewards);
             return false;
         }
     }
@@ -395,12 +462,23 @@ bool CMemberInfoDB::InitRewardsDist(CAmount memberTotalRewards, const CScript& s
 
 uint64_t CMemberInfoDB::GetHarvestPowerByAddress(std::string address, int nHeight)
 {
-    uint64_t hPower = 0;
-    vector<string> clubMembers = _pclubinfodb->GetClubMembersByAddress(address, nHeight);
-    hPower += GetTXCnt(address, nHeight);
-    for(size_t i = 0; i < clubMembers.size(); i++)
-        hPower += GetTXCnt(clubMembers[i], nHeight);
-    return hPower;
+//    uint64_t hPower = 0;
+//    vector<string> clubMembers = _pclubinfodb->GetTotalMembersByAddress(address, nHeight);
+//    hPower += GetTXCnt(address, nHeight);
+//    for(size_t i = 0; i < clubMembers.size(); i++)
+//        hPower += GetTXCnt(clubMembers[i], nHeight);
+//    return hPower;
+
+    string packer;
+    string ft;
+    uint64_t tc = 0;
+    uint64_t ttc = 0;
+    CAmount value;
+    GetFullRecord(address, nHeight, packer, ft, tc, ttc, value);
+    if ((packer.compare("0") == 0) && (ft.compare("0") == 0))
+        return GetTotalTXCnt(address, nHeight);
+    else
+        return 0;
 }
 
 bool CMemberInfoDB::UpdateRewardsByTX(const CTransaction& tx, CAmount blockReward, int nHeight, bool isUndo)
@@ -442,65 +520,143 @@ bool CMemberInfoDB::UpdateRewardsByTX(const CTransaction& tx, CAmount blockRewar
 
 bool CMemberInfoDB::EntrustByAddress(string inputAddr, string voutAddress, int nHeight, bool isUndo)
 {
-    if (isUndo)
-    {
-        if (GetFather(voutAddress, nHeight).compare("0") == 0)
-        {
-            if (!DeleteDB(inputAddr, nHeight+1))
-                return false;
+//    if (isUndo)
+//    {
+//        if (GetFather(voutAddress, nHeight).compare("0") == 0)
+//        {
+//            if (!DeleteDB(inputAddr, nHeight+1))
+//                return false;
 
-            _pclubinfodb->UpdateMembersByFatherAddress(voutAddress, true, inputAddr, nHeight, isUndo);
-            _pclubinfodb->UpdateMembersByFatherAddress(GetFather(inputAddr, nHeight), false, inputAddr, nHeight, isUndo);
-        }
-        if (!DeleteDB(voutAddress, nHeight+1))
-            return false;
-        return true;
+//            _pclubinfodb->UpdateMembersByFatherAddress(voutAddress, true, inputAddr, nHeight, isUndo);
+//            _pclubinfodb->UpdateMembersByFatherAddress(GetFather(inputAddr, nHeight), false, inputAddr, nHeight, isUndo);
+//        }
+//        if (!DeleteDB(voutAddress, nHeight+1))
+//            return false;
+//        return true;
+//    }
+
+    // Address of vout must have both father and packer of "0" in database or entrust itself
+    string fatherOfVin = GetFather(inputAddr, nHeight-1);
+    string packerOfVin = GetPacker(inputAddr, nHeight-1);
+    string fatherOfVout = GetFather(voutAddress, nHeight-1);
+    string packerOfVout = GetPacker(voutAddress, nHeight-1);
+    string newPackerAddr = voutAddress;
+    bool changeRelationship = false;
+
+    // Compute the total TX count of the vin address and update the packer of the these members
+    vector<string> totalMembers = _pclubinfodb->GetTotalMembersByAddress(inputAddr, nHeight-1);
+    uint64_t ttcOfVin = GetTXCnt(inputAddr, nHeight-1);
+    for(size_t i = 0; i < totalMembers.size(); i++)
+    {
+        CAmount rwdbalance = 0;
+        string packerInput = " ";
+        string ft = " ";
+        uint64_t tc = 0;
+        uint64_t ttc = 0;
+        GetFullRecord(totalMembers[i], nHeight-1, packerInput, ft, tc, ttc, rwdbalance);
+        packerInput = voutAddress;
+        string newRecordInput = GenerateRecord(packerInput, ft, tc, ttc, rwdbalance);
+        cacheRecord[totalMembers[i]] = newRecordInput;
+
+        ttcOfVin += tc;
     }
 
-    // Address of vout must have father of "0" in database or entrust itself
-    if ((voutAddress.compare(inputAddr) != 0) && (GetFather(voutAddress, nHeight-1).compare("0") == 0))
+    // Update club info
+    // When the vout address is a club leader, the vin entrust the vout(not vin himself)
+    if ((voutAddress.compare(inputAddr) != 0) && (fatherOfVin.compare(voutAddress) != 0) &&
+        (fatherOfVout.compare("0") == 0) && (packerOfVout.compare("0") == 0))
     {
-        _pclubinfodb->UpdateMembersByFatherAddress(GetFather(inputAddr, nHeight), false, inputAddr, nHeight, isUndo);
+        _pclubinfodb->UpdateMembersByFatherAddress(fatherOfVin, false, inputAddr, nHeight, isUndo);
         _pclubinfodb->UpdateMembersByFatherAddress(voutAddress, true, inputAddr, nHeight, isUndo);
-
-        // Input address update
-        UpdateCacheFather(inputAddr, nHeight-1, voutAddress);
+        newPackerAddr = voutAddress;
+        changeRelationship = true;
     }
-    else if((voutAddress.compare(inputAddr) == 0) && (GetFather(voutAddress, nHeight-1).compare("0") != 0))
+    // When the vin address is not a club leader and the vin entrust himself
+    else if((voutAddress.compare(inputAddr) == 0) &&
+            (fatherOfVin.compare("0") != 0) && (packerOfVin.compare("0") != 0))
     {
-        _pclubinfodb->UpdateMembersByFatherAddress(GetFather(inputAddr, nHeight), false, inputAddr, nHeight, isUndo);
-
-        // Input address update
-        UpdateCacheFather(inputAddr, nHeight-1, "0");
+        _pclubinfodb->UpdateMembersByFatherAddress(fatherOfVin, false, inputAddr, nHeight, isUndo);
+        newPackerAddr = "0";
+        changeRelationship = true;
     }
 
-    // Address of vout update by transaction count
-    UpdateCacheTcAddOne(voutAddress, nHeight-1);
+    if (changeRelationship)
+    {
+        // Update the father of the vin address
+        UpdateCacheFather(inputAddr, nHeight, newPackerAddr);
+
+        // Update the packer of the vin address
+        UpdateCachePacker(inputAddr, nHeight, newPackerAddr);
+
+        // Update the ttc of the vin's packer address
+        if (packerOfVin.compare("0") != 0)
+        {
+            if (!UpdateCacheTtcByChange(packerOfVin, nHeight, ttcOfVin, false, isUndo))
+                return false;
+        }
+        else
+        {
+            if (!UpdateCacheTtcByChange(inputAddr, nHeight, ttcOfVin, false, isUndo))
+                return false;
+        }
+
+        // Update the ttc of the vout address
+        if (!UpdateCacheTtcByChange(voutAddress, nHeight, ttcOfVin, true, isUndo))
+            return false;
+    }
+
+    // TX count add one, including vout address and packer of vout
+    UpdateCacheTcAddOne(voutAddress, nHeight);
+    if (newPackerAddr.compare("0") != 0)
+    {
+        if (!UpdateCacheTtcByChange(newPackerAddr, nHeight, 1, true, isUndo))
+            return false;
+    }
+    else
+    {
+        if (!UpdateCacheTtcByChange(voutAddress, nHeight, 1, true, isUndo))
+            return false;
+    }
 
     return true;
 }
 
-bool CMemberInfoDB::TcAddOneByAddress(string address, int nHeight, string father, bool isUndo)
+bool CMemberInfoDB::UpdateCacheTtcByChange(std::string address, int nHeight, uint64_t count, bool isAdd, bool isUndo)
 {
-    if (isUndo)
-    {
-        if (!DeleteDB(address, nHeight+1))
-            return false;
-        return true;
-    }
+//    if (isUndo)
+//    {
+//        if (!DeleteDB(address, nHeight+1))
+//            return false;
+//        return true;
+//    }
 
-    CAmount rewardbalance = 0;
+    CBitcoinAddress addr = CBitcoinAddress(address);
+    if (!addr.IsValid())
+        return false;
+
+    string packer = " ";
     string ft = " ";
-    uint64_t tc = 1;
-    GetFullRecord(address, nHeight-1, ft, tc, rewardbalance);
-    if (ft.compare(" ") == 0)
+    uint64_t tc = 0;
+    uint64_t ttcInput = 0;
+    CAmount rewardbalance = 0;
+    GetFullRecord(address, nHeight-1, packer, ft, tc, ttcInput, rewardbalance);
+    if (isAdd)
+        ttcInput += count;
+    else
     {
-        ft = father;
-        _pclubinfodb->UpdateMembersByFatherAddress(father, true, address, nHeight, isUndo);
+        if (count == 0)
+            ttcInput = 0;
+        else if(ttcInput >= count)
+            ttcInput -= count;
+        else
+        {
+            LogPrintf("%s, ttc - count error, address:%s, %d - %d\n", __func__, address, ttcInput, count);
+            return false;
+        }
     }
-    tc++;
 
-    string newRecord = GenerateRecord(ft, tc, rewardbalance);
+    // Update cache
+    string newRecord = GenerateRecord(packer, ft, tc, ttcInput, rewardbalance);
     cacheRecord[address] = newRecord;
 
     //LogPrintf("%s, member:%s, rw:%d\n", __func__, member, rewardbalance_old);
@@ -508,11 +664,84 @@ bool CMemberInfoDB::TcAddOneByAddress(string address, int nHeight, string father
     return true;
 }
 
-bool CMemberInfoDB::UpdateFatherTCByTX(const CTransaction& tx, const CCoinsViewCache& view, int nHeight, bool isUndo)
+bool CMemberInfoDB::UpdateTcAndTtcByAddress(string address, int nHeight, string father, bool isUndo)
+{
+//    if (isUndo)
+//    {
+//        if (!DeleteDB(address, nHeight+1))
+//            return false;
+//        return true;
+//    }
+
+    CAmount rewardbalance = 0;
+    string packer = " ";
+    string ft = " ";
+    uint64_t tc = 0;
+    uint64_t ttc = 0;
+    bool addressUpdated = false;
+    GetFullRecord(address, nHeight-1, packer, ft, tc, ttc, rewardbalance);
+    if ((ft.compare(" ") == 0) && (packer.compare(" ") == 0))
+    {
+        // It's a new address on chain
+        // Update father
+        ft = father;
+        _pclubinfodb->UpdateMembersByFatherAddress(father, true, address, nHeight, isUndo);
+
+        // Update packer
+        string packerOfFather = GetPacker(father, nHeight-1);
+        if (packerOfFather.compare("0") != 0)
+            packer = packerOfFather;
+        else
+            packer = father;
+
+        // Ttc of packer add one
+        if (!UpdateCacheTtcByChange(packer, nHeight, 1, true, isUndo))
+            return false;
+    }
+    else if((ft.compare(" ") != 0) && (packer.compare(" ") != 0))
+    {
+        // Total TX count of the address' packer add one
+        if (packer.compare("0") != 0)
+        {
+            if (!UpdateCacheTtcByChange(packer, nHeight, 1, true, isUndo))
+                return false;
+        }
+        else
+        {
+            if (!UpdateCacheTtcByChange(address, nHeight, 1, true, isUndo))
+                return false;
+            addressUpdated = true;
+        }
+    }
+    else
+        return false;
+
+    // Check if father or packer is null
+    if ((ft.compare(" ") == 0) || (packer.compare(" ") == 0))
+    {
+        //LogPrintf("%s, member:%s, rw:%d\n", __func__, member, rewardbalance_old);
+        return false;
+    }
+
+    // TX count of the address add one
+    if (addressUpdated)
+        GetFullRecord(address, nHeight-1, packer, ft, tc, ttc, rewardbalance);
+    tc++;
+
+    // Update cache
+    string newRecord = GenerateRecord(packer, ft, tc, ttc, rewardbalance);
+    cacheRecord[address] = newRecord;
+
+    //LogPrintf("%s, member:%s, rw:%d\n", __func__, member, rewardbalance_old);
+
+    return true;
+}
+
+bool CMemberInfoDB::UpdateFatherAndTCByTX(const CTransaction& tx, const CCoinsViewCache& view, int nHeight, bool isUndo)
 {
     if (!tx.IsCoinBase())
     {
-        // get best father
+        // Get best father
         string bestFather = " ";
         if (!isUndo)
         {
@@ -546,7 +775,7 @@ bool CMemberInfoDB::UpdateFatherTCByTX(const CTransaction& tx, const CCoinsViewC
             }
         }
 
-        // update packer, father and tc
+        // Update packer, father, ttc and tc
         for(unsigned int i = 0; i < tx.vout.size(); i++)
         {
             CTxDestination dst;
@@ -560,7 +789,7 @@ bool CMemberInfoDB::UpdateFatherTCByTX(const CTransaction& tx, const CCoinsViewC
             }
             else
             {
-                if (!TcAddOneByAddress(voutAddress, nHeight, bestFather, isUndo))
+                if (!UpdateTcAndTtcByAddress(voutAddress, nHeight, bestFather, isUndo))
                     return false;
             }
         }

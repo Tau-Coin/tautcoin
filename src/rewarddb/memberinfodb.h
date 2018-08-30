@@ -38,20 +38,26 @@ private:
 
     bool EntrustByAddress(std::string inputAddr, std::string voutAddress, int nHeight, bool isUndo);
 
-    bool TcAddOneByAddress(std::string address, int nHeight, std::string father, bool isUndo);
+    bool UpdateTcAndTtcByAddress(std::string address, int nHeight, std::string father, bool isUndo);
 
-    bool WriteDB(std::string key, int nHeight, std::string father, uint64_t tc, CAmount value);
+    bool WriteDB(std::string key, int nHeight, std::string packer, std::string father,
+                 uint64_t tc, uint64_t ttc, CAmount value);
 
     bool WriteDB(std::string key, int nHeight, std::string strValue);
 
-    bool ReadDB(std::string key, int nHeight, std::string& father, uint64_t& tc, CAmount& value);
-    bool ReadDB(std::string key, int nHeight, std::string& strValue);
+    bool ReadDB(std::string key, int nHeight, std::string& packer, std::string& father,
+                uint64_t& tc, uint64_t& ttc, CAmount& value) const;
+    bool ReadDB(std::string key, int nHeight, std::string& strValue) const;
 
     bool DeleteDB(std::string key, int nHeight);
 
     void UpdateCacheFather(std::string address, int inputHeight, std::string newFather);
 
+    void UpdateCachePacker(std::string address, int inputHeight, std::string newPacker);
+
     void UpdateCacheTcAddOne(std::string address, int inputHeight);
+
+    bool UpdateCacheTtcByChange(std::string address, int nHeight, uint64_t count, bool isAdd, bool isUndo);
 
     void UpdateCacheRewardChange(std::string address, int inputHeight, CAmount rewardChange);
 
@@ -77,16 +83,17 @@ public:
 
     //! Compute the reward of each member
     bool ComputeMemberReward(const uint64_t& txCnt, const uint64_t& totalTXCnt,
-                             const CAmount& totalRewards, CAmount& memberReward);
+                             const CAmount& totalRewards, CAmount& memberReward) const;
 
     //! Parse the record
-    bool ParseRecord(std::string inputStr, std::string& father, uint64_t& tc, CAmount& value);
+    bool ParseRecord(std::string inputStr, std::string &packer, std::string& father,
+                     uint64_t& tc, uint64_t &ttc, CAmount& value) const;
 
     //! Generate a record
-    std::string GenerateRecord(std::string father, uint64_t tc, CAmount value);
+    std::string GenerateRecord(std::string packer, std::string father, uint64_t tc, uint64_t ttc, CAmount value) const;
 
-    //! Retrieve the reward balance for a given address
-    CAmount GetRwdBalance(std::string address, int nHeight);
+    //! Retrieve the packer for a given address
+    std::string GetPacker(std::string address, int nHeight);
 
     //! Retrieve the father for a given address
     std::string GetFather(std::string address, int nHeight);
@@ -94,8 +101,15 @@ public:
     //! Retrieve the transaction count for a given address
     uint64_t GetTXCnt(std::string address, int nHeight);
 
+    //! Retrieve the whole club's TX count where a given address in
+    uint64_t GetTotalTXCnt(std::string address, int nHeight);
+
+    //! Retrieve the reward balance for a given address
+    CAmount GetRwdBalance(std::string address, int nHeight);
+
     //! Retrieve a full record for a given address
-    void GetFullRecord(std::string address, int nHeight, std::string& father, uint64_t& tc, CAmount& value);
+    void GetFullRecord(std::string address, int nHeight, std::string &packer, std::string& father,
+                       uint64_t& tc, uint64_t &ttc, CAmount& value);
     std::string GetFullRecord(std::string address, int nHeight);
 
     //! Retrieve the harvest power for a given address if it's a miner
@@ -105,7 +119,7 @@ public:
     bool UpdateRewardsByTX(const CTransaction& tx, CAmount blockReward, int nHeight, bool isUndo);
 
     //! Update the TX count and the father
-    bool UpdateFatherTCByTX(const CTransaction& tx, const CCoinsViewCache &view, int nHeight, bool isUndo);
+    bool UpdateFatherAndTCByTX(const CTransaction& tx, const CCoinsViewCache &view, int nHeight, bool isUndo);
 };
 
 #endif // TAUCOIN_MEMBERINFODB_H
