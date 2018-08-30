@@ -27,6 +27,7 @@
 #include "wallet/wallet.h"
 
 #include <stdint.h>
+#include <fstream>
 
 #include <boost/assign/list_of.hpp>
 #include <boost/shared_ptr.hpp>
@@ -35,6 +36,10 @@
 
 //#define tautest    //it is a debug function switch,if you does not want please turn off it
 using namespace std;
+
+std::string static EncodeDumpTime(int64_t nTime) {
+    return DateTimeStrFormat("%Y-%m-%dT%H:%M:%SZ", nTime);
+}
 
 UniValue getminingpowerbyaddress(const UniValue& params, bool fHelp)
 {
@@ -57,8 +62,17 @@ UniValue getminingpowerbyaddress(const UniValue& params, bool fHelp)
 
     RPCTypeCheck(params, boost::assign::list_of(UniValue::VSTR)(UniValue::VNUM), true);
 
+    int chainHeight = 0;
+    {
+        LOCK(cs_main);
+        chainHeight = chainActive.Height();
+    }
+
     std::string addrStr = params[0].get_str();
     int height = params[1].get_int();
+
+    if (height < 0 || height > chainHeight)
+        throw JSONRPCError(RPC_INVALID_ADDRESS_OR_KEY, "Error: Invalid height");
 
     CBitcoinAddress address(addrStr);
 
@@ -74,10 +88,65 @@ UniValue getminingpowerbyaddress(const UniValue& params, bool fHelp)
     return result;
 }
 
+UniValue dumpclubmembers(const UniValue& params, bool fHelp)
+{
+    if (fHelp || params.size() != 1)
+        throw runtime_error(
+            "dumpclubmembers \"filename\"\n"
+            "\nDumps all mining clubs and members in a human-readable format.\n"
+            "\nArguments:\n"
+            "1. \"filename\"    (string, required) The filename\n"
+            "\nExamples:\n"
+            + HelpExampleCli("dumpclubmembers", "\"test\"")
+            + HelpExampleRpc("dumpclubmembers", "\"test\"")
+        );
+
+    std::ofstream file;
+    file.open(params[0].get_str().c_str());
+    if (!file.is_open())
+        throw JSONRPCError(RPC_INVALID_PARAMETER, "Cannot open dump file");
+
+    int height = 0;
+    {
+        LOCK(cs_main);
+        height = chainActive.Height();
+    }
+
+    // produce output
+    file << strprintf("Height %i ,\n", chainActive.Height());
+
+    std::vector<std::string> leaders;
+
+    bool result = pclubinfodb->GetAllClubLeaders(leaders);
+    if (!result)
+        throw JSONRPCError(RPC_INVALID_PARAMETER, "Get club leaders failed");
+
+    // Output clubinfo
+    file << "\n";
+    file << "club leaders count:" << leaders.size() << "\n";
+    file << "index \t address \t\t mining power" << "\n";
+
+    int i = 1;
+    uint64_t totalTTC = 0;
+    for (std::vector<std::string>::iterator it = leaders.begin();
+        it != leaders.end(); it++, i++)
+    {
+        std::string address = *it;
+        uint64_t ttc = pmemberinfodb->GetTotalTXCnt(address, height);
+        totalTTC += ttc;
+        file << i + 1 << "\t" << address << "\t" << ttc << "\n";
+    }
+
+    file.close();
+    return NullUniValue;
+}
+
+
 static const CRPCCommand commands[] =
 { //  category              name                        actor (function)           okSafeMode
   //  --------------------- ------------------------    -----------------------    ----------
     { "clubmember",         "getminingpowerbyaddress",  &getminingpowerbyaddress,  true  },
+    { "clubmember",         "dumpclubmembers",          &dumpclubmembers,          true  },
 };
 
 void RegisterClubmemberRPCCommands(CRPCTable &tableRPC)

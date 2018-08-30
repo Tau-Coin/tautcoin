@@ -194,6 +194,8 @@ bool CMemberInfoDB::Commit(int nHeight)
             return false;
     }
 
+    _pclubinfodb->Commit(nHeight);
+
     return true;
 }
 
@@ -207,6 +209,9 @@ bool CMemberInfoDB::InitGenesisDB(std::vector<std::string> addresses)
         uint64_t tc = 1;
         uint64_t ttc = 1;
         if (!WriteDB(addresses[i], 0, packer, ft, tc, ttc, rewardbalance))
+            return false;
+
+        if (!_pclubinfodb->AddClubLeader(addresses[i]))
             return false;
     }
     return true;
@@ -573,6 +578,20 @@ bool CMemberInfoDB::EntrustByAddress(string inputAddr, string voutAddress, int n
         _pclubinfodb->UpdateMembersByFatherAddress(voutAddress, true, inputAddr, nHeight, isUndo);
         newPackerAddr = voutAddress;
         changeRelationship = true;
+
+        // If input address is a club leader
+        if ((fatherOfVin.compare("0") == 0) && (packerOfVin.compare("0") == 0))
+        {
+            if (!isUndo)
+            {
+                // remove this address from leader db
+                _pclubinfodb->RemoveClubLeader(inputAddr);
+            }
+            else
+            {
+                _pclubinfodb->AddClubLeader(inputAddr);
+            }
+        }
     }
     // When the vin address is not a club leader and the vin entrust himself
     else if((voutAddress.compare(inputAddr) == 0) &&
@@ -581,6 +600,15 @@ bool CMemberInfoDB::EntrustByAddress(string inputAddr, string voutAddress, int n
         _pclubinfodb->UpdateMembersByFatherAddress(fatherOfVin, false, inputAddr, nHeight, isUndo);
         newPackerAddr = "0";
         changeRelationship = true;
+
+        if (!isUndo)
+        {
+            _pclubinfodb->AddClubLeader(inputAddr);
+        }
+        else
+        {
+            _pclubinfodb->RemoveClubLeader(inputAddr);
+        }
     }
 
     if (changeRelationship)

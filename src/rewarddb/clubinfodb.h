@@ -11,6 +11,8 @@
 #include <string>
 #include <vector>
 
+#include "clubleaderdb.h"
+
 /** View on the reward rate dataset. */
 #define RWDBALDBRATEPATH "/rewardrate"
 class CRewardRateViewDB
@@ -55,6 +57,9 @@ private:
     //! clubinfo database used
     CRewardRateViewDB* _prewardratedbview;
 
+    //!club leader database
+    CClubLeaderDB* pclubleaderdb;
+
     //! cache for multi-transaction balance updating
     std::map<std::string, std::string> cacheRecord;
 
@@ -90,6 +95,15 @@ public:
 
     //! Retrieve the merbers' addresses
     std::vector<std::string> GetTotalMembersByAddress(std::string fatherAddress, int nHeight);
+
+    //! Add club leader
+    bool AddClubLeader(std::string address);
+
+    //! Remove club leader
+    bool RemoveClubLeader(std::string address);
+
+    //! Retrieve all the club leaders
+    bool GetAllClubLeaders(std::vector<std::string>& leaders);
 };
 
 #endif // TAUCOIN_CLUBINFODB_H

@@ -104,6 +104,8 @@ static const CRPCConvertParam vRPCConvertParams[] =
     { "getbalancebypubkey", 1 },
     { "getminingpowerbyaddress", 0},
     { "getminingpowerbyaddress", 1},
+    { "dumpclubmembers", 0},
+    { "dumpclubmembers", 1},
     { "getminingpowerbyaddress", 2},
     { "keypoolrefill", 0 },
     { "getrawmempool", 0 },

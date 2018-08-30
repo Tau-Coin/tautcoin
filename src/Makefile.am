@@ -142,6 +142,7 @@ BITCOIN_CORE_H = \
   rewarddb/addrtrie.h \
   rewarddb/clubinfodb.h \
   rewarddb/memberinfodb.h \
+  rewarddb/clubleaderdb.h \
   txmempool.h \
   ui_interface.h \
   undo.h \
@@ -205,6 +206,7 @@ libbitcoin_server_a_SOURCES = \
   rewarddb/addrtrie.cpp \
   rewarddb/clubinfodb.cpp \
   rewarddb/memberinfodb.cpp \
+  rewarddb/clubleaderdb.cpp \
   txmempool.cpp \
   ui_interface.cpp \
   validationinterface.cpp \

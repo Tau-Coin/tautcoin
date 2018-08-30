@@ -43,6 +43,11 @@ uint64_t ClubManager::GetHarvestPowerByAddress(std::string& address, int nHeight
         return DEFAULT_HARVEST_POWER;
     }
     */
+    if (nHeight <= -1)
+    {
+        LOCK(cs_main);
+        nHeight = chainActive.Height();
+    }
     return pmemberinfodb->GetHarvestPowerByAddress(address, nHeight);
 }
 

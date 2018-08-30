@@ -151,6 +151,8 @@ CClubInfoDB::CClubInfoDB()
     dbwrapper_private::HandleError(status);
     assert(status.ok());
     LogPrintf("Opened LevelDB successfully\n");
+
+    pclubleaderdb = new CClubLeaderDB();
 }
 
 CClubInfoDB::CClubInfoDB(CRewardRateViewDB *prewardratedbview) : _prewardratedbview(prewardratedbview)
@@ -164,6 +166,8 @@ CClubInfoDB::CClubInfoDB(CRewardRateViewDB *prewardratedbview) : _prewardratedbv
     dbwrapper_private::HandleError(status);
     assert(status.ok());
     LogPrintf("Opened LevelDB successfully\n");
+
+    pclubleaderdb = new CClubLeaderDB();
 }
 
 CClubInfoDB::~CClubInfoDB()
@@ -171,6 +175,9 @@ CClubInfoDB::~CClubInfoDB()
     delete pdb;
     pdb = NULL;
     _prewardratedbview = NULL;
+
+    delete pclubleaderdb;
+    pclubleaderdb = NULL;
 }
 
 CRewardRateViewDB* CClubInfoDB::GetRewardRateDBPointer() const
@@ -196,6 +203,8 @@ bool CClubInfoDB::Commit(int nHeight)
         if (!WriteDB(address, nHeight, strValue))
             return false;
     }
+
+    pclubleaderdb->Commit();
 
     return true;
 }
@@ -270,4 +279,19 @@ vector<string> CClubInfoDB::GetTotalMembersByAddress(std::string fatherAddress, 
     }
 
     return members;
+}
+
+bool CClubInfoDB::AddClubLeader(std::string address)
+{
+    return pclubleaderdb->AddClubLeader(address);
+}
+
+bool CClubInfoDB::RemoveClubLeader(std::string address)
+{
+    return pclubleaderdb->RemoveClubLeader(address);
+}
+
+bool CClubInfoDB::GetAllClubLeaders(std::vector<std::string>& leaders)
+{
+    return pclubleaderdb->GetAllClubLeaders(leaders);
 }
