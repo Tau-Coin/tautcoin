@@ -49,8 +49,15 @@ bool CMemberInfoDB::WriteDB(std::string key, int nHeight, string packer, string 
 }
 
 bool CMemberInfoDB::ReadDB(std::string key, int nHeight, string &packer, string& father,
-                           uint64_t& tc, uint64_t &ttc, CAmount& value) const
+                           uint64_t& tc, uint64_t &ttc, CAmount& value)
 {
+    if (cacheForRead.find(key) != cacheForRead.end())
+    {
+        if (!ParseRecord(cacheForRead[key], packer, father, tc, ttc, value))
+            return false;
+        return true;
+    }
+
     std::stringstream ssHeight;
     std::string strHeight;
     ssHeight << nHeight;
@@ -76,14 +83,21 @@ bool CMemberInfoDB::ReadDB(std::string key, int nHeight, string &packer, string&
         return false;
     }
 
+    cacheForRead[key] = strValue;// Insert cache for read accelerating
     if (!ParseRecord(strValue, packer, father, tc, ttc, value))
         return false;
 
     return true;
 }
 
-bool CMemberInfoDB::ReadDB(std::string key, int nHeight, std::string& strValue) const
+bool CMemberInfoDB::ReadDB(std::string key, int nHeight, std::string& strValue)
 {
+    if (cacheForRead.find(key) != cacheForRead.end())
+    {
+        strValue = cacheForRead[key];
+        return true;
+    }
+
     std::stringstream ssHeight;
     std::string strHeight;
     ssHeight << nHeight;
@@ -93,7 +107,7 @@ bool CMemberInfoDB::ReadDB(std::string key, int nHeight, std::string& strValue) 
     if(!status.ok())
     {
         if (status.IsNotFound())
-            strValue = " _0_0";
+            strValue = " _ _0_0_0";
         else
         {
             LogPrintf("LevelDB read failure in rwdbalance module: %s\n", status.ToString());
@@ -101,6 +115,8 @@ bool CMemberInfoDB::ReadDB(std::string key, int nHeight, std::string& strValue) 
         }
         return false;
     }
+
+    cacheForRead[key] = strValue;// Insert cache for read accelerating
 
     return true;
 }
@@ -126,6 +142,7 @@ bool CMemberInfoDB::DeleteDB(std::string key, int nHeight)
 void CMemberInfoDB::ClearCache()
 {
     cacheRecord.clear();
+    cacheForRead.clear();
 }
 
 void CMemberInfoDB::UpdateCacheFather(string address, int inputHeight, string newFather)
@@ -223,7 +240,10 @@ bool CMemberInfoDB::ParseRecord(string inputStr, string& packer, string& father,
     vector<string> splitedStr;
     boost::split(splitedStr, inputStr, boost::is_any_of(DBSEPECTATOR));
     if (splitedStr.size() != 5)
+    {
+        LogPrintf("%s, splitedStr.size() != 5, inputStr:%s\n", __func__, inputStr);
         return false;
+    }
     packer = splitedStr[0];
     father = splitedStr[1];
     std::istringstream ssVal2(splitedStr[2]);
@@ -583,14 +603,9 @@ bool CMemberInfoDB::EntrustByAddress(string inputAddr, string voutAddress, int n
         if ((fatherOfVin.compare("0") == 0) && (packerOfVin.compare("0") == 0))
         {
             if (!isUndo)
-            {
-                // remove this address from leader db
-                _pclubinfodb->RemoveClubLeader(inputAddr);
-            }
+                _pclubinfodb->RemoveClubLeader(inputAddr); // Remove this address from leader db
             else
-            {
                 _pclubinfodb->AddClubLeader(inputAddr);
-            }
         }
     }
     // When the vin address is not a club leader and the vin entrust himself
@@ -602,13 +617,9 @@ bool CMemberInfoDB::EntrustByAddress(string inputAddr, string voutAddress, int n
         changeRelationship = true;
 
         if (!isUndo)
-        {
             _pclubinfodb->AddClubLeader(inputAddr);
-        }
         else
-        {
             _pclubinfodb->RemoveClubLeader(inputAddr);
-        }
     }
 
     if (changeRelationship)

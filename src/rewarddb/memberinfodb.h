@@ -29,6 +29,9 @@ private:
     //! cache for multi-transaction balance updating
     std::map<std::string, std::string> cacheRecord;
 
+    //! cache for read accelerating
+    std::map<std::string, std::string> cacheForRead;
+
     //! clubinfo database used
     CClubInfoDB* _pclubinfodb;
 
@@ -46,8 +49,8 @@ private:
     bool WriteDB(std::string key, int nHeight, std::string strValue);
 
     bool ReadDB(std::string key, int nHeight, std::string& packer, std::string& father,
-                uint64_t& tc, uint64_t& ttc, CAmount& value) const;
-    bool ReadDB(std::string key, int nHeight, std::string& strValue) const;
+                uint64_t& tc, uint64_t& ttc, CAmount& value);
+    bool ReadDB(std::string key, int nHeight, std::string& strValue);
 
     bool DeleteDB(std::string key, int nHeight);
 
