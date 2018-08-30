@@ -29,7 +29,7 @@ private:
     //! cache for multi-transaction balance updating
     std::map<std::string, std::string> cacheRecord;
 
-    //! cache for read accelerating
+    //! cache for accelerating
     std::map<std::string, std::string> cacheForRead;
 
     //! clubinfo database used

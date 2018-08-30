@@ -2667,6 +2667,9 @@ bool DisconnectBlock(CBlock& block, CValidationState& state, CBlockIndex* pindex
         view.SetBestBlock(pindex->pprev->GetBlockHash());
     }
 
+    // Clear clubinfo database accelerating cache
+    pclubinfodb->ClearReadCache();
+
     if (pfClean) {
         *pfClean = fClean;
         return true;

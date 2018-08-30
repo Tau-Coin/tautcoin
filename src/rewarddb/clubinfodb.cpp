@@ -190,6 +190,11 @@ void CClubInfoDB::ClearCache()
     cacheRecord.clear();
 }
 
+void CClubInfoDB::ClearReadCache()
+{
+    cacheForRead.clear();
+}
+
 bool CClubInfoDB::Commit(int nHeight)
 {
     if (cacheRecord.size() == 0)
@@ -202,6 +207,12 @@ bool CClubInfoDB::Commit(int nHeight)
         string strValue = it->second;
         if (!WriteDB(address, nHeight, strValue))
             return false;
+
+        // Add to cache for accelerating
+        TAUAddrTrie::Trie trie;
+        trie.BuildTreeFromStr(strValue);
+        vector<string> members = trie.ListAll();
+        cacheForRead[address] = members;
     }
 
     pclubleaderdb->Commit();
@@ -257,6 +268,8 @@ string CClubInfoDB::GetTrieStrByFatherAddress(std::string fatherAddress, int nHe
 
 vector<string> CClubInfoDB::GetTotalMembersByAddress(std::string fatherAddress, int nHeight)
 {
+    if (cacheForRead.find(fatherAddress) != cacheForRead.end())
+        return cacheForRead[fatherAddress];
 
     vector<string> members;
     TAUAddrTrie::Trie trie;
@@ -277,6 +290,8 @@ vector<string> CClubInfoDB::GetTotalMembersByAddress(std::string fatherAddress, 
             return members;
         }
     }
+
+    cacheForRead[fatherAddress] = members;// Add to cache for accelerating
 
     return members;
 }

@@ -83,7 +83,7 @@ bool CMemberInfoDB::ReadDB(std::string key, int nHeight, string &packer, string&
         return false;
     }
 
-    cacheForRead[key] = strValue;// Insert cache for read accelerating
+    cacheForRead[key] = strValue;// Add to cache for accelerating
     if (!ParseRecord(strValue, packer, father, tc, ttc, value))
         return false;
 
@@ -116,7 +116,7 @@ bool CMemberInfoDB::ReadDB(std::string key, int nHeight, std::string& strValue)
         return false;
     }
 
-    cacheForRead[key] = strValue;// Insert cache for read accelerating
+    cacheForRead[key] = strValue;// Add to cache for accelerating
 
     return true;
 }

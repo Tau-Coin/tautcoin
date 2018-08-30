@@ -63,6 +63,9 @@ private:
     //! cache for multi-transaction balance updating
     std::map<std::string, std::string> cacheRecord;
 
+    //! cache for accelerating
+    std::map<std::string, std::vector<std::string> > cacheForRead;
+
     bool WriteDB(std::string key, int nHeight, std::string strValue);
 
     bool ReadDB(std::string key, int nHeight, std::string& strValue);
@@ -80,8 +83,11 @@ public:
     //! Retrieve the reward rate dataset pointer
     CRewardRateViewDB* GetRewardRateDBPointer() const;
 
-    //! Clear the rwdbalance cache
+    //! Clear the clubinfo cache
     void ClearCache();
+
+    //! Clear the clubinfo accelerating cache
+    void ClearReadCache();
 
     //! Commit the database transaction
     bool Commit(int nHeight);
