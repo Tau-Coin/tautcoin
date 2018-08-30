@@ -548,27 +548,31 @@ bool CMemberInfoDB::UpdateRewardsByTX(const CTransaction& tx, CAmount blockRewar
 
 bool CMemberInfoDB::EntrustByAddress(string inputAddr, string voutAddress, int nHeight, bool isUndo)
 {
-//    if (isUndo)
-//    {
-//        if (GetFather(voutAddress, nHeight).compare("0") == 0)
-//        {
-//            if (!DeleteDB(inputAddr, nHeight+1))
-//                return false;
-
-//            _pclubinfodb->UpdateMembersByFatherAddress(voutAddress, true, inputAddr, nHeight, isUndo);
-//            _pclubinfodb->UpdateMembersByFatherAddress(GetFather(inputAddr, nHeight), false, inputAddr, nHeight, isUndo);
-//        }
-//        if (!DeleteDB(voutAddress, nHeight+1))
-//            return false;
-//        return true;
-//    }
-
-    // Address of vout must have both father and packer of "0" in database or entrust itself
     string fatherOfVin = GetFather(inputAddr, nHeight-1);
     string packerOfVin = GetPacker(inputAddr, nHeight-1);
     string fatherOfVout = GetFather(voutAddress, nHeight-1);
     string packerOfVout = GetPacker(voutAddress, nHeight-1);
     string newPackerAddr = voutAddress;
+
+    if (isUndo)
+    {
+        // When the vout address is a club leader, the vin entrust the vout(not vin himself)
+        if ((voutAddress.compare(inputAddr) != 0) && (fatherOfVin.compare(voutAddress) != 0) &&
+            (fatherOfVout.compare("0") == 0) && (packerOfVout.compare("0") == 0))
+        {
+            // If input address is a club leader
+            if ((fatherOfVin.compare("0") == 0) && (packerOfVin.compare("0") == 0))
+                _pclubinfodb->AddClubLeader(inputAddr);
+        }
+        // When the vin address is not a club leader and the vin entrust himself
+        else if((voutAddress.compare(inputAddr) == 0) &&
+                (fatherOfVin.compare("0") != 0) && (packerOfVin.compare("0") != 0))
+            _pclubinfodb->RemoveClubLeader(inputAddr);
+
+        return true;
+    }
+
+    // Address of vout must have both father and packer of "0" in database or entrust itself
     bool changeRelationship = false;
 
     // Compute the total TX count of the vin address and update the packer of the these members
@@ -601,12 +605,7 @@ bool CMemberInfoDB::EntrustByAddress(string inputAddr, string voutAddress, int n
 
         // If input address is a club leader
         if ((fatherOfVin.compare("0") == 0) && (packerOfVin.compare("0") == 0))
-        {
-            if (!isUndo)
                 _pclubinfodb->RemoveClubLeader(inputAddr); // Remove this address from leader db
-            else
-                _pclubinfodb->AddClubLeader(inputAddr);
-        }
     }
     // When the vin address is not a club leader and the vin entrust himself
     else if((voutAddress.compare(inputAddr) == 0) &&
@@ -616,10 +615,7 @@ bool CMemberInfoDB::EntrustByAddress(string inputAddr, string voutAddress, int n
         newPackerAddr = "0";
         changeRelationship = true;
 
-        if (!isUndo)
-            _pclubinfodb->AddClubLeader(inputAddr);
-        else
-            _pclubinfodb->RemoveClubLeader(inputAddr);
+        _pclubinfodb->AddClubLeader(inputAddr);
     }
 
     if (changeRelationship)
@@ -708,12 +704,8 @@ bool CMemberInfoDB::UpdateCacheTtcByChange(std::string address, int nHeight, uin
 
 bool CMemberInfoDB::UpdateTcAndTtcByAddress(string address, int nHeight, string father, bool isUndo)
 {
-//    if (isUndo)
-//    {
-//        if (!DeleteDB(address, nHeight+1))
-//            return false;
-//        return true;
-//    }
+    if (isUndo)
+        return true;
 
     CAmount rewardbalance = 0;
     string packer = " ";
@@ -790,7 +782,14 @@ bool CMemberInfoDB::UpdateFatherAndTCByTX(const CTransaction& tx, const CCoinsVi
             CAmount maxValue = 0;
             for(unsigned int j = 0; j < tx.vin.size(); j++)
             {
-                CTxOut out = view.GetOutputFor(tx.vin[j]);
+                const CCoins* coins = view.AccessCoins(tx.vin[j].prevout.hash);
+                if (!coins)
+                {
+                    LogPrintf("%s, AccessCoins() failed, no specific coins\n", __func__);
+                    return false;
+                }
+                CTxOut out = coins->vout[tx.vin[j].prevout.n];
+                //CTxOut out = view.GetOutputFor(tx.vin[j]);
                 CAmount val = out.nValue;
                 if (val > maxValue)
                 {

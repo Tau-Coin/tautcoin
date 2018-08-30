@@ -2402,6 +2402,10 @@ bool DisconnectBlock(CBlock& block, CValidationState& state, CBlockIndex* pindex
         const CTransaction &tx = block.vtx[i];
         uint256 hash = tx.GetHash();
 
+        // Restore relationship
+        if (!pmemberinfodb->UpdateFatherAndTCByTX(tx, view, 0, true))
+            return error("DisconnectBlock(): UpdateRewards failed");
+
         // Check that all outputs are available and match the outputs in the block itself
         // exactly.
         {
