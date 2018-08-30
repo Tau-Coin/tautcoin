@@ -610,77 +610,77 @@ static string ScriptToPubKey(const CScript& script)
 //    ISNDB::StopISNDBService();
 //}
 
-BOOST_AUTO_TEST_CASE(ComputeMemberReward_test)
-{
-    // Create inputs
-    const uint txCntCase = 5;
-    const uint totalTXCntCase = 5;
-    const uint totalRewardsCase = 6;
-    const uint64_t txCnt[txCntCase] = {0, 43251, 43259, 0x7fffffffffffffff, 0xffffffffffffffff};
-    const uint64_t totalTXCnt[totalTXCntCase] = {0, 43251, 43259, 0x7fffffffffffffff, 0xffffffffffffffff};
-    const CAmount totalRewards[totalRewardsCase] = {-1, 0, 20000, MAX_MONEY-1, 0x7fffffffffffffff, 0x7fffffffffffffff+1};
-    const uint testTime = txCntCase * totalTXCntCase * totalRewardsCase;
+//BOOST_AUTO_TEST_CASE(ComputeMemberReward_test)
+//{
+//    // Create inputs
+//    const uint txCntCase = 5;
+//    const uint totalTXCntCase = 5;
+//    const uint totalRewardsCase = 6;
+//    const uint64_t txCnt[txCntCase] = {0, 43251, 43259, 0x7fffffffffffffff, 0xffffffffffffffff};
+//    const uint64_t totalTXCnt[totalTXCntCase] = {0, 43251, 43259, 0x7fffffffffffffff, 0xffffffffffffffff};
+//    const CAmount totalRewards[totalRewardsCase] = {-1, 0, 20000, MAX_MONEY-1, 0x7fffffffffffffff, 0x7fffffffffffffff+1};
+//    const uint testTime = txCntCase * totalTXCntCase * totalRewardsCase;
 
-    // Create outputs
-    bool expRet[testTime];
-    CAmount expMemberReward[testTime] = {0};
-    for(uint i = 0; i < txCntCase; i++)
-    {
-        for(uint j = 0; j < totalTXCntCase; j++)
-        {
-            for(uint k = 0; k < totalRewardsCase; k++)
-            {
-                uint num = k+totalRewardsCase*j+totalTXCntCase*totalRewardsCase*i;
-                if (j == 0 || i > j || k == 0 || k >= 4)
-                    expRet[num] = false;
-                else
-                {
-                    expRet[num] = true;
-                    arith_uint256 ttc = totalTXCnt[j];
-                    arith_uint256 tc = txCnt[i];
-                    arith_uint256 tRwd_1 = totalRewards[k] / (CENT*CENT);
-                    arith_uint256 tRwd_2 = totalRewards[k] % (CENT*CENT) / CENT;
-                    arith_uint256 tRwd_3 = totalRewards[k] % CENT;
-                    double ratio = tc.getdouble() / ttc.getdouble();
-                    CAmount expMemberReward_1 = ratio * tRwd_1.getdouble() * (CENT*CENT);
-                    CAmount expMemberReward_2 = ratio * tRwd_2.getdouble() * CENT;
-                    CAmount expMemberReward_3 = ratio * tRwd_3.getdouble();
-                    expMemberReward[num] = expMemberReward_1 + expMemberReward_2 + expMemberReward_3;
-                }
-            }
-        }
-    }
+//    // Create outputs
+//    bool expRet[testTime];
+//    CAmount expMemberReward[testTime] = {0};
+//    for(uint i = 0; i < txCntCase; i++)
+//    {
+//        for(uint j = 0; j < totalTXCntCase; j++)
+//        {
+//            for(uint k = 0; k < totalRewardsCase; k++)
+//            {
+//                uint num = k+totalRewardsCase*j+totalTXCntCase*totalRewardsCase*i;
+//                if (j == 0 || i > j || k == 0 || k >= 4)
+//                    expRet[num] = false;
+//                else
+//                {
+//                    expRet[num] = true;
+//                    arith_uint256 ttc = totalTXCnt[j];
+//                    arith_uint256 tc = txCnt[i];
+//                    arith_uint256 tRwd_1 = totalRewards[k] / (CENT*CENT);
+//                    arith_uint256 tRwd_2 = totalRewards[k] % (CENT*CENT) / CENT;
+//                    arith_uint256 tRwd_3 = totalRewards[k] % CENT;
+//                    double ratio = tc.getdouble() / ttc.getdouble();
+//                    CAmount expMemberReward_1 = ratio * tRwd_1.getdouble() * (CENT*CENT);
+//                    CAmount expMemberReward_2 = ratio * tRwd_2.getdouble() * CENT;
+//                    CAmount expMemberReward_3 = ratio * tRwd_3.getdouble();
+//                    expMemberReward[num] = expMemberReward_1 + expMemberReward_2 + expMemberReward_3;
+//                }
+//            }
+//        }
+//    }
 
-    // Execute tests
-    bool ret[testTime];
-    CAmount retMemberReward[testTime] = {0};
-    for(uint i = 0; i < txCntCase; i++)
-    {
-        for(uint j = 0; j < totalTXCntCase; j++)
-        {
-            for(uint k = 0; k < totalRewardsCase; k++)
-            {
-                uint num = k+totalRewardsCase*j+totalTXCntCase*totalRewardsCase*i;
-                ret[num] = ComputeMemberReward(txCnt[i], totalTXCnt[j], totalRewards[k], retMemberReward[num]);
-            }
-        }
-    }
+//    // Execute tests
+//    bool ret[testTime];
+//    CAmount retMemberReward[testTime] = {0};
+//    for(uint i = 0; i < txCntCase; i++)
+//    {
+//        for(uint j = 0; j < totalTXCntCase; j++)
+//        {
+//            for(uint k = 0; k < totalRewardsCase; k++)
+//            {
+//                uint num = k+totalRewardsCase*j+totalTXCntCase*totalRewardsCase*i;
+//                ret[num] = ComputeMemberReward(txCnt[i], totalTXCnt[j], totalRewards[k], retMemberReward[num]);
+//            }
+//        }
+//    }
 
-    // Verify
-    for(uint i = 0; i < txCntCase; i++)
-    {
-        for(uint j = 0; j < totalTXCntCase; j++)
-        {
-            for(uint k = 0; k < totalRewardsCase; k++)
-            {
-                uint num = k+totalRewardsCase*j+totalTXCntCase*totalRewardsCase*i;
-                BOOST_CHECK_MESSAGE(ret[num] == expRet[num], "ret case: "<<i<<", "<<j<<", "<<k);
-                if (ret[num])
-                    BOOST_CHECK_MESSAGE(expMemberReward[num] == retMemberReward[num], "reward case: "<<i<<", "<<j<<", "<<k);
-            }
-        }
-    }
-}
+//    // Verify
+//    for(uint i = 0; i < txCntCase; i++)
+//    {
+//        for(uint j = 0; j < totalTXCntCase; j++)
+//        {
+//            for(uint k = 0; k < totalRewardsCase; k++)
+//            {
+//                uint num = k+totalRewardsCase*j+totalTXCntCase*totalRewardsCase*i;
+//                BOOST_CHECK_MESSAGE(ret[num] == expRet[num], "ret case: "<<i<<", "<<j<<", "<<k);
+//                if (ret[num])
+//                    BOOST_CHECK_MESSAGE(expMemberReward[num] == retMemberReward[num], "reward case: "<<i<<", "<<j<<", "<<k);
+//            }
+//        }
+//    }
+//}
 
 static string GetRandomAddress()
 {
