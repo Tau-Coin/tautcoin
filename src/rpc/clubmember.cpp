@@ -37,10 +37,6 @@
 //#define tautest    //it is a debug function switch,if you does not want please turn off it
 using namespace std;
 
-std::string static EncodeDumpTime(int64_t nTime) {
-    return DateTimeStrFormat("%Y-%m-%dT%H:%M:%SZ", nTime);
-}
-
 UniValue getminingpowerbyaddress(const UniValue& params, bool fHelp)
 {
     if (fHelp || params.size() < 2 || params.size() > 3)
@@ -113,7 +109,7 @@ UniValue dumpclubmembers(const UniValue& params, bool fHelp)
     }
 
     // produce output
-    file << strprintf("Height %i ,\n", chainActive.Height());
+    file << strprintf("Height %i \n", chainActive.Height());
 
     std::vector<std::string> leaders;
 
@@ -122,11 +118,12 @@ UniValue dumpclubmembers(const UniValue& params, bool fHelp)
         throw JSONRPCError(RPC_INVALID_PARAMETER, "Get club leaders failed");
 
     // Output clubinfo
+    file << "club information table:\n";
     file << "\n";
     file << "club leaders count:" << leaders.size() << "\n";
-    file << "index \t address \t\t mining power" << "\n";
+    file << "index \t address \t\t\t\t mining power" << "\n";
 
-    int i = 1;
+    int i = 0;
     uint64_t totalTTC = 0;
     for (std::vector<std::string>::iterator it = leaders.begin();
         it != leaders.end(); it++, i++)
@@ -134,11 +131,74 @@ UniValue dumpclubmembers(const UniValue& params, bool fHelp)
         std::string address = *it;
         uint64_t ttc = pmemberinfodb->GetTotalTXCnt(address, height);
         totalTTC += ttc;
-        file << i + 1 << "\t" << address << "\t" << ttc << "\n";
+        file << i + 1 << "\t\t" << address << "\t" << ttc << "\n";
+    }
+    file << "\n";
+    file << "Total TTC:" << totalTTC  << "\n";
+    file << "\n\n\n";
+
+    file << "member information table:\n";
+    file << "\n";
+    file << "\n";
+
+    i = 0;
+    uint64_t totalTC = 0;
+    uint64_t totalRewards = 0;
+    for (std::vector<std::string>::iterator it = leaders.begin();
+        it != leaders.end(); it++, i++)
+    {
+        uint64_t  itTC = 0;
+        uint64_t  itRewards = 0;
+        std::string address = *it;
+        uint64_t ttcleader = pmemberinfodb->GetTotalTXCnt(address, height);
+        file << i << " club:" << address << ", ttc:" << ttcleader << "\n";
+        file << "\t" << "index\t" << "address\t\t\t\t\t\t\t\t" << "packer\t" << "father\t"
+             << "tc\t" << "reward" << "\n";
+
+        // Firstly, output leader info
+        std::string packer;
+        std::string father;
+        uint64_t    tc = 0;
+        uint64_t    ttc = 0;
+        CAmount     value = 0;
+
+        int j = 1;
+
+        pmemberinfodb->GetFullRecord(address, height, packer, father, tc, ttc, value);
+        file << "\t" << j <<"\t\t" << address <<"\t" << packer <<"\t" << father << "\t"
+             << tc << "\t" << value << "\n";
+        itTC += tc;
+        itRewards += value;
+
+        std::vector<std::string> members
+            = pclubinfodb->GetTotalMembersByAddress(address, height);
+        for (std::vector<std::string>::iterator itr = members.begin();
+            itr != members.end(); itr++, j++)
+        {
+            pmemberinfodb->GetFullRecord(*itr, height, packer, father, tc, ttc, value);
+            file << "\t" << j <<"\t\t" << *itr <<"\t" << packer <<"\t" << father << "\t"
+                << tc << "\t" << value << "\n";
+            itTC += tc;
+            itRewards += value;
+        }
+
+        file << "\n\n\ttotalTC:" << itTC
+            << ", totalRewards:" << itRewards << "\n";
+
+        totalTC += itTC;
+        totalRewards += itRewards;
+
+        file << "\n\n";
     }
 
+    file << "\n\n";
+    file << "Total TC:" << totalTC << ", total rewards:" << totalRewards << "\n";
+
     file.close();
-    return NullUniValue;
+
+    UniValue ret(UniValue::VOBJ);
+    ret.push_back(Pair("Result", "finished"));
+    return result;
 }
 
 

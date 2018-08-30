@@ -131,7 +131,8 @@ bool CClubLeaderDB::GetAllClubLeaders(std::vector<std::string>& leaders)
         try
         {
             leveldb::Slice slKey = pcursor->key();
-            std::string keyStr(slKey.data());
+            CDataStream ssKey(slKey.data(), slKey.data()+slKey.size(), SER_DISK, CLIENT_VERSION);
+            std::string keyStr = ssKey.str();
 
             if (keyStr.length() > 2 && keyStr[0] == 'L')
             {
