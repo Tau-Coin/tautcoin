@@ -6,10 +6,14 @@
 
 #include "leveldb/iterator.h"
 
+#include <boost/lexical_cast.hpp>
 #include <boost/signals2/signal.hpp>
 #include <boost/thread/exceptions.hpp>
+#include <boost/algorithm/string.hpp>
+#include <boost/function.hpp>
 
 using namespace std;
+using boost::lexical_cast;
 
 const std::string CClubLeaderDB::DB_PATH   = "/clubinfo/leader";
 const std::string CClubLeaderDB::ADD_OP    = "A";
@@ -35,9 +39,9 @@ CClubLeaderDB::~CClubLeaderDB()
     pdb = NULL;
 }
 
-bool CClubLeaderDB::Write(std::string address)
+bool CClubLeaderDB::Write(std::string address, std::string height)
 {
-    leveldb::Status status = pdb->Put(leveldb::WriteOptions(), DB_LEADER + address, "1");
+    leveldb::Status status = pdb->Put(leveldb::WriteOptions(), DB_LEADER + address, height);
     if(!status.ok())
     {
         LogPrintf("LevelDB write failure in clubleader module: %s\n", status.ToString());
@@ -70,11 +74,20 @@ bool CClubLeaderDB::Commit()
     for(std::map<std::string, std::string>::const_iterator it = cache.begin();
         it != cache.end(); it++)
     {
-        string address = it->first;
+        string key = it->first;
+        vector<string> splitedStr;
+        boost::split(splitedStr, key, boost::is_any_of("_"));
+        if (splitedStr.size() != 2)
+        {
+            LogPrintf("%s, key string error:%s\n", __func__, key);
+            continue;
+        }
+        string address = splitedStr[0];
+        string height  = splitedStr[1];
         string op = it->second;
         if (op.compare(ADD_OP) == 0)
         {
-            Write(address);
+            Write(address, height);
         }
         else if (op.compare(REMOVE_OP) == 0)
         {
@@ -87,38 +100,79 @@ bool CClubLeaderDB::Commit()
 
 }
 
-bool CClubLeaderDB::AddClubLeader(std::string address)
+bool CClubLeaderDB::AddClubLeader(std::string address, int height)
 {
-    std::map<std::string, std::string>::iterator it = cache.find(address);
+    if (height < 0)
+    {
+        return false;
+    }
+
+    std::string key;
+    std::string strHeight;
+    try
+    {
+        strHeight = lexical_cast<std::string>(height);
+    }
+    catch(boost::bad_lexical_cast& e)
+    {
+        LogPrintf("type cast err %s %s\n", __func__, e.what());
+        return false;
+    }
+
+    key = address + "_" + strHeight;
+
+    std::map<std::string, std::string>::iterator it = cache.find(key);
     if (it != cache.end())
     {
         it->second = ADD_OP;
     }
     else
     {
-        cache.insert(std::map<std::string, std::string>::value_type(address, ADD_OP));
+        cache.insert(std::map<std::string, std::string>::value_type(key, ADD_OP));
     }
 
     return true;
 }
 
-bool CClubLeaderDB::RemoveClubLeader(std::string address)
+bool CClubLeaderDB::RemoveClubLeader(std::string address, int height)
 {
-    std::map<std::string, std::string>::iterator it = cache.find(address);
+    if (height < 0)
+    {
+        return false;
+    }
+
+    std::string key;
+    std::string strHeight;
+    try
+    {
+        strHeight = lexical_cast<std::string>(height);
+    }
+    catch(boost::bad_lexical_cast& e)
+    {
+        LogPrintf("type cast err %s %s\n", __func__, e.what());
+        return false;
+    }
+
+    key = address + "_" + strHeight;
+
+    std::map<std::string, std::string>::iterator it = cache.find(key);
     if (it != cache.end())
     {
         it->second = REMOVE_OP;
     }
     else
     {
-        cache.insert(std::map<std::string, std::string>::value_type(address, REMOVE_OP));
+        cache.insert(std::map<std::string, std::string>::value_type(key, REMOVE_OP));
     }
 
     return true;
 }
 
-bool CClubLeaderDB::GetAllClubLeaders(std::vector<std::string>& leaders)
+bool CClubLeaderDB::GetAllClubLeaders(std::vector<std::string>& leaders, int height)
 {
+    if (height < 0)
+        return false;
+
     leaders.clear();
 
     boost::scoped_ptr<leveldb::Iterator> pcursor(pdb->NewIterator(leveldb::ReadOptions()));
@@ -137,7 +191,18 @@ bool CClubLeaderDB::GetAllClubLeaders(std::vector<std::string>& leaders)
             if (keyStr.length() > 2 && keyStr[0] == 'L')
             {
                 std::string address = keyStr.substr(1, keyStr.length() - 1);
-                leaders.push_back(address);
+
+                leveldb::Slice slValue = pcursor->value();
+                CDataStream ssValue(slValue.data(), slValue.data()+slValue.size(), SER_DISK, CLIENT_VERSION);
+                std::string valueStr = ssValue.str();
+                int h = lexical_cast<int>(valueStr);
+
+                LogPrintf("%s height str:%s h:%d thresold:%d\n", __func__, valueStr, h, height);
+
+                if (h <= height)
+                {
+                    leaders.push_back(address);
+                }
             }
         }
         catch (const std::exception& e)

@@ -39,7 +39,7 @@ private:
     //! remove operation
     static const std::string REMOVE_OP;
 
-    bool Write(std::string address);
+    bool Write(std::string address, std::string height);
 
     bool Delete(std::string address);
 
@@ -54,13 +54,13 @@ public:
     bool Commit();
 
     //! Add club leader
-    bool AddClubLeader(std::string address);
+    bool AddClubLeader(std::string address, int height);
 
     //! Remove club leader
-    bool RemoveClubLeader(std::string address);
+    bool RemoveClubLeader(std::string address, int height);
 
     //! Retrieve all the club leaders
-    bool GetAllClubLeaders(std::vector<std::string>& leaders);
+    bool GetAllClubLeaders(std::vector<std::string>& leaders, int height);
 };
 
 #endif //TAUCOIN_CLUBLEADERDB_H

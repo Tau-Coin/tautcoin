@@ -103,13 +103,13 @@ public:
     std::vector<std::string> GetTotalMembersByAddress(std::string fatherAddress, int nHeight);
 
     //! Add club leader
-    bool AddClubLeader(std::string address);
+    bool AddClubLeader(std::string address, int height);
 
     //! Remove club leader
-    bool RemoveClubLeader(std::string address);
+    bool RemoveClubLeader(std::string address, int height);
 
     //! Retrieve all the club leaders
-    bool GetAllClubLeaders(std::vector<std::string>& leaders);
+    bool GetAllClubLeaders(std::vector<std::string>& leaders, int height);
 };
 
 #endif // TAUCOIN_CLUBINFODB_H

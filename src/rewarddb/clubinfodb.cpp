@@ -296,17 +296,17 @@ vector<string> CClubInfoDB::GetTotalMembersByAddress(std::string fatherAddress, 
     return members;
 }
 
-bool CClubInfoDB::AddClubLeader(std::string address)
+bool CClubInfoDB::AddClubLeader(std::string address, int height)
 {
-    return pclubleaderdb->AddClubLeader(address);
+    return pclubleaderdb->AddClubLeader(address, height);
 }
 
-bool CClubInfoDB::RemoveClubLeader(std::string address)
+bool CClubInfoDB::RemoveClubLeader(std::string address, int height)
 {
-    return pclubleaderdb->RemoveClubLeader(address);
+    return pclubleaderdb->RemoveClubLeader(address, height);
 }
 
-bool CClubInfoDB::GetAllClubLeaders(std::vector<std::string>& leaders)
+bool CClubInfoDB::GetAllClubLeaders(std::vector<std::string>& leaders, int height)
 {
-    return pclubleaderdb->GetAllClubLeaders(leaders);
+    return pclubleaderdb->GetAllClubLeaders(leaders, height);
 }

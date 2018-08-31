@@ -86,16 +86,19 @@ UniValue getminingpowerbyaddress(const UniValue& params, bool fHelp)
 
 UniValue dumpclubmembers(const UniValue& params, bool fHelp)
 {
-    if (fHelp || params.size() != 1)
+    if (fHelp || params.size() < 1 || params.size() > 2)
         throw runtime_error(
-            "dumpclubmembers \"filename\"\n"
+            "dumpclubmembers \"filename\" height\n"
             "\nDumps all mining clubs and members in a human-readable format.\n"
             "\nArguments:\n"
             "1. \"filename\"    (string, required) The filename\n"
+            "2. height          (numberic, optional) The height\n"
             "\nExamples:\n"
-            + HelpExampleCli("dumpclubmembers", "\"test\"")
-            + HelpExampleRpc("dumpclubmembers", "\"test\"")
+            + HelpExampleCli("dumpclubmembers", "\"test\" 1000")
+            + HelpExampleRpc("dumpclubmembers", "\"test\" 1000")
         );
+
+    RPCTypeCheck(params, boost::assign::list_of(UniValue::VSTR)(UniValue::VNUM), true);
 
     std::ofstream file;
     file.open(params[0].get_str().c_str());
@@ -103,17 +106,32 @@ UniValue dumpclubmembers(const UniValue& params, bool fHelp)
         throw JSONRPCError(RPC_INVALID_PARAMETER, "Cannot open dump file");
 
     int height = 0;
+    int chainHeight;
     {
         LOCK(cs_main);
-        height = chainActive.Height();
+        chainHeight = chainActive.Height();
+    }
+    if (params.size() == 1)
+    {
+        LOCK(cs_main);
+        height = chainHeight;
+    }
+    else if (params.size() == 2)
+    {
+        height = params[1].get_int();
+    }
+
+    if (height < 0 || height > chainHeight)
+    {
+        throw JSONRPCError(RPC_INVALID_PARAMETER, "Invalid height");
     }
 
     // produce output
-    file << strprintf("Height %i \n", chainActive.Height());
+    file << strprintf("Height %i \n", height);
 
     std::vector<std::string> leaders;
 
-    bool result = pclubinfodb->GetAllClubLeaders(leaders);
+    bool result = pclubinfodb->GetAllClubLeaders(leaders, height);
     if (!result)
         throw JSONRPCError(RPC_INVALID_PARAMETER, "Get club leaders failed");
 
