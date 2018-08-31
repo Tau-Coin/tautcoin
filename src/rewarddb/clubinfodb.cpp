@@ -113,6 +113,7 @@ bool CClubInfoDB::ReadDB(std::string key, int nHeight, std::string& strValue)
             strValue = "";
         else
         {
+            strValue = "#";
             LogPrintf("LevelDB read failure in clubinfo module: %s\n", status.ToString());
             dbwrapper_private::HandleError(status);
         }
@@ -288,6 +289,9 @@ vector<string> CClubInfoDB::GetTotalMembersByAddress(std::string fatherAddress, 
             }
 
             return members;
+        }else{
+            LogPrintf("%s recursion exception on %d %s have no child or read db fail\n", __func__,nHeight,fatherAddress);
+            assert(strCompressed == "");
         }
     }
 
