@@ -228,12 +228,12 @@ bool CClubInfoDB::UpdateMembersByFatherAddress(std::string fatherAddress, bool a
     else if(fatherAddress.compare(" ") == 0)
         return false;// Error in fatherAddress
 
-//    if (isUndo)
-//    {
-//        if (!DeleteDB(address, nHeight+1))
-//            return false;
-//        return true;
-//    }
+    if (isUndo)
+    {
+        if (!DeleteDB(fatherAddress, nHeight+1))
+            return false;
+        return true;
+    }
 
     TAUAddrTrie::Trie trie;
     trie.BuildTreeFromStr(GetTrieStrByFatherAddress(fatherAddress, nHeight-1));

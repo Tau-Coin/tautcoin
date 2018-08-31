@@ -145,8 +145,11 @@ void CMemberInfoDB::ClearCache()
     cacheForRead.clear();
 }
 
-void CMemberInfoDB::UpdateCacheFather(string address, int inputHeight, string newFather)
+void CMemberInfoDB::UpdateCacheFather(string address, int inputHeight, string newFather, bool isUndo)
 {
+    if (isUndo)
+        DeleteDB(address, inputHeight+1);
+
     CAmount rwdbalance = 0;
     string packer = " ";
     string ftInput = " ";
@@ -158,8 +161,11 @@ void CMemberInfoDB::UpdateCacheFather(string address, int inputHeight, string ne
     cacheRecord[address] = newRecordInput;
 }
 
-void CMemberInfoDB::UpdateCachePacker(std::string address, int inputHeight, std::string newPacker)
+void CMemberInfoDB::UpdateCachePacker(std::string address, int inputHeight, std::string newPacker, bool isUndo)
 {
+    if (isUndo)
+        DeleteDB(address, inputHeight+1);
+
     CAmount rwdbalance = 0;
     string packerInput = " ";
     string ft = " ";
@@ -171,8 +177,11 @@ void CMemberInfoDB::UpdateCachePacker(std::string address, int inputHeight, std:
     cacheRecord[address] = newRecordInput;
 }
 
-void CMemberInfoDB::UpdateCacheTcAddOne(string address, int inputHeight)
+void CMemberInfoDB::UpdateCacheTcAddOne(string address, int inputHeight, bool isUndo)
 {
+    if (isUndo)
+        DeleteDB(address, inputHeight+1);
+
     CAmount rwdbalance = 0;
     string packer = " ";
     string ft = " ";
@@ -184,8 +193,11 @@ void CMemberInfoDB::UpdateCacheTcAddOne(string address, int inputHeight)
     cacheRecord[address] = newRecordVout;
 }
 
-void CMemberInfoDB::UpdateCacheRewardChange(string address, int inputHeight, CAmount rewardChange)
+void CMemberInfoDB::UpdateCacheRewardChange(string address, int inputHeight, CAmount rewardChange, bool isUndo)
 {
+    if (isUndo)
+        DeleteDB(address, inputHeight+1);
+
     CAmount rewardbalance_old = 0;
     string packer = " ";
     string ft = " ";
@@ -276,8 +288,8 @@ string CMemberInfoDB::GenerateRecord(string packer, string father, uint64_t tc, 
 
 string CMemberInfoDB::GetPacker(string address, int nHeight)
 {
-    string packer;
-    string ft;
+    string packer = " ";
+    string ft = " ";
     uint64_t tc = 0;
     uint64_t ttc = 0;
     CAmount value;
@@ -287,8 +299,8 @@ string CMemberInfoDB::GetPacker(string address, int nHeight)
 
 string CMemberInfoDB::GetFather(string address, int nHeight)
 {
-    string packer;
-    string ft;
+    string packer = " ";
+    string ft = " ";
     uint64_t tc = 0;
     uint64_t ttc = 0;
     CAmount value;
@@ -298,8 +310,8 @@ string CMemberInfoDB::GetFather(string address, int nHeight)
 
 uint64_t CMemberInfoDB::GetTXCnt(string address, int nHeight)
 {
-    string packer;
-    string ft;
+    string packer = " ";
+    string ft = " ";
     uint64_t tc = 0;
     uint64_t ttc = 0;
     CAmount value;
@@ -309,8 +321,8 @@ uint64_t CMemberInfoDB::GetTXCnt(string address, int nHeight)
 
 uint64_t CMemberInfoDB::GetTotalTXCnt(string address, int nHeight)
 {
-    string packer;
-    string ft;
+    string packer = " ";
+    string ft = " ";
     uint64_t tc = 0;
     uint64_t ttc = 0;
     CAmount value;
@@ -320,8 +332,8 @@ uint64_t CMemberInfoDB::GetTotalTXCnt(string address, int nHeight)
 
 CAmount CMemberInfoDB::GetRwdBalance(std::string address, int nHeight)
 {
-    string packer;
-    string ft;
+    string packer = " ";
+    string ft = " ";
     uint64_t tc = 0;
     uint64_t ttc = 0;
     CAmount value;
@@ -372,14 +384,14 @@ bool CMemberInfoDB::RewardChangeUpdate(CAmount rewardChange, string address, int
     if (rewardChange >= MAX_MONEY || rewardChange <= -MAX_MONEY)
         return false;
 
-//    if (isUndo)
-//    {
-//        if (!DeleteDB(address, nHeight+1))
-//            return false;
-//        return true;
-//    }
+    if (isUndo)
+    {
+        if (!DeleteDB(address, nHeight+1))
+            return false;
+        return true;
+    }
 
-    UpdateCacheRewardChange(address, nHeight, rewardChange);
+    UpdateCacheRewardChange(address, nHeight, rewardChange, isUndo);
 
     //LogPrintf("%s, member:%s, rw:%d\n", __func__, member, rewardbalance_old);
 
@@ -501,7 +513,7 @@ uint64_t CMemberInfoDB::GetHarvestPowerByAddress(std::string address, int nHeigh
     CAmount value;
     GetFullRecord(address, nHeight, packer, ft, tc, ttc, value);
     if ((packer.compare("0") == 0) && (ft.compare("0") == 0))
-        return GetTotalTXCnt(address, nHeight);
+        return ttc;
     else
         return 0;
 }
@@ -548,35 +560,35 @@ bool CMemberInfoDB::UpdateRewardsByTX(const CTransaction& tx, CAmount blockRewar
 
 bool CMemberInfoDB::EntrustByAddress(string inputAddr, string voutAddress, int nHeight, bool isUndo)
 {
-    string fatherOfVin = GetFather(inputAddr, nHeight-1);
-    string packerOfVin = GetPacker(inputAddr, nHeight-1);
-    string fatherOfVout = GetFather(voutAddress, nHeight-1);
-    string packerOfVout = GetPacker(voutAddress, nHeight-1);
-    string newPackerAddr = voutAddress;
-
-    if (isUndo)
+    string fatherOfVin;
+    string packerOfVin;
+    string fatherOfVout;
+    string packerOfVout;
+    if (!isUndo)
     {
-        // When the vout address is a club leader, the vin entrust the vout(not vin himself)
-        if ((voutAddress.compare(inputAddr) != 0) && (fatherOfVin.compare(voutAddress) != 0) &&
-            (fatherOfVout.compare("0") == 0) && (packerOfVout.compare("0") == 0))
-        {
-            // If input address is a club leader
-            if ((fatherOfVin.compare("0") == 0) && (packerOfVin.compare("0") == 0))
-                _pclubinfodb->AddClubLeader(inputAddr, nHeight);
-        }
-        // When the vin address is not a club leader and the vin entrust himself
-        else if((voutAddress.compare(inputAddr) == 0) &&
-                (fatherOfVin.compare("0") != 0) && (packerOfVin.compare("0") != 0))
-            _pclubinfodb->RemoveClubLeader(inputAddr, nHeight);
-
-        return true;
+        fatherOfVin = GetFather(inputAddr, nHeight-1);
+        packerOfVin = GetPacker(inputAddr, nHeight-1);
+        fatherOfVout = GetFather(voutAddress, nHeight-1);
+        packerOfVout = GetPacker(voutAddress, nHeight-1);
     }
+    else
+    {
+        fatherOfVin = GetFather(inputAddr, nHeight);
+        packerOfVin = GetPacker(inputAddr, nHeight);
+        fatherOfVout = GetFather(voutAddress, nHeight);
+        packerOfVout = GetPacker(voutAddress, nHeight);
+    }
+    string newPackerAddr = voutAddress;
 
     // Address of vout must have both father and packer of "0" in database or entrust itself
     bool changeRelationship = false;
 
     // Compute the total TX count of the vin address and update the packer of the these members
-    vector<string> totalMembers = _pclubinfodb->GetTotalMembersByAddress(inputAddr, nHeight-1);
+    vector<string> totalMembers;
+    if (!isUndo)
+        totalMembers = _pclubinfodb->GetTotalMembersByAddress(inputAddr, nHeight-1);
+    else
+        totalMembers = _pclubinfodb->GetTotalMembersByAddress(inputAddr, nHeight);
     uint64_t ttcOfVin = GetTXCnt(inputAddr, nHeight-1);
     for(size_t i = 0; i < totalMembers.size(); i++)
     {
@@ -589,6 +601,11 @@ bool CMemberInfoDB::EntrustByAddress(string inputAddr, string voutAddress, int n
         packerInput = voutAddress;
         string newRecordInput = GenerateRecord(packerInput, ft, tc, ttc, rwdbalance);
         cacheRecord[totalMembers[i]] = newRecordInput;
+        if (isUndo)
+        {
+            if (!DeleteDB(totalMembers[i], nHeight+1))
+                return false;
+        }
 
         ttcOfVin += tc;
     }
@@ -605,7 +622,13 @@ bool CMemberInfoDB::EntrustByAddress(string inputAddr, string voutAddress, int n
 
         // If input address is a club leader
         if ((fatherOfVin.compare("0") == 0) && (packerOfVin.compare("0") == 0))
+        {
+            if (!isUndo)
                 _pclubinfodb->RemoveClubLeader(inputAddr, nHeight); // Remove this address from leader db
+            else
+                _pclubinfodb->AddClubLeader(inputAddr, nHeight);
+        }
+
     }
     // When the vin address is not a club leader and the vin entrust himself
     else if((voutAddress.compare(inputAddr) == 0) &&
@@ -615,16 +638,20 @@ bool CMemberInfoDB::EntrustByAddress(string inputAddr, string voutAddress, int n
         newPackerAddr = "0";
         changeRelationship = true;
 
-        _pclubinfodb->AddClubLeader(inputAddr, nHeight);
+        if (!isUndo)
+            _pclubinfodb->AddClubLeader(inputAddr, nHeight);
+        else
+            _pclubinfodb->RemoveClubLeader(inputAddr, nHeight);
+
     }
 
     if (changeRelationship)
     {
         // Update the father of the vin address
-        UpdateCacheFather(inputAddr, nHeight, newPackerAddr);
+        UpdateCacheFather(inputAddr, nHeight, newPackerAddr, isUndo);
 
         // Update the packer of the vin address
-        UpdateCachePacker(inputAddr, nHeight, newPackerAddr);
+        UpdateCachePacker(inputAddr, nHeight, newPackerAddr, isUndo);
 
         // Update the ttc of the vin's packer address
         if (packerOfVin.compare("0") != 0)
@@ -644,29 +671,21 @@ bool CMemberInfoDB::EntrustByAddress(string inputAddr, string voutAddress, int n
     }
 
     // TX count add one, including vout address and packer of vout
-    UpdateCacheTcAddOne(voutAddress, nHeight);
-    if (newPackerAddr.compare("0") != 0)
-    {
-        if (!UpdateCacheTtcByChange(newPackerAddr, nHeight, 1, true, isUndo))
-            return false;
-    }
-    else
-    {
-        if (!UpdateCacheTtcByChange(voutAddress, nHeight, 1, true, isUndo))
-            return false;
-    }
+    UpdateCacheTcAddOne(voutAddress, nHeight, isUndo);
+    if (!UpdateCacheTtcByChange(voutAddress, nHeight, 1, true, isUndo))
+        return false;
 
     return true;
 }
 
 bool CMemberInfoDB::UpdateCacheTtcByChange(std::string address, int nHeight, uint64_t count, bool isAdd, bool isUndo)
 {
-//    if (isUndo)
-//    {
-//        if (!DeleteDB(address, nHeight+1))
-//            return false;
-//        return true;
-//    }
+    if (isUndo)
+    {
+        if (!DeleteDB(address, nHeight+1))
+            return false;
+        return true;
+    }
 
     CBitcoinAddress addr = CBitcoinAddress(address);
     if (!addr.IsValid())
@@ -704,16 +723,16 @@ bool CMemberInfoDB::UpdateCacheTtcByChange(std::string address, int nHeight, uin
 
 bool CMemberInfoDB::UpdateTcAndTtcByAddress(string address, int nHeight, string father, bool isUndo)
 {
-    if (isUndo)
-        return true;
-
     CAmount rewardbalance = 0;
     string packer = " ";
     string ft = " ";
     uint64_t tc = 0;
     uint64_t ttc = 0;
     bool addressUpdated = false;
-    GetFullRecord(address, nHeight-1, packer, ft, tc, ttc, rewardbalance);
+    if (!isUndo)
+        GetFullRecord(address, nHeight-1, packer, ft, tc, ttc, rewardbalance);
+    else
+        GetFullRecord(address, nHeight, packer, ft, tc, ttc, rewardbalance);
     if ((ft.compare(" ") == 0) && (packer.compare(" ") == 0))
     {
         // It's a new address on chain
@@ -722,7 +741,12 @@ bool CMemberInfoDB::UpdateTcAndTtcByAddress(string address, int nHeight, string 
         _pclubinfodb->UpdateMembersByFatherAddress(father, true, address, nHeight, isUndo);
 
         // Update packer
-        string packerOfFather = GetPacker(father, nHeight-1);
+        string packerOfFather;
+        if (!isUndo)
+            packerOfFather = GetPacker(father, nHeight-1);
+        else
+            packerOfFather = GetPacker(father, nHeight);
+
         if (packerOfFather.compare("0") != 0)
             packer = packerOfFather;
         else
@@ -768,22 +792,38 @@ bool CMemberInfoDB::UpdateTcAndTtcByAddress(string address, int nHeight, string 
 
     //LogPrintf("%s, member:%s, rw:%d\n", __func__, member, rewardbalance_old);
 
+    if (isUndo)
+    {
+        if (!DeleteDB(address, nHeight+1))
+            return false;
+        return true;
+    }
+
     return true;
 }
 
 bool CMemberInfoDB::UpdateFatherAndTCByTX(const CTransaction& tx, const CCoinsViewCache& view, int nHeight, bool isUndo)
 {
+    if (tx.IsCoinBase() && isUndo)
+    {
+        string packer;
+        CBitcoinAddress addr;
+        if (!addr.ScriptPub2Addr(tx.vout[0].scriptPubKey, packer))
+            return false;
+        DeleteDB(packer, nHeight+1);
+    }
+
     if (!tx.IsCoinBase())
     {
         // Get best father
         string bestFather = " ";
-        if (!isUndo)
+        //if (!isUndo)
         {
             CAmount maxValue = 0;
             for(unsigned int j = 0; j < tx.vin.size(); j++)
             {
                 const CCoins* coins = view.AccessCoins(tx.vin[j].prevout.hash);
-                if (!coins)
+                if (coins == NULL)
                 {
                     LogPrintf("%s, AccessCoins() failed, no specific coins\n", __func__);
                     return false;

@@ -2402,10 +2402,6 @@ bool DisconnectBlock(CBlock& block, CValidationState& state, CBlockIndex* pindex
         const CTransaction &tx = block.vtx[i];
         uint256 hash = tx.GetHash();
 
-        // Restore relationship
-        if (!pmemberinfodb->UpdateFatherAndTCByTX(tx, view, 0, true))
-            return error("DisconnectBlock(): UpdateRewards failed");
-
         // Check that all outputs are available and match the outputs in the block itself
         // exactly.
         {
@@ -2470,26 +2466,22 @@ bool DisconnectBlock(CBlock& block, CValidationState& state, CBlockIndex* pindex
             mysqlpp::Transaction::session);
          */
 
-        // restore rewards
-//        bool isUndo = true;
-//        CAmount nFees = DEFAULT_TRANSACTION_MAXFEE * block.vtx.size();
-//        if (!UpdateRewards(block, nFees, pindex->nHeight-1, isUndo))
-//            return error("DisconnectBlock(): UpdateRewards failed");
-        /*
+        // restore rewards and relationship
+        bool isUndo = true;
+        CAmount nFees = DEFAULT_TRANSACTION_MAXFEE * block.vtx.size();
+        if (!UpdateRewards(block, nFees, pindex->nHeight-1, isUndo))
+            return error("DisconnectBlock(): UpdateRewards failed");
         for (int k = block.vtx.size() - 1; k >= 0; k--)
         {
             const CTransaction &tx = block.vtx[k];
-            if (!pmemberinfodb->UpdateFatherAndTCByTX(tx, view, pindex->nHeight-1, isUndo))
-                return error("DisconnectBlock(): UpdateFatherAndTC failed");
-
-            if (!UpdateRewards(tx, nFees, pindex->nHeight-1, isUndo))
-            {
-                trans.rollback();
-                return error("DisconnectBlock(): UpdateRewards step2 failed");
-            }
+            if (!pmemberinfodb->UpdateFatherAndTCByTX(tx, view, pindex->nHeight-1, true))
+                return error("DisconnectBlock(): UpdateFatherAndTCByTX failed");
         }
-        */
-//        RewardManager::GetInstance()->currentHeight = pindex->nHeight-1;
+        // Clear all cache
+        pmemberinfodb->ClearCache();
+        pclubinfodb->ClearCache();
+        pclubinfodb->ClearReadCache();
+        //RewardManager::GetInstance()->currentHeight = pindex->nHeight-1;
 
         // undo entrust relationship in reverse order
         int nSize = vecTxInfo.size();
@@ -2667,15 +2659,20 @@ bool DisconnectBlock(CBlock& block, CValidationState& state, CBlockIndex* pindex
             }
         }*/
 
+//        for (int i = block.vtx.size() - 1; i >= 0; i--) {
+//            const CTransaction &tx = block.vtx[i];
+//            // Restore relationship
+//            if (!pmemberinfodb->UpdateFatherAndTCByTX(tx, view, pindex->nHeight-1, true))
+//                return error("DisconnectBlock(): UpdateFatherAndTCByTX failed");
+//        }
+
         // move best block pointer to prevout block
         view.SetBestBlock(pindex->pprev->GetBlockHash());
     }
 
-    // Clear clubinfo database accelerating cache
-    pclubinfodb->ClearReadCache();
-
     if (pfClean) {
         *pfClean = fClean;
+
         return true;
     }
 
