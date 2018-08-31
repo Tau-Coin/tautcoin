@@ -41,7 +41,7 @@ CClubLeaderDB::~CClubLeaderDB()
 
 bool CClubLeaderDB::Write(std::string address, std::string height)
 {
-    leveldb::Status status = pdb->Put(leveldb::WriteOptions(), DB_LEADER + address, height);
+    leveldb::Status status = pdb->Put(leveldb::WriteOptions(), DB_LEADER + address, ADD_OP + height);
     if(!status.ok())
     {
         LogPrintf("LevelDB write failure in clubleader module: %s\n", status.ToString());
@@ -52,9 +52,9 @@ bool CClubLeaderDB::Write(std::string address, std::string height)
     return true;
 }
 
-bool CClubLeaderDB::Delete(std::string address)
+bool CClubLeaderDB::Delete(std::string address, std::string height)
 {
-    leveldb::Status status = pdb->Delete(leveldb::WriteOptions(), DB_LEADER + address);
+    leveldb::Status status = pdb->Put(leveldb::WriteOptions(), DB_LEADER + address, REMOVE_OP + height);
     if(!status.ok() && !status.IsNotFound())
     {
         LogPrintf("LevelDB write failure in clubleader module: %s\n", status.ToString());
@@ -91,7 +91,7 @@ bool CClubLeaderDB::Commit()
         }
         else if (op.compare(REMOVE_OP) == 0)
         {
-            Delete(address);
+            Delete(address, height);
         }
     }
 
@@ -175,6 +175,8 @@ bool CClubLeaderDB::GetAllClubLeaders(std::vector<std::string>& leaders, int hei
 
     leaders.clear();
 
+    std::map<std::string, std::pair<int, char> > addressToHeight;
+
     boost::scoped_ptr<leveldb::Iterator> pcursor(pdb->NewIterator(leveldb::ReadOptions()));
     pcursor->SeekToFirst();
 
@@ -195,13 +197,36 @@ bool CClubLeaderDB::GetAllClubLeaders(std::vector<std::string>& leaders, int hei
                 leveldb::Slice slValue = pcursor->value();
                 CDataStream ssValue(slValue.data(), slValue.data()+slValue.size(), SER_DISK, CLIENT_VERSION);
                 std::string valueStr = ssValue.str();
-                int h = lexical_cast<int>(valueStr);
 
-                LogPrintf("%s height str:%s h:%d thresold:%d\n", __func__, valueStr, h, height);
-
-                if (h <= height)
+                if (valueStr[0] == 'A' || valueStr[0] == 'R')
                 {
-                    leaders.push_back(address);
+                    std::string heightStr = valueStr.substr(1, valueStr.length() - 1);
+                    int h = lexical_cast<int>(heightStr);
+
+                    LogPrintf("%s height str:%s h:%d thresold:%d\n", __func__, valueStr, h, height);
+
+                    //if (h > height)
+                    //{
+                    //    pcursor->Next();
+                    //    continue;
+                    //}
+
+                    std::map<std::string, std::pair<int, char> >::iterator it = addressToHeight.find(address);
+
+                    if (it != addressToHeight.end())
+                    {
+                        // Here the record with "address" exist, store the heighter.
+                        if (h > it->second.first)
+                        {
+                            it->second.first = h;
+                            it->second.second = valueStr[0];
+                        }
+                    }
+                    else
+                    {
+                        addressToHeight.insert(std::map<std::string, std::pair<int, char> >::value_type(
+                            address, std::pair<int, char>(h, valueStr[0])));
+                    }
                 }
             }
         }
@@ -212,6 +237,19 @@ bool CClubLeaderDB::GetAllClubLeaders(std::vector<std::string>& leaders, int hei
         }
 
         pcursor->Next();
+    }
+
+    for (std::map<std::string, std::pair<int, char> >::iterator it = addressToHeight.begin();
+        it != addressToHeight.end(); it++)
+    {
+        if (it->second.second == 'R' && it->second.first > height)
+        {
+            leaders.push_back(it->first);
+        }
+        else if (it->second.second == 'A' && it->second.first <= height)
+        {
+            leaders.push_back(it->first);
+        }
     }
 
     return true;

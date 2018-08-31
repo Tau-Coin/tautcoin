@@ -41,7 +41,7 @@ private:
 
     bool Write(std::string address, std::string height);
 
-    bool Delete(std::string address);
+    bool Delete(std::string address, std::string height);
 
 public:
     //! Constructor
