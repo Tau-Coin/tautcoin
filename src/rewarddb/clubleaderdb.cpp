@@ -180,13 +180,14 @@ void CClubLeaderDB::DumpDBCache()
 {
     LogPrintf("dump db cache begin\n");
 
+    LogPrintf("Total size : %d\n", pdbcache->cache.size());
+
     for (std::map<std::string, OpMap>::iterator it = pdbcache->cache.begin();
         it !=pdbcache->cache.end(); it++)
     {
-        LogPrintf("\n%s\n", it->first);
+        LogPrintf("\n%s:\t", it->first);
         OpMap& operations = it->second;
 
-        LogPrintf("\t");
         for (OpMap::iterator itr = operations.begin(); itr != operations.end(); itr++)
         {
             LogPrintf("%d %s ", itr->first, itr->second);
@@ -303,6 +304,7 @@ bool CClubLeaderDB::SeletedOrNot(OpMap& operations, int height)
     {
         if (height >= it->first)
         {
+            LogPrintf("hit height:%d\n", it->first);
             return (it->second).compare(ADD_OP) == 0 ? true : false;
         }
     }
