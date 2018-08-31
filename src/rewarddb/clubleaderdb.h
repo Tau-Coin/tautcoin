@@ -15,6 +15,32 @@
 #include <string>
 #include <vector>
 
+struct COPComparator
+{
+    bool operator()(int h1, int h2) const {
+        // First sort by height
+        if (h1 > h2) return false;
+        if (h1 < h2) return true;
+
+        return false;
+    }
+};
+
+typedef std::map<int, std::string, COPComparator> OpMap;
+
+class CClubLeaderCache
+{
+public:
+    int height;
+    std::map<std::string, OpMap> cache;
+
+    CClubLeaderCache()
+    {
+        height = -1;
+        cache.clear();
+    }
+};
+
 class CClubLeaderDB
 {
 private:
@@ -30,6 +56,8 @@ private:
     // !database prefix
     static const std::string DB_LEADER;
 
+    static const std::string KEY_SPERATOR;
+
     //! cache for club leaders updating
     std::map<std::string, std::string> cache;
 
@@ -39,9 +67,17 @@ private:
     //! remove operation
     static const std::string REMOVE_OP;
 
+    CClubLeaderCache* pdbcache;
+
     bool Write(std::string address, std::string height);
 
     bool Delete(std::string address, std::string height);
+
+    bool SyncWithDB();
+
+    bool SeletedOrNot(OpMap& operations, int height);
+
+    void DumpDBCache();
 
 public:
     //! Constructor
@@ -60,6 +96,7 @@ public:
     bool RemoveClubLeader(std::string address, int height);
 
     //! Retrieve all the club leaders
+    // Note: this method is just for debug!
     bool GetAllClubLeaders(std::vector<std::string>& leaders, int height);
 };
 
