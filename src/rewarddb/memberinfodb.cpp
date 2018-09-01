@@ -211,6 +211,8 @@ void CMemberInfoDB::UpdateCacheRewardChange(string address, int inputHeight, CAm
 
 bool CMemberInfoDB::Commit(int nHeight)
 {
+    _pclubinfodb->Commit(nHeight);
+
     if (cacheRecord.size() == 0)
         return true;
 
@@ -222,8 +224,6 @@ bool CMemberInfoDB::Commit(int nHeight)
         if (!WriteDB(address, nHeight, strValue))
             return false;
     }
-
-    _pclubinfodb->Commit(nHeight);
 
     return true;
 }
@@ -242,6 +242,8 @@ bool CMemberInfoDB::InitGenesisDB(std::vector<std::string> addresses)
 
         if (!_pclubinfodb->AddClubLeader(addresses[i], 0))
             return false;
+
+        _pclubinfodb->Commit(0);
     }
     return true;
 }

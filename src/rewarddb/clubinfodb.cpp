@@ -198,6 +198,8 @@ void CClubInfoDB::ClearReadCache()
 
 bool CClubInfoDB::Commit(int nHeight)
 {
+    pclubleaderdb->Commit();
+
     if (cacheRecord.size() == 0)
         return true;
 
@@ -215,8 +217,6 @@ bool CClubInfoDB::Commit(int nHeight)
         vector<string> members = trie.ListAll();
         cacheForRead[address] = members;
     }
-
-    pclubleaderdb->Commit();
 
     return true;
 }
