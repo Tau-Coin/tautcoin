@@ -159,7 +159,7 @@ UniValue dumpclubmembers(const UniValue& params, bool fHelp)
     file << "\n";
     file << "\n";
 
-    i = 0;
+    i = 1;
     uint64_t totalTC = 0;
     uint64_t totalRewards = 0;
     for (std::vector<std::string>::iterator it = leaders.begin();
@@ -183,10 +183,11 @@ UniValue dumpclubmembers(const UniValue& params, bool fHelp)
         int j = 1;
 
         pmemberinfodb->GetFullRecord(address, height, packer, father, tc, ttc, value);
-        file << "\t" << j <<"\t\t" << address <<"\t" << packer <<"\t" << father << "\t"
-             << tc << "\t" << value << "\n";
+        file << "\t" << j <<"\t\t" << address <<"\t" << packer <<"\t\t" << father << "\t\t"
+             << tc << "\t\t" << value << "\n";
         itTC += tc;
         itRewards += value;
+        j++;
 
         std::vector<std::string> members
             = pclubinfodb->GetTotalMembersByAddress(address, height);
@@ -194,8 +195,8 @@ UniValue dumpclubmembers(const UniValue& params, bool fHelp)
             itr != members.end(); itr++, j++)
         {
             pmemberinfodb->GetFullRecord(*itr, height, packer, father, tc, ttc, value);
-            file << "\t" << j <<"\t\t" << *itr <<"\t" << packer <<"\t" << father << "\t"
-                << tc << "\t" << value << "\n";
+            file << "\t" << j <<"\t\t" << *itr <<"\t" << packer <<"\t\t" << father << "\t\t"
+                << tc << "\t\t" << value << "\n";
             itTC += tc;
             itRewards += value;
         }
