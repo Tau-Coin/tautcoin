@@ -4,10 +4,10 @@ https://www.taucoin.io
 
 Why Tau?
 ----------------
-TAU is the answer to Bitcoin’s lack of economic activity. It’s proven to be a great store of value but has not been able to jump into “medium of exchange”. With the innovation of Proof-of-Transactions, users are incentivized to make more transactions and increase circulation by receiving the block reward.
+TAU proposes a fast circulation currency without inflation. Users collectively grow and secure the network by doing essential behavior - transactions. With the technology innovation of "Proof Of Transaction", users with transaction history are rewarded by sharing the future block reward. No advantage is for concentrating wealth and hardware such as in POS and POW. Low barrier to get coins and rewarding to daily commoners behavior are TAU implementation of fairness.
 
 For more information, you can read the
-[original whitepaper](https://www.taucoin.io/whitepaper/whitepaper.pdf).
+[original whitepaper](https://www.taucoin.io/whitePaper/TAU%20White%20Paper%20v0.1.pdf).
 
 License
 ---------------
@@ -22,7 +22,7 @@ Supported Operating Systems
 Resources
 -------------------
 1. [taucoin.io Website](https://www.taucoin.io)
-2. [White Paper - publish soon](https://www.taucoin.io/whitepaper/whitepaper.pdf)
+2. [White Paper](https://www.taucoin.io/whitePaper/TAU%20White%20Paper%20v0.1.pdf)
 
 ## Getting Started
 Seen in [build-unix.md](https://github.com/Tau-Coin/taucoin/blob/master/build-unix.md).
@@ -30,8 +30,8 @@ Seen in [build-unix.md](https://github.com/Tau-Coin/taucoin/blob/master/build-un
 ## Schedule
 The testnet is published from 2018-08-01 to 2018-09-01.
 
-## Get Free Token
-Seen in [GET FREE TOKENS](https://www.taucoin.io)
-
 ## Questions
 If you have any question, you can ask [here](https://github.com/Tau-Coin/taucoin/issues).
+
+
+
