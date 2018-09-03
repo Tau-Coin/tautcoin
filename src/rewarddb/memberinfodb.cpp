@@ -145,8 +145,22 @@ void CMemberInfoDB::ClearCache()
     cacheForRead.clear();
 }
 
-void CMemberInfoDB::UpdateCacheFather(string address, int inputHeight, string newFather, bool isUndo)
+bool CMemberInfoDB::UpdateCacheFather(string address, int inputHeight, string newFather, bool isUndo)
 {
+    if (!CClubInfoDB::AddressIsValid(address))
+    {
+        LogPrintf("%s, The input address is : %s, which is not valid\n", __func__, address);
+        return false;
+    }
+    if (!CClubInfoDB::AddressIsValid(newFather))
+    {
+        if (newFather.compare("0") != 0)
+        {
+            LogPrintf("%s, The input address of newFather is : %s, which is not valid\n", __func__, newFather);
+            return false;
+        }
+    }
+
     if (isUndo)
         DeleteDB(address, inputHeight+1);
 
@@ -159,10 +173,26 @@ void CMemberInfoDB::UpdateCacheFather(string address, int inputHeight, string ne
     ftInput = newFather;
     string newRecordInput = GenerateRecord(packer, ftInput, tc, ttc, rwdbalance);
     cacheRecord[address] = newRecordInput;
+
+    return true;
 }
 
-void CMemberInfoDB::UpdateCachePacker(std::string address, int inputHeight, std::string newPacker, bool isUndo)
+bool CMemberInfoDB::UpdateCachePacker(std::string address, int inputHeight, std::string newPacker, bool isUndo)
 {
+    if (!CClubInfoDB::AddressIsValid(address))
+    {
+        LogPrintf("%s, The input address is : %s, which is not valid\n", __func__, address);
+        return false;
+    }
+    if (!CClubInfoDB::AddressIsValid(newPacker))
+    {
+        if (newPacker.compare("0") != 0)
+        {
+            LogPrintf("%s, The input address of newPacker is : %s, which is not valid\n", __func__, newPacker);
+            return false;
+        }
+    }
+
     if (isUndo)
         DeleteDB(address, inputHeight+1);
 
@@ -175,10 +205,18 @@ void CMemberInfoDB::UpdateCachePacker(std::string address, int inputHeight, std:
     packerInput = newPacker;
     string newRecordInput = GenerateRecord(packerInput, ft, tc, ttc, rwdbalance);
     cacheRecord[address] = newRecordInput;
+
+    return true;
 }
 
-void CMemberInfoDB::UpdateCacheTcAddOne(string address, int inputHeight, bool isUndo)
+bool CMemberInfoDB::UpdateCacheTcAddOne(string address, int inputHeight, bool isUndo)
 {
+    if (!CClubInfoDB::AddressIsValid(address))
+    {
+        LogPrintf("%s, The input address is : %s, which is not valid\n", __func__, address);
+        return false;
+    }
+
     if (isUndo)
         DeleteDB(address, inputHeight+1);
 
@@ -191,10 +229,18 @@ void CMemberInfoDB::UpdateCacheTcAddOne(string address, int inputHeight, bool is
     tcVout++;
     string newRecordVout = GenerateRecord(packer, ft, tcVout, ttc, rwdbalance);
     cacheRecord[address] = newRecordVout;
+
+    return true;
 }
 
-void CMemberInfoDB::UpdateCacheRewardChange(string address, int inputHeight, CAmount rewardChange, bool isUndo)
+bool CMemberInfoDB::UpdateCacheRewardChange(string address, int inputHeight, CAmount rewardChange, bool isUndo)
 {
+    if (!CClubInfoDB::AddressIsValid(address))
+    {
+        LogPrintf("%s, The input address is : %s, which is not valid\n", __func__, address);
+        return false;
+    }
+
     if (isUndo)
         DeleteDB(address, inputHeight+1);
 
@@ -207,6 +253,8 @@ void CMemberInfoDB::UpdateCacheRewardChange(string address, int inputHeight, CAm
     CAmount newValue = rewardbalance_old + rewardChange;
     string newRecord = GenerateRecord(packer, ft, tc, ttc, newValue);
     cacheRecord[address] = newRecord;
+
+    return true;
 }
 
 bool CMemberInfoDB::Commit(int nHeight)
@@ -383,8 +431,17 @@ string CMemberInfoDB::GetFullRecord(std::string address, int nHeight)
 
 bool CMemberInfoDB::RewardChangeUpdate(CAmount rewardChange, string address, int nHeight, bool isUndo)
 {
-    if (rewardChange >= MAX_MONEY || rewardChange <= -MAX_MONEY)
+    if (!CClubInfoDB::AddressIsValid(address))
+    {
+        LogPrintf("%s, The input address is : %s, which is not valid\n", __func__, address);
         return false;
+    }
+
+    if (rewardChange >= MAX_MONEY || rewardChange <= -MAX_MONEY)
+    {
+        LogPrintf("%s, The reward is overrange : %d, which is not valid\n", __func__, rewardChange);
+        return false;
+    }
 
     if (isUndo)
     {
@@ -393,7 +450,8 @@ bool CMemberInfoDB::RewardChangeUpdate(CAmount rewardChange, string address, int
         return true;
     }
 
-    UpdateCacheRewardChange(address, nHeight, rewardChange, isUndo);
+    if (!UpdateCacheRewardChange(address, nHeight, rewardChange, isUndo))
+        return false;
 
     //LogPrintf("%s, member:%s, rw:%d\n", __func__, member, rewardbalance_old);
 
@@ -501,12 +559,11 @@ bool CMemberInfoDB::InitRewardsDist(CAmount memberTotalRewards, const CScript& s
 
 uint64_t CMemberInfoDB::GetHarvestPowerByAddress(std::string address, int nHeight)
 {
-//    uint64_t hPower = 0;
-//    vector<string> clubMembers = _pclubinfodb->GetTotalMembersByAddress(address, nHeight);
-//    hPower += GetTXCnt(address, nHeight);
-//    for(size_t i = 0; i < clubMembers.size(); i++)
-//        hPower += GetTXCnt(clubMembers[i], nHeight);
-//    return hPower;
+    if (!CClubInfoDB::AddressIsValid(address))
+    {
+        LogPrintf("%s, The input address is : %s, which is not valid\n", __func__, address);
+        return false;
+    }
 
     string packer;
     string ft;
@@ -562,6 +619,17 @@ bool CMemberInfoDB::UpdateRewardsByTX(const CTransaction& tx, CAmount blockRewar
 
 bool CMemberInfoDB::EntrustByAddress(string inputAddr, string voutAddress, int nHeight, bool isUndo)
 {
+    if (!CClubInfoDB::AddressIsValid(inputAddr))
+    {
+        LogPrintf("%s, The input address is : %s, which is not valid\n", __func__, inputAddr);
+        return false;
+    }
+    if (!CClubInfoDB::AddressIsValid(voutAddress))
+    {
+        LogPrintf("%s, The input address is : %s, which is not valid\n", __func__, voutAddress);
+        return false;
+    }
+
     string fatherOfVin;
     string packerOfVin;
     string fatherOfVout;
@@ -617,7 +685,15 @@ bool CMemberInfoDB::EntrustByAddress(string inputAddr, string voutAddress, int n
     if ((voutAddress.compare(inputAddr) != 0) && (fatherOfVin.compare(voutAddress) != 0) &&
         (fatherOfVout.compare("0") == 0) && (packerOfVout.compare("0") == 0))
     {
-        _pclubinfodb->UpdateMembersByFatherAddress(fatherOfVin, false, inputAddr, nHeight, isUndo);
+        if ((fatherOfVin.compare("0") != 0) && (packerOfVin.compare("0") != 0))
+            _pclubinfodb->UpdateMembersByFatherAddress(fatherOfVin, false, inputAddr, nHeight, isUndo);
+        else if((fatherOfVin.compare("0") == 0) && (packerOfVin.compare("0") == 0))
+            _pclubinfodb->UpdateMembersByFatherAddress(inputAddr, false, inputAddr, nHeight, isUndo);
+        else
+        {
+            //LogPrintf("%s, The input address is : %s, which is not valid\n", __func__, fatherAddress);
+            return false;
+        }
         _pclubinfodb->UpdateMembersByFatherAddress(voutAddress, true, inputAddr, nHeight, isUndo);
         newPackerAddr = voutAddress;
         changeRelationship = true;
@@ -650,10 +726,12 @@ bool CMemberInfoDB::EntrustByAddress(string inputAddr, string voutAddress, int n
     if (changeRelationship)
     {
         // Update the father of the vin address
-        UpdateCacheFather(inputAddr, nHeight, newPackerAddr, isUndo);
+        if (!UpdateCacheFather(inputAddr, nHeight, newPackerAddr, isUndo))
+            return false;
 
         // Update the packer of the vin address
-        UpdateCachePacker(inputAddr, nHeight, newPackerAddr, isUndo);
+        if (!UpdateCachePacker(inputAddr, nHeight, newPackerAddr, isUndo))
+            return false;
 
         // Update the ttc of the vin's packer address
         if (packerOfVin.compare("0") != 0)
@@ -673,7 +751,8 @@ bool CMemberInfoDB::EntrustByAddress(string inputAddr, string voutAddress, int n
     }
 
     // TX count add one, including vout address and packer of vout
-    UpdateCacheTcAddOne(voutAddress, nHeight, isUndo);
+    if (!UpdateCacheTcAddOne(voutAddress, nHeight, isUndo))
+        return false;
     if (!UpdateCacheTtcByChange(voutAddress, nHeight, 1, true, isUndo))
         return false;
 
@@ -689,9 +768,11 @@ bool CMemberInfoDB::UpdateCacheTtcByChange(std::string address, int nHeight, uin
         return true;
     }
 
-    CBitcoinAddress addr = CBitcoinAddress(address);
-    if (!addr.IsValid())
+    if (!CClubInfoDB::AddressIsValid(address))
+    {
+        LogPrintf("%s, The input address is : %s, which is not valid\n", __func__, address);
         return false;
+    }
 
     string packer = " ";
     string ft = " ";
@@ -725,6 +806,17 @@ bool CMemberInfoDB::UpdateCacheTtcByChange(std::string address, int nHeight, uin
 
 bool CMemberInfoDB::UpdateTcAndTtcByAddress(string address, int nHeight, string father, bool isUndo)
 {
+    if (!CClubInfoDB::AddressIsValid(address))
+    {
+        LogPrintf("%s, The input address is : %s, which is not valid\n", __func__, address);
+        return false;
+    }
+    if (!CClubInfoDB::AddressIsValid(father))
+    {
+        LogPrintf("%s, The input address is : %s, which is not valid\n", __func__, father);
+        return false;
+    }
+
     CAmount rewardbalance = 0;
     string packer = " ";
     string ft = " ";

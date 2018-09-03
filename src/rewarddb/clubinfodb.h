@@ -83,6 +83,9 @@ public:
     //! Retrieve the reward rate dataset pointer
     CRewardRateViewDB* GetRewardRateDBPointer() const;
 
+    //! Check if input address is valid
+    static bool AddressIsValid(std::string address);
+
     //! Clear the clubinfo cache
     void ClearCache();
 

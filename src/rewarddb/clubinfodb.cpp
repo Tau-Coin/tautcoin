@@ -73,6 +73,13 @@ bool CRewardRateViewDB::GetRewardRate(int nHeight, string& addr_rate)
 
 bool CRewardRateViewDB::UpdateRewardRate(std::string leaderAddress, double val, int nHeight)
 {
+    if (!CClubInfoDB::AddressIsValid(leaderAddress))
+    {
+        LogPrintf("%s, The input address is : %s, which is not valid\n", __func__, leaderAddress);
+        return false;
+    }
+
+
     if ((val < 0 || val > 1.0) && val != -1)
         return false;
     if (!WriteDB(nHeight, leaderAddress, val))
@@ -186,6 +193,14 @@ CRewardRateViewDB* CClubInfoDB::GetRewardRateDBPointer() const
     return _prewardratedbview;
 }
 
+bool CClubInfoDB::AddressIsValid(string address)
+{
+    CBitcoinAddress addr = CBitcoinAddress(address);
+    if (!addr.IsValid())
+        return false;
+    return true;
+}
+
 void CClubInfoDB::ClearCache()
 {
     cacheRecord.clear();
@@ -224,10 +239,16 @@ bool CClubInfoDB::Commit(int nHeight)
 bool CClubInfoDB::UpdateMembersByFatherAddress(std::string fatherAddress, bool add, std::string address,
                                                int nHeight, bool isUndo)
 {
-    if (fatherAddress.compare("0") == 0)
-        return true;
-    else if(fatherAddress.compare(" ") == 0)
-        return false;// Error in fatherAddress
+    if (!CClubInfoDB::AddressIsValid(fatherAddress))
+    {
+        LogPrintf("%s, The input address is : %s, which is not valid\n", __func__, fatherAddress);
+        return false;
+    }
+    if (!CClubInfoDB::AddressIsValid(address))
+    {
+        LogPrintf("%s, The input address is : %s, which is not valid\n", __func__, address);
+        return false;
+    }
 
     if (isUndo)
     {
@@ -302,11 +323,25 @@ vector<string> CClubInfoDB::GetTotalMembersByAddress(std::string fatherAddress, 
 
 bool CClubInfoDB::AddClubLeader(std::string address, int height)
 {
+    if (!CClubInfoDB::AddressIsValid(address))
+    {
+        LogPrintf("%s, The input address is : %s, which is not valid\n", __func__, address);
+        return false;
+    }
+
+
     return pclubleaderdb->AddClubLeader(address, height);
 }
 
 bool CClubInfoDB::RemoveClubLeader(std::string address, int height)
 {
+    if (!CClubInfoDB::AddressIsValid(address))
+    {
+        LogPrintf("%s, The input address is : %s, which is not valid\n", __func__, address);
+        return false;
+    }
+
+
     return pclubleaderdb->RemoveClubLeader(address, height);
 }
 

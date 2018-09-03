@@ -54,15 +54,15 @@ private:
 
     bool DeleteDB(std::string key, int nHeight);
 
-    void UpdateCacheFather(std::string address, int inputHeight, std::string newFather, bool isUndo);
+    bool UpdateCacheFather(std::string address, int inputHeight, std::string newFather, bool isUndo);
 
-    void UpdateCachePacker(std::string address, int inputHeight, std::string newPacker, bool isUndo);
+    bool UpdateCachePacker(std::string address, int inputHeight, std::string newPacker, bool isUndo);
 
-    void UpdateCacheTcAddOne(std::string address, int inputHeight, bool isUndo);
+    bool UpdateCacheTcAddOne(std::string address, int inputHeight, bool isUndo);
 
     bool UpdateCacheTtcByChange(std::string address, int nHeight, uint64_t count, bool isAdd, bool isUndo);
 
-    void UpdateCacheRewardChange(std::string address, int inputHeight, CAmount rewardChange, bool isUndo);
+    bool UpdateCacheRewardChange(std::string address, int inputHeight, CAmount rewardChange, bool isUndo);
 
 public:
     //! Constructor
