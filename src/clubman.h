@@ -1,4 +1,4 @@
-// Copyright (c) 2018- The isncoin Core developers
+// Copyright (c) 2018- The taucoin Core developers
 // Distributed under the MIT software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
@@ -8,7 +8,6 @@
 #include "amount.h"
 #include "base58.h"
 #include "consensus/params.h"
-#include "isndb.h"
 #include "main.h"
 #include "script/script.h"
 
@@ -26,10 +25,6 @@ class ClubManager
 
         bool IsForgeScript(const CScript& script, CBitcoinAddress& addr, uint64_t& memCount, int nHeight = -1);
 
-        bool GetClubIDByAddress(const std::string& address, uint64_t& clubID);
-
-        bool GetClubIDByPubkey(const std::string& pubkey, uint64_t& clubID);
-
     protected:
 
         ClubManager();
@@ -37,8 +32,6 @@ class ClubManager
     private:
 
         static ClubManager* pSingleton;
-
-        ISNDB* backendDb;
 };
 #endif // TAUCOIN_REWARD_MANAGER_H
 

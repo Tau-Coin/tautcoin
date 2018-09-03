@@ -1,4 +1,4 @@
-// Copyright (c) 2018- The isncoin Core developers
+// Copyright (c) 2018- The taucoin Core developers
 // Distributed under the MIT software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
@@ -7,8 +7,6 @@
 #include "main.h"
 #include "util.h"
 #include "sync.h"
-#include <sstream>
-//#include "tool.h"
 
 #include "rewarddb/memberinfodb.h"
 
@@ -32,83 +30,14 @@ RewardManager* RewardManager::GetInstance()
     return pSingleton;
 }
 
-uint64_t RewardManager::GetTxCountByAddress(std::string& address, int height)
-{
-    /*
-	std::vector<string> fields;
-	fields.push_back(memFieldCount);
-	mysqlpp::StoreQueryResult bLocal = backendDb->ISNSqlSelectAA(tableMember, fields, memFieldAddress, address);
-
-    if (bLocal.num_rows() > 0)
-    {
-	    return bLocal[0][memFieldCount.c_str()];
-    }
-    else
-    {
-        return 0;
-    }*/
-
-    if (height <= -1)
-    {
-        LOCK(cs_main);
-        height = chainActive.Height();
-    }
-    return pmemberinfodb->GetTXCnt(address, height);
-}
-
 CAmount RewardManager::GetRewardsByAddress(std::string& address, int height)
 {
-    /*
-	std::vector<string> fields;
-	fields.push_back(memFieldBalance);
-	mysqlpp::StoreQueryResult bLocal = backendDb->ISNSqlSelectAA(tableMember, fields, memFieldAddress, address);
-
-    if (bLocal.num_rows() > 0)
-    {
-        LogPrint("reward", "%s, %s, %d\n", __func__, address, (CAmount)bLocal[0]["balance"]);
-	    return bLocal[0]["balance"];
-    }
-    else
-    {
-        return 0;
-    }
-    */
-
     if (height <= -1)
     {
         LOCK(cs_main);
         height = chainActive.Height();
     }
     return pmemberinfodb->GetRwdBalance(address, height);
-}
-
-bool RewardManager::UpdateRewardsByAddress(std::string& address, CAmount newRewards, CAmount oldReward)
-{
-    return true;
-    /*
-    if (newRewards == oldReward)
-        return true;
-
-	std::vector<string> fields;
-	fields.push_back(memFieldBalance);
-
-    std::vector<string> values;
-    std::string valueStr;
-    int2str(newRewards, valueStr);
-	values.push_back(valueStr);
-
-    mysqlpp::SimpleResult bLocal = backendDb->ISNSqlUpdate(tableMember, fields, values, memFieldAddress, address);
-
-    LogPrint("reward", "%s, %s, %d, %d\n", __func__, address, newRewards, bLocal.rows());
-
-    if (bLocal.rows() > 0)
-    {
-	    return true;
-    }
-    else
-    {
-        return false;
-    }*/
 }
 
 CAmount RewardManager::GetRewardsByPubkey(const std::string &pubkey, int height)
@@ -121,77 +50,4 @@ CAmount RewardManager::GetRewardsByPubkey(const std::string &pubkey, int height)
     return GetRewardsByAddress(addrStr, height);
 }
 
-bool RewardManager::UpdateRewardsByPubkey(const std::string &pubkey, CAmount newRewards, CAmount oldReward)
-{
-    std::string addrStr;
-
-    if (!ConvertPubkeyToAddress(pubkey, addrStr))
-        return 0;
-
-    return UpdateRewardsByAddress(addrStr, newRewards, oldReward);
-}
-
-RewardManager::RewardManager()
-{
-    //backendDb = ISNDB::GetInstance();
-}
-
-bool RewardManager::GetMembersByClubID(uint64_t clubID, std::vector<std::string>& addresses, std::string& leaderAddr)
-{
-    /*
-    addresses.clear();
-
-	std::vector<string> fields;
-	fields.push_back(memFieldAddress);
-    fields.push_back(memFieldClub);
-
-    std::string clubIDStr;
-    int2str(clubID, clubIDStr);
-
-	mysqlpp::StoreQueryResult bLocal = backendDb->ISNSqlSelectAA(tableMember, fields, memFieldClub, clubIDStr);
-
-    uint64_t size = (uint64_t)bLocal.num_rows();
-    LogPrint("reward", "%s, %d, %d\n", __func__, clubID, size);
-
-    for (uint64_t i = 0; i != size; i++)
-    {
-        if (leaderAddr != static_cast<std::string>(bLocal[i]["address"]))
-        {
-            LogPrint("reward", "%s, db record:%s\n", __func__, static_cast<std::string>(bLocal[i]["address"]));
-            addresses.push_back(static_cast<std::string>(bLocal[i]["address"]));
-        }
-    }*/
-
-	return true;
-}
-
-bool RewardManager::GetMembersTxCountByClubID(uint64_t clubID, std::map<std::string, uint64_t>& addrToTC, std::string& leaderAddr)
-{
-    /*
-    addrToTC.clear();
-
-    std::vector<string> fields;
-    fields.push_back(memFieldAddress);
-    fields.push_back(memFieldCount);
-    fields.push_back(memFieldClub);
-
-    std::string clubIDStr;
-    int2str(clubID, clubIDStr);
-
-    mysqlpp::StoreQueryResult bLocal = backendDb->ISNSqlSelectAA(tableMember, fields, memFieldClub, clubIDStr);
-
-    uint64_t size = (uint64_t)bLocal.num_rows();
-    LogPrint("reward", "%s, %d, %d\n", __func__, clubID, size);
-
-    for (uint64_t i = 0; i != size; i++)
-    {
-        std::string address = static_cast<std::string>(bLocal[i]["address"]);
-        uint64_t txCnt = (uint64_t)bLocal[i]["tc"];
-        if (leaderAddr != address)
-        {
-            addrToTC.insert(std::map<std::string, uint64_t>::value_type(address, txCnt));
-        }
-    }*/
-
-	return true;
-}
+RewardManager::RewardManager(){}

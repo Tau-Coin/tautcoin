@@ -1,4 +1,4 @@
-// Copyright (c) 2018- The isncoin Core developers
+// Copyright (c) 2018- The taucoin Core developers
 // Distributed under the MIT software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
@@ -28,21 +28,6 @@ ClubManager* ClubManager::GetInstance()
 
 uint64_t ClubManager::GetHarvestPowerByAddress(std::string& address, int nHeight)
 {
-    /*
-    std::vector<string> fields;
-	fields.push_back(clubFieldCount);
-	mysqlpp::StoreQueryResult bLocal = backendDb->ISNSqlSelectAA(tableClub, fields, clubFieldAddress, address);
-
-    if (bLocal.num_rows() > 0)
-    {
-        LogPrint("club", "%s, %s, %d\n", __func__, address, (uint64_t)bLocal[0]["ttc"]);
-	    return (uint64_t)bLocal[0]["ttc"];
-    }
-    else
-    {
-        return DEFAULT_HARVEST_POWER;
-    }
-    */
     if (nHeight <= -1)
     {
         LOCK(cs_main);
@@ -51,10 +36,7 @@ uint64_t ClubManager::GetHarvestPowerByAddress(std::string& address, int nHeight
     return pmemberinfodb->GetHarvestPowerByAddress(address, nHeight);
 }
 
-ClubManager::ClubManager()
-{
-    backendDb = ISNDB::GetInstance();
-}
+ClubManager::ClubManager() {}
 
 bool ClubManager::IsAllowForge(const std::string& pubKey, int nHeight, uint64_t &harvestPower)
 {
@@ -101,38 +83,4 @@ bool ClubManager::IsForgeScript(const CScript& script, CBitcoinAddress& addr, ui
     }
 
     return false;
-}
-
-bool ClubManager::GetClubIDByAddress(const std::string& address, uint64_t& clubID)
-{
-    std::vector<string> fields;
-	fields.push_back(clubFieldID);
-	mysqlpp::StoreQueryResult bLocal = backendDb->ISNSqlSelectAA(tableClub, fields, clubFieldAddress, address);
-
-    if (bLocal.num_rows() > 0)
-    {
-	    clubID = (uint64_t)bLocal[0]["club_id"];
-        LogPrint("club", "%s, %s, %d\n", __func__, address, clubID);
-        return true;
-    }
-    else
-    {
-        return false;
-    }
-}
-
-bool ClubManager::GetClubIDByPubkey(const std::string& pubkey, uint64_t& clubID)
-{
-    if (pubkey.empty())
-    {
-        return false;
-    }
-
-    std::string addrStr;
-    if (!ConvertPubkeyToAddress(pubkey, addrStr))
-    {
-        return false;
-    }
-
-    return GetClubIDByAddress(addrStr, clubID);
 }
