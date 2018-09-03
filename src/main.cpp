@@ -1995,8 +1995,8 @@ bool UpdateRewards(const CBlock& block, CAmount blockReward, int nHeight, bool i
     if (!pmemberinfodb->UpdateRewardsByTX(coinbase, blockReward, nHeight, isUndo))
         return false;
 
-    pmemberinfodb->Commit(nHeight);
-    pmemberinfodb->ClearCache();
+    //pmemberinfodb->Commit(nHeight);
+    //pmemberinfodb->ClearCache();
 
     return true;
 }
@@ -2468,10 +2468,13 @@ bool DisconnectBlock(CBlock& block, CValidationState& state, CBlockIndex* pindex
 
         // restore rewards and relationship
         bool isUndo = true;
+        pmemberinfodb->ClearCache();
+        pclubinfodb->ClearCache();
+        pclubinfodb->ClearReadCache();
         CAmount nFees = DEFAULT_TRANSACTION_MAXFEE * block.vtx.size();
         if (!UpdateRewards(block, nFees, pindex->nHeight-1, isUndo))
             return error("DisconnectBlock(): UpdateRewards failed");
-        for (int k = block.vtx.size() - 1; k >= 0; k--)
+        for (size_t k = 0; k < block.vtx.size(); k++)
         {
             const CTransaction &tx = block.vtx[k];
             if (!pmemberinfodb->UpdateFatherAndTCByTX(tx, view, pindex->nHeight-1, true))
@@ -3262,14 +3265,23 @@ bool ConnectBlock(const CBlock& block, CValidationState& state, CBlockIndex* pin
         pos.nTxOffset += ::GetSerializeSize(tx, SER_DISK, CLIENT_VERSION);
     }
 
+    // Commit to database
+    pclubinfodb->Commit(pindex->nHeight);
+    pclubinfodb->ClearCache();
+
     // Update rewards
     if (!fJustCheck)
     {
+        clock_t start2 = clock();
         if (!UpdateRewards(block, nFees, pindex->nHeight))
             return error("ConnectBlock(): UpdateRewards failed");
-        pclubinfodb->Commit(pindex->nHeight);
-        pclubinfodb->ClearCache();
+        clock_t ends2 = clock();
+        double t2 = (double)(ends2 - start2)/ CLOCKS_PER_SEC;
+        if (t2 > 0.02)
+            cout<<"============================================================"<<endl;
+        cout <<"=====UpdateRewards_Running Time : "<< t2 << endl;
     }
+
 
     if (!fJustCheck) {
         //trans.commit();

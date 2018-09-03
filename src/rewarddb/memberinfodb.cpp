@@ -45,7 +45,13 @@ bool CMemberInfoDB::WriteDB(std::string key, int nHeight, string strValue)
 bool CMemberInfoDB::WriteDB(std::string key, int nHeight, string packer, string father,
                             uint64_t tc, uint64_t ttc, CAmount value)
 {
-    return WriteDB(key, nHeight, GenerateRecord(packer, father, tc, ttc, value));
+    string newRecord = " ";
+    if (!GenerateRecord(packer, father, tc, ttc, value, newRecord))
+    {
+        //LogPrintf("%s, The input address of newPacker is : %s, which is not valid\n", __func__, newPacker);
+        return false;
+    }
+    return WriteDB(key, nHeight, newRecord);
 }
 
 bool CMemberInfoDB::ReadDB(std::string key, int nHeight, string &packer, string& father,
@@ -171,7 +177,12 @@ bool CMemberInfoDB::UpdateCacheFather(string address, int inputHeight, string ne
     uint64_t ttc = 0;
     GetFullRecord(address, inputHeight-1, packer, ftInput, tc, ttc, rwdbalance);
     ftInput = newFather;
-    string newRecordInput = GenerateRecord(packer, ftInput, tc, ttc, rwdbalance);
+    string newRecordInput = " ";//GenerateRecord(packer, ftInput, tc, ttc, rwdbalance);
+    if (!GenerateRecord(packer, ftInput, tc, ttc, rwdbalance, newRecordInput))
+    {
+        //LogPrintf("%s, The input address of newPacker is : %s, which is not valid\n", __func__, newPacker);
+        return false;
+    }
     cacheRecord[address] = newRecordInput;
 
     return true;
@@ -203,7 +214,12 @@ bool CMemberInfoDB::UpdateCachePacker(std::string address, int inputHeight, std:
     uint64_t ttc = 0;
     GetFullRecord(address, inputHeight-1, packerInput, ft, tc, ttc, rwdbalance);
     packerInput = newPacker;
-    string newRecordInput = GenerateRecord(packerInput, ft, tc, ttc, rwdbalance);
+    string newRecordInput = " ";//GenerateRecord(packerInput, ft, tc, ttc, rwdbalance);
+    if (!GenerateRecord(packerInput, ft, tc, ttc, rwdbalance, newRecordInput))
+    {
+        //LogPrintf("%s, The input address of newPacker is : %s, which is not valid\n", __func__, newPacker);
+        return false;
+    }
     cacheRecord[address] = newRecordInput;
 
     return true;
@@ -227,7 +243,12 @@ bool CMemberInfoDB::UpdateCacheTcAddOne(string address, int inputHeight, bool is
     uint64_t ttc = 0;
     GetFullRecord(address, inputHeight-1, packer, ft, tcVout, ttc, rwdbalance);
     tcVout++;
-    string newRecordVout = GenerateRecord(packer, ft, tcVout, ttc, rwdbalance);
+    string newRecordVout = " ";//GenerateRecord(packer, ft, tcVout, ttc, rwdbalance);
+    if (!GenerateRecord(packer, ft, tcVout, ttc, rwdbalance, newRecordVout))
+    {
+        //LogPrintf("%s, The input address of newPacker is : %s, which is not valid\n", __func__, newPacker);
+        return false;
+    }
     cacheRecord[address] = newRecordVout;
 
     return true;
@@ -251,7 +272,12 @@ bool CMemberInfoDB::UpdateCacheRewardChange(string address, int inputHeight, CAm
     uint64_t ttc = 0;
     GetFullRecord(address, inputHeight-1, packer, ft, tc, ttc, rewardbalance_old);
     CAmount newValue = rewardbalance_old + rewardChange;
-    string newRecord = GenerateRecord(packer, ft, tc, ttc, newValue);
+    string newRecord = " ";
+    if (!GenerateRecord(packer, ft, tc, ttc, newValue, newRecord))
+    {
+        //LogPrintf("%s, The input address of newPacker is : %s, which is not valid\n", __func__, newPacker);
+        return false;
+    }
     cacheRecord[address] = newRecord;
 
     return true;
@@ -318,10 +344,13 @@ bool CMemberInfoDB::ParseRecord(string inputStr, string& packer, string& father,
     return true;
 }
 
-string CMemberInfoDB::GenerateRecord(string packer, string father, uint64_t tc, uint64_t ttc, CAmount value) const
+bool CMemberInfoDB::GenerateRecord(string packer, string father, uint64_t tc, uint64_t ttc,
+                                   CAmount value, string& outputStr) const
 {
-    string outputStr;
+    outputStr = "";
     std::stringstream ssVal;
+    if ((packer.compare(" ") == 0) || (father.compare(" ") == 0))
+        return false;
     ssVal << packer;
     ssVal << DBSEPECTATOR;
     ssVal << father;
@@ -333,7 +362,7 @@ string CMemberInfoDB::GenerateRecord(string packer, string father, uint64_t tc, 
     ssVal << value;
     ssVal >> outputStr;
 
-    return outputStr;
+    return true;
 }
 
 string CMemberInfoDB::GetPacker(string address, int nHeight)
@@ -669,7 +698,12 @@ bool CMemberInfoDB::EntrustByAddress(string inputAddr, string voutAddress, int n
         uint64_t ttc = 0;
         GetFullRecord(totalMembers[i], nHeight-1, packerInput, ft, tc, ttc, rwdbalance);
         packerInput = voutAddress;
-        string newRecordInput = GenerateRecord(packerInput, ft, tc, ttc, rwdbalance);
+        string newRecordInput = " ";
+        if (!GenerateRecord(packerInput, ft, tc, ttc, rwdbalance, newRecordInput))
+        {
+            //LogPrintf("%s, The input address of newPacker is : %s, which is not valid\n", __func__, newPacker);
+            return false;
+        }
         cacheRecord[totalMembers[i]] = newRecordInput;
         if (isUndo)
         {
@@ -796,7 +830,12 @@ bool CMemberInfoDB::UpdateCacheTtcByChange(std::string address, int nHeight, uin
     }
 
     // Update cache
-    string newRecord = GenerateRecord(packer, ft, tc, ttcInput, rewardbalance);
+    string newRecord = " ";
+    if (!GenerateRecord(packer, ft, tc, ttcInput, rewardbalance, newRecord))
+    {
+        //LogPrintf("%s, The input address of newPacker is : %s, which is not valid\n", __func__, newPacker);
+        return false;
+    }
     cacheRecord[address] = newRecord;
 
     //LogPrintf("%s, member:%s, rw:%d\n", __func__, member, rewardbalance_old);
@@ -846,13 +885,14 @@ bool CMemberInfoDB::UpdateTcAndTtcByAddress(string address, int nHeight, string 
         else
             packer = father;
 
-        // Ttc of packer add one
+        // Ttc of the address' packer add one
         if (!UpdateCacheTtcByChange(packer, nHeight, 1, true, isUndo))
             return false;
     }
     else if((ft.compare(" ") != 0) && (packer.compare(" ") != 0))
     {
-        // Total TX count of the address' packer add one
+        // It's an exist address on chain
+        // Ttc of the address' packer add one
         if (packer.compare("0") != 0)
         {
             if (!UpdateCacheTtcByChange(packer, nHeight, 1, true, isUndo))
@@ -865,13 +905,11 @@ bool CMemberInfoDB::UpdateTcAndTtcByAddress(string address, int nHeight, string 
             addressUpdated = true;
         }
     }
-    else
-        return false;
 
     // Check if father or packer is null
     if ((ft.compare(" ") == 0) || (packer.compare(" ") == 0))
     {
-        //LogPrintf("%s, member:%s, rw:%d\n", __func__, member, rewardbalance_old);
+        LogPrintf("%s, The address: %s, whose father or packer is null\n", __func__, address);
         return false;
     }
 
@@ -881,7 +919,12 @@ bool CMemberInfoDB::UpdateTcAndTtcByAddress(string address, int nHeight, string 
     tc++;
 
     // Update cache
-    string newRecord = GenerateRecord(packer, ft, tc, ttc, rewardbalance);
+    string newRecord = " ";
+    if (!GenerateRecord(packer, ft, tc, ttc, rewardbalance, newRecord))
+    {
+        //LogPrintf("%s, The input address of newPacker is : %s, which is not valid\n", __func__, newPacker);
+        return false;
+    }
     cacheRecord[address] = newRecord;
 
     //LogPrintf("%s, member:%s, rw:%d\n", __func__, member, rewardbalance_old);
@@ -922,9 +965,15 @@ bool CMemberInfoDB::UpdateFatherAndTCByTX(const CTransaction& tx, const CCoinsVi
                     LogPrintf("%s, AccessCoins() failed, no specific coins\n", __func__);
                     return false;
                 }
-                CTxOut out = coins->vout[tx.vin[j].prevout.n];
+
                 //CTxOut out = view.GetOutputFor(tx.vin[j]);
-                CAmount val = out.nValue;
+                CTxOut out;
+                CAmount val = 0;
+                if (coins->vout.size() > 0)
+                {
+                    out = coins->vout[tx.vin[j].prevout.n];
+                    val = out.nValue;
+                }
                 if (val > maxValue)
                 {
                     maxValue = val;

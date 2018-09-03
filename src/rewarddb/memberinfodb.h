@@ -93,7 +93,8 @@ public:
                      uint64_t& tc, uint64_t &ttc, CAmount& value) const;
 
     //! Generate a record
-    std::string GenerateRecord(std::string packer, std::string father, uint64_t tc, uint64_t ttc, CAmount value) const;
+    bool GenerateRecord(std::string packer, std::string father, uint64_t tc, uint64_t ttc,
+                        CAmount value, std::string& outputStr) const;
 
     //! Retrieve the packer for a given address
     std::string GetPacker(std::string address, int nHeight);

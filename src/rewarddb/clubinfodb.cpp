@@ -290,10 +290,20 @@ string CClubInfoDB::GetTrieStrByFatherAddress(std::string fatherAddress, int nHe
 
 vector<string> CClubInfoDB::GetTotalMembersByAddress(std::string fatherAddress, int nHeight)
 {
-    if (cacheForRead.find(fatherAddress) != cacheForRead.end())
-        return cacheForRead[fatherAddress];
-
     vector<string> members;
+    if (cacheForRead.find(fatherAddress) != cacheForRead.end())
+    {
+        members = cacheForRead[fatherAddress];
+        for(size_t i = 0; i < members.size(); i++)
+        {
+            vector<string> childMembers = GetTotalMembersByAddress(members[i], nHeight);
+            for(size_t k = 0; k < childMembers.size(); k++)
+                members.push_back(childMembers[k]);
+        }
+
+        return members;
+    }
+
     TAUAddrTrie::Trie trie;
     for (int h = nHeight; h >= 0; h--)
     {
@@ -310,9 +320,11 @@ vector<string> CClubInfoDB::GetTotalMembersByAddress(std::string fatherAddress, 
             }
 
             return members;
-        }else{
-            LogPrintf("%s recursion exception on %d %s have no child or read db fail\n", __func__,nHeight,fatherAddress);
-            assert(strCompressed == "");
+        }
+        else if(strCompressed.compare("#") == 0)
+        {
+            LogPrintf("%s recursion exception on %d %s have no child or read db fail\n", __func__, nHeight, fatherAddress);
+            //assert(strCompressed == "");
         }
     }
 
