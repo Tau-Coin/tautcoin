@@ -1995,8 +1995,8 @@ bool UpdateRewards(const CBlock& block, CAmount blockReward, int nHeight, bool i
     if (!pmemberinfodb->UpdateRewardsByTX(coinbase, blockReward, nHeight, isUndo))
         return false;
 
-    //pmemberinfodb->Commit(nHeight);
-    //pmemberinfodb->ClearCache();
+    pmemberinfodb->Commit(nHeight);
+    pmemberinfodb->ClearCache();
 
     return true;
 }
@@ -2845,6 +2845,24 @@ bool ConnectBlock(const CBlock& block, CValidationState& state, CBlockIndex* pin
         }
 
         UpdateCoins(block.vtx[0], view, 0);
+        // Write undo information to disk
+        if (pindex->GetUndoPos().IsNull() || !pindex->IsValid(BLOCK_VALID_SCRIPTS))
+        {
+            if (pindex->GetUndoPos().IsNull()) {
+                CDiskBlockPos pos;
+                if (!FindUndoPos(state, pindex->nFile, pos, ::GetSerializeSize(blockundo, SER_DISK, CLIENT_VERSION) + 40))
+                    return error("ConnectBlock(): FindUndoPos failed");
+                if (!UndoWriteToDisk(blockundo, pos, uint256S("0"), chainparams.MessageStart()))
+                    return AbortNode(state, "Failed to write undo data");
+
+                // update nUndoPos in block index
+                pindex->nUndoPos = pos.nPos;
+                pindex->nStatus |= BLOCK_HAVE_UNDO;
+            }
+
+            pindex->RaiseValidity(BLOCK_VALID_SCRIPTS);
+            setDirtyBlockIndex.insert(pindex);
+        }
 
         return true;
     }
@@ -3272,14 +3290,8 @@ bool ConnectBlock(const CBlock& block, CValidationState& state, CBlockIndex* pin
     // Update rewards
     if (!fJustCheck)
     {
-        clock_t start2 = clock();
         if (!UpdateRewards(block, nFees, pindex->nHeight))
             return error("ConnectBlock(): UpdateRewards failed");
-        clock_t ends2 = clock();
-        double t2 = (double)(ends2 - start2)/ CLOCKS_PER_SEC;
-        if (t2 > 0.02)
-            cout<<"============================================================"<<endl;
-        cout <<"=====UpdateRewards_Running Time : "<< t2 << endl;
     }
 
 

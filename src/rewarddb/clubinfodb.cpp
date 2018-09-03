@@ -196,7 +196,7 @@ CRewardRateViewDB* CClubInfoDB::GetRewardRateDBPointer() const
 bool CClubInfoDB::AddressIsValid(string address)
 {
     CBitcoinAddress addr = CBitcoinAddress(address);
-    if (!addr.IsValid())
+    if (!addr.IsValid() || addr.IsScript())
         return false;
     return true;
 }

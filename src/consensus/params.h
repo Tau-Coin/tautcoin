@@ -11,7 +11,7 @@
 #include <string>
 
 #define GENESISLOCK_ADDRCNT 18
-#define GENESISLOCK_MATURITY 30//60 * 24 * 365
+#define GENESISLOCK_MATURITY 0//60 * 24 * 365
 #define GENESISCOIN_CNT 100
 
 namespace Consensus {

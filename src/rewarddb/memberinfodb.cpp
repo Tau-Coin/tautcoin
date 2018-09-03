@@ -48,7 +48,8 @@ bool CMemberInfoDB::WriteDB(std::string key, int nHeight, string packer, string 
     string newRecord = " ";
     if (!GenerateRecord(packer, father, tc, ttc, value, newRecord))
     {
-        //LogPrintf("%s, The input address of newPacker is : %s, which is not valid\n", __func__, newPacker);
+        LogPrintf("%s, GenerateRecord error, packer: %s, father: %s, tc: %d, ttc: %d, rwdbal: %d\n",
+                  __func__, packer, father, tc, ttc, value);
         return false;
     }
     return WriteDB(key, nHeight, newRecord);
@@ -180,7 +181,8 @@ bool CMemberInfoDB::UpdateCacheFather(string address, int inputHeight, string ne
     string newRecordInput = " ";//GenerateRecord(packer, ftInput, tc, ttc, rwdbalance);
     if (!GenerateRecord(packer, ftInput, tc, ttc, rwdbalance, newRecordInput))
     {
-        //LogPrintf("%s, The input address of newPacker is : %s, which is not valid\n", __func__, newPacker);
+        LogPrintf("%s, GenerateRecord error, packer: %s, father: %s, tc: %d, ttc: %d, rwdbal: %d\n",
+                  __func__, packer, ftInput, tc, ttc, rwdbalance);
         return false;
     }
     cacheRecord[address] = newRecordInput;
@@ -217,7 +219,8 @@ bool CMemberInfoDB::UpdateCachePacker(std::string address, int inputHeight, std:
     string newRecordInput = " ";//GenerateRecord(packerInput, ft, tc, ttc, rwdbalance);
     if (!GenerateRecord(packerInput, ft, tc, ttc, rwdbalance, newRecordInput))
     {
-        //LogPrintf("%s, The input address of newPacker is : %s, which is not valid\n", __func__, newPacker);
+        LogPrintf("%s, GenerateRecord error, packer: %s, father: %s, tc: %d, ttc: %d, rwdbal: %d\n",
+                  __func__, packerInput, ft, tc, ttc, rwdbalance);
         return false;
     }
     cacheRecord[address] = newRecordInput;
@@ -246,7 +249,8 @@ bool CMemberInfoDB::UpdateCacheTcAddOne(string address, int inputHeight, bool is
     string newRecordVout = " ";//GenerateRecord(packer, ft, tcVout, ttc, rwdbalance);
     if (!GenerateRecord(packer, ft, tcVout, ttc, rwdbalance, newRecordVout))
     {
-        //LogPrintf("%s, The input address of newPacker is : %s, which is not valid\n", __func__, newPacker);
+        LogPrintf("%s, GenerateRecord error, packer: %s, father: %s, tc: %d, ttc: %d, rwdbal: %d\n",
+                  __func__, packer, ft, tcVout, ttc, rwdbalance);
         return false;
     }
     cacheRecord[address] = newRecordVout;
@@ -263,7 +267,11 @@ bool CMemberInfoDB::UpdateCacheRewardChange(string address, int inputHeight, CAm
     }
 
     if (isUndo)
-        DeleteDB(address, inputHeight+1);
+    {
+        if (!DeleteDB(address, inputHeight+1))
+            return false;
+        return true;
+    }
 
     CAmount rewardbalance_old = 0;
     string packer = " ";
@@ -275,7 +283,8 @@ bool CMemberInfoDB::UpdateCacheRewardChange(string address, int inputHeight, CAm
     string newRecord = " ";
     if (!GenerateRecord(packer, ft, tc, ttc, newValue, newRecord))
     {
-        //LogPrintf("%s, The input address of newPacker is : %s, which is not valid\n", __func__, newPacker);
+        LogPrintf("%s, GenerateRecord error, packer: %s, father: %s, tc: %d, ttc: %d, rwdbal: %d\n",
+                  __func__, packer, ft, tc, ttc, newValue);
         return false;
     }
     cacheRecord[address] = newRecord;
@@ -507,11 +516,14 @@ bool CMemberInfoDB::RewardChangeUpdateByPubkey(CAmount rewardChange, string pubK
 bool CMemberInfoDB::ComputeMemberReward(const uint64_t& txCnt, const uint64_t& totalTXCnt,
                                         const CAmount& totalRewards, CAmount& memberReward) const
 {
-    if (totalTXCnt < txCnt || totalTXCnt == 0 || totalRewards < 0)
-        return false;
-    if (totalRewards >= MAX_MONEY)
+    if ((totalTXCnt < txCnt) || (totalTXCnt == 0))
     {
-        LogPrintf("Error: The rewards are too large\n");
+        LogPrintf("%s, some of inputs are error, totalTXCnt: %d, txCnt: %d\n", __func__, totalTXCnt, txCnt);
+        return false;
+    }
+    if ((totalRewards >= MAX_MONEY)  || (totalRewards < 0))
+    {
+        LogPrintf("%s, the rewards are overrange: %d\n", __func__, totalRewards);
         return false;
     }
 
@@ -701,7 +713,8 @@ bool CMemberInfoDB::EntrustByAddress(string inputAddr, string voutAddress, int n
         string newRecordInput = " ";
         if (!GenerateRecord(packerInput, ft, tc, ttc, rwdbalance, newRecordInput))
         {
-            //LogPrintf("%s, The input address of newPacker is : %s, which is not valid\n", __func__, newPacker);
+            LogPrintf("%s, GenerateRecord error, packer: %s, father: %s, tc: %d, ttc: %d, rwdbal: %d\n",
+                      __func__, packerInput, ft, tc, ttc, rwdbalance);
             return false;
         }
         cacheRecord[totalMembers[i]] = newRecordInput;
@@ -833,7 +846,8 @@ bool CMemberInfoDB::UpdateCacheTtcByChange(std::string address, int nHeight, uin
     string newRecord = " ";
     if (!GenerateRecord(packer, ft, tc, ttcInput, rewardbalance, newRecord))
     {
-        //LogPrintf("%s, The input address of newPacker is : %s, which is not valid\n", __func__, newPacker);
+        LogPrintf("%s, GenerateRecord error, packer: %s, father: %s, tc: %d, ttc: %d, rwdbal: %d\n",
+                  __func__, packer, ft, tc, ttcInput, rewardbalance);
         return false;
     }
     cacheRecord[address] = newRecord;
@@ -852,7 +866,7 @@ bool CMemberInfoDB::UpdateTcAndTtcByAddress(string address, int nHeight, string 
     }
     if (!CClubInfoDB::AddressIsValid(father))
     {
-        LogPrintf("%s, The input address is : %s, which is not valid\n", __func__, father);
+        LogPrintf("%s, The input address of the father is : %s, which is not valid\n", __func__, father);
         return false;
     }
 
@@ -922,7 +936,8 @@ bool CMemberInfoDB::UpdateTcAndTtcByAddress(string address, int nHeight, string 
     string newRecord = " ";
     if (!GenerateRecord(packer, ft, tc, ttc, rewardbalance, newRecord))
     {
-        //LogPrintf("%s, The input address of newPacker is : %s, which is not valid\n", __func__, newPacker);
+        LogPrintf("%s, GenerateRecord error, packer: %s, father: %s, tc: %d, ttc: %d, rwdbal: %d\n",
+                  __func__, packer, ft, tc, ttc, rewardbalance);
         return false;
     }
     cacheRecord[address] = newRecord;
@@ -954,49 +969,52 @@ bool CMemberInfoDB::UpdateFatherAndTCByTX(const CTransaction& tx, const CCoinsVi
     {
         // Get best father
         string bestFather = " ";
-        //if (!isUndo)
+        CAmount maxValue = 0;
+        for(unsigned int j = 0; j < tx.vin.size(); j++)
         {
-            CAmount maxValue = 0;
-            for(unsigned int j = 0; j < tx.vin.size(); j++)
+            const CCoins* coins = view.AccessCoins(tx.vin[j].prevout.hash);
+            if (coins == NULL)
             {
-                const CCoins* coins = view.AccessCoins(tx.vin[j].prevout.hash);
-                if (coins == NULL)
-                {
-                    LogPrintf("%s, AccessCoins() failed, no specific coins\n", __func__);
+                LogPrintf("%s, AccessCoins() failed, no specific coins\n", __func__);
+                return false;
+            }
+
+            //CTxOut out = view.GetOutputFor(tx.vin[j]);
+            CTxOut out;
+            CAmount val = 0;
+            if (coins->vout.size() > 0)
+            {
+                out = coins->vout[tx.vin[j].prevout.n];
+                val = out.nValue;
+            }
+            if (val > maxValue)
+            {
+                maxValue = val;
+
+                const CScript script = out.scriptPubKey;
+                CBitcoinAddress addr;
+                if (!addr.ScriptPub2Addr(script, bestFather))
                     return false;
-                }
-
-                //CTxOut out = view.GetOutputFor(tx.vin[j]);
-                CTxOut out;
-                CAmount val = 0;
-                if (coins->vout.size() > 0)
-                {
-                    out = coins->vout[tx.vin[j].prevout.n];
-                    val = out.nValue;
-                }
-                if (val > maxValue)
-                {
-                    maxValue = val;
-
-                    const CScript script = out.scriptPubKey;
-                    CBitcoinAddress addr;
-                    if (!addr.ScriptPub2Addr(script, bestFather))
-                        return false;
-                }
             }
-            for(unsigned int k = 0; k < tx.vreward.size(); k++)
+        }
+        for(unsigned int k = 0; k < tx.vreward.size(); k++)
+        {
+            CAmount val = tx.vreward[k].rewardBalance;
+            if (val > maxValue)
             {
-                CAmount val = tx.vreward[k].rewardBalance;
-                if (val > maxValue)
-                {
-                    maxValue = val;
+                maxValue = val;
 
-                    const CScript script = CScript() << ParseHex(tx.vreward[k].senderPubkey) << OP_CHECKSIG;
-                    CBitcoinAddress addr;
-                    if (!addr.ScriptPub2Addr(script, bestFather))
-                        return false;
-                }
+                const CScript script = CScript() << ParseHex(tx.vreward[k].senderPubkey) << OP_CHECKSIG;
+                CBitcoinAddress addr;
+                if (!addr.ScriptPub2Addr(script, bestFather))
+                    return false;
             }
+        }
+
+        if (bestFather.compare(" ") == 0)
+        {
+            LogPrintf("%s, The bestFather address is : %s, which is not valid\n", __func__, bestFather);
+            return false;
         }
 
         // Update packer, father, ttc and tc
