@@ -581,7 +581,10 @@ bool CMemberInfoDB::InitRewardsDist(CAmount memberTotalRewards, const CScript& s
             uint64_t TXCnt = it->second;
             CAmount memberReward = 0;
             if (!ComputeMemberReward(TXCnt, totalmemberTXCnt, memberTotalRewards, memberReward))
+            {
+                LogPrintf("%s, ComputeMemberReward() error, address is: %s\n", __func__, it->first);
                 return false;
+            }
             if (memberReward > 0)
                 memberRewards.insert(pair<string, CAmount>(it->first, memberReward));
             distributedRewards += memberReward;
@@ -882,7 +885,7 @@ bool CMemberInfoDB::UpdateTcAndTtcByAddress(string address, int nHeight, string 
         GetFullRecord(address, nHeight, packer, ft, tc, ttc, rewardbalance);
     if ((ft.compare(" ") == 0) && (packer.compare(" ") == 0))
     {
-        // It's a new address on chain
+        // It's a new address on the chain
         // Update father
         ft = father;
         _pclubinfodb->UpdateMembersByFatherAddress(father, true, address, nHeight, isUndo);
@@ -905,7 +908,7 @@ bool CMemberInfoDB::UpdateTcAndTtcByAddress(string address, int nHeight, string 
     }
     else if((ft.compare(" ") != 0) && (packer.compare(" ") != 0))
     {
-        // It's an exist address on chain
+        // It's an existed address on the chain
         // Ttc of the address' packer add one
         if (packer.compare("0") != 0)
         {

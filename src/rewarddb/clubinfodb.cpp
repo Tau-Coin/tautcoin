@@ -291,6 +291,21 @@ string CClubInfoDB::GetTrieStrByFatherAddress(std::string fatherAddress, int nHe
 vector<string> CClubInfoDB::GetTotalMembersByAddress(std::string fatherAddress, int nHeight)
 {
     vector<string> members;
+    if (cacheRecord.find(fatherAddress) != cacheRecord.end())
+    {
+        TAUAddrTrie::Trie trieCache;
+        trieCache.BuildTreeFromStr(cacheRecord[fatherAddress]);
+        members = trieCache.ListAll();
+        for(size_t i = 0; i < members.size(); i++)
+        {
+            vector<string> childMembers = GetTotalMembersByAddress(members[i], nHeight);
+            for(size_t k = 0; k < childMembers.size(); k++)
+                members.push_back(childMembers[k]);
+        }
+
+        return members;
+    }
+
     if (cacheForRead.find(fatherAddress) != cacheForRead.end())
     {
         members = cacheForRead[fatherAddress];

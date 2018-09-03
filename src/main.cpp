@@ -3007,7 +3007,11 @@ bool ConnectBlock(const CBlock& block, CValidationState& state, CBlockIndex* pin
         if (!fJustCheck)
         {
             if (!pmemberinfodb->UpdateFatherAndTCByTX(tx, view, pindex->nHeight, false))
+            {
+                pmemberinfodb->ClearCache();
+                pclubinfodb->ClearCache();
                 return error("ConnectBlock(): UpdateFatherAndTC failed");
+            }
         }
 
         if (!tx.IsCoinBase())
@@ -3283,15 +3287,20 @@ bool ConnectBlock(const CBlock& block, CValidationState& state, CBlockIndex* pin
         pos.nTxOffset += ::GetSerializeSize(tx, SER_DISK, CLIENT_VERSION);
     }
 
-    // Commit to database
-    pclubinfodb->Commit(pindex->nHeight);
-    pclubinfodb->ClearCache();
 
-    // Update rewards
     if (!fJustCheck)
     {
+        // Update rewards
         if (!UpdateRewards(block, nFees, pindex->nHeight))
+        {
+            pmemberinfodb->ClearCache();
+            pclubinfodb->ClearCache();
             return error("ConnectBlock(): UpdateRewards failed");
+        }
+
+        // Commit relationship to database
+        pclubinfodb->Commit(pindex->nHeight);
+        pclubinfodb->ClearCache();
     }
 
 
