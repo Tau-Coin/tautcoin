@@ -8,8 +8,6 @@
 #include "util.h"
 #include "sync.h"
 
-#include "rewarddb/memberinfodb.h"
-
 extern CMemberInfoDB *pmemberinfodb;
 
 extern bool ConvertPubkeyToAddress(const std::string& pubKey, std::string& addrStr); 

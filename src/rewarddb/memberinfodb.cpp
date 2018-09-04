@@ -820,8 +820,16 @@ bool CMemberInfoDB::EntrustByAddress(string inputAddr, string voutAddress, int n
     // TX count add one, including vout address and packer of vout
     if (!UpdateCacheTcAddOne(voutAddress, nHeight, isUndo))
         return false;
-    if (!UpdateCacheTtcByChange(voutAddress, nHeight, 1, true, isUndo))
-        return false;
+    if (packerOfVout.compare("0") != 0)
+    {
+        if (!UpdateCacheTtcByChange(packerOfVout, nHeight, 1, true, isUndo))
+            return false;
+    }
+    else
+    {
+        if (!UpdateCacheTtcByChange(voutAddress, nHeight, 1, true, isUndo))
+            return false;
+    }
 
     return true;
 }
