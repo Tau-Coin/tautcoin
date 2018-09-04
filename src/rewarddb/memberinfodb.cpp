@@ -244,7 +244,11 @@ bool CMemberInfoDB::UpdateCacheTcAddOne(string address, int inputHeight, bool is
     }
 
     if (isUndo)
-        DeleteDB(address, inputHeight+1);
+    {
+        if (!DeleteDB(address, inputHeight+1))
+            return false;
+        return true;
+    }
 
     CAmount rwdbalance = 0;
     string packer = " ";
@@ -713,6 +717,9 @@ bool CMemberInfoDB::EntrustByAddress(string inputAddr, string voutAddress, int n
         packerOfVout = GetPacker(voutAddress, nHeight);
     }
     string newPackerAddr = voutAddress;
+    // The address is a new one on the chain
+    if ((fatherOfVout.compare(" ") == 0) && (packerOfVout.compare(" ") == 0))
+        return true;
 
     // Address of vout must have both father and packer of "0" in database or entrust itself
     bool changeRelationship = false;
@@ -724,9 +731,7 @@ bool CMemberInfoDB::EntrustByAddress(string inputAddr, string voutAddress, int n
     {
         if ((fatherOfVin.compare("0") != 0) && (packerOfVin.compare("0") != 0))// The father of vin is not a packer
             _pclubinfodb->UpdateMembersByFatherAddress(fatherOfVin, false, inputAddr, nHeight, isUndo);
-        else if((fatherOfVin.compare("0") == 0) && (packerOfVin.compare("0") == 0))// The father of vin is a packer
-            ;//_pclubinfodb->UpdateMembersByFatherAddress(inputAddr, false, inputAddr, nHeight, isUndo);
-        else
+        else if(!(fatherOfVin.compare("0") == 0) && (packerOfVin.compare("0") == 0))
         {
             //LogPrintf("%s, The input address is : %s, which is not valid\n", __func__, fatherAddress);
             return false;
