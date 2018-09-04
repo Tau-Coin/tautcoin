@@ -147,7 +147,11 @@ UniValue dumpclubmembers(const UniValue& params, bool fHelp)
         it != leaders.end(); it++, i++)
     {
         std::string address = *it;
-        uint64_t ttc = pmemberinfodb->GetTotalTXCnt(address, height);
+        uint64_t ttc = 0;//pmemberinfodb->GetTotalTXCnt(address, height);
+        std::string dummyStr;
+        uint64_t dummyInt;
+        CAmount  dummyValue;
+        pmemberinfodb->GetFullRecord(address, height, dummyStr, dummyStr, dummyInt, ttc, dummyValue, true);
         totalTTC += ttc;
         file << i + 1 << "\t\t" << address << "\t" << ttc << "\n";
     }
@@ -168,7 +172,11 @@ UniValue dumpclubmembers(const UniValue& params, bool fHelp)
         uint64_t  itTC = 0;
         uint64_t  itRewards = 0;
         std::string address = *it;
-        uint64_t ttcleader = pmemberinfodb->GetTotalTXCnt(address, height);
+        uint64_t ttcleader = 0;//pmemberinfodb->GetTotalTXCnt(address, height);
+        std::string dummyStr;
+        uint64_t dummyInt;
+        CAmount  dummyValue;
+        pmemberinfodb->GetFullRecord(address, height, dummyStr, dummyStr, dummyInt, ttcleader, dummyValue, true);
         file << i << " club:" << address << ", ttc:" << ttcleader << "\n";
         file << "\t" << "index\t" << "address\t\t\t\t\t\t\t\t" << "packer\t" << "father\t"
              << "tc\t" << "reward" << "\n";
@@ -182,7 +190,7 @@ UniValue dumpclubmembers(const UniValue& params, bool fHelp)
 
         int j = 1;
 
-        pmemberinfodb->GetFullRecord(address, height, packer, father, tc, ttc, value);
+        pmemberinfodb->GetFullRecord(address, height, packer, father, tc, ttc, value, true);
         file << "\t" << j <<"\t\t" << address <<"\t" << packer <<"\t\t" << father << "\t\t"
              << tc << "\t\t" << value << "\n";
         itTC += tc;
@@ -190,11 +198,11 @@ UniValue dumpclubmembers(const UniValue& params, bool fHelp)
         j++;
 
         std::vector<std::string> members
-            = pclubinfodb->GetTotalMembersByAddress(address, height);
+            = pclubinfodb->GetTotalMembersByAddress(address, height, true);
         for (std::vector<std::string>::iterator itr = members.begin();
             itr != members.end(); itr++, j++)
         {
-            pmemberinfodb->GetFullRecord(*itr, height, packer, father, tc, ttc, value);
+            pmemberinfodb->GetFullRecord(*itr, height, packer, father, tc, ttc, value, true);
             file << "\t" << j <<"\t\t" << *itr <<"\t" << packer <<"\t\t" << father << "\t\t"
                 << tc << "\t\t" << value << "\n";
             itTC += tc;
