@@ -2882,6 +2882,13 @@ bool ConnectBlock(const CBlock& block, CValidationState& state, CBlockIndex* pin
 
     if (!fJustCheck)
     {
+        std::string addrStr;
+        if (!ConvertPubkeyToAddress(block.pubKeyOfpackager, addrStr))
+        {
+            return false;
+        }
+        if (block.harvestPower != pmemberinfodb->GetHarvestPowerByAddress(addrStr, pindex->nHeight - 1))
+                cout<<"=====addrStr: "<<addrStr<<endl;
         if (!CheckBlockHarvestPower(block, state, chainparams.GetConsensus(), pindex->nHeight - 1))
             return error("%s: Check harvest power: %s", __func__, FormatStateMessage(state));
     }

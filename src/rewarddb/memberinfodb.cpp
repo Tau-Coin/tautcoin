@@ -460,12 +460,10 @@ void CMemberInfoDB::GetFullRecord(string address, int nHeight, string& packer, s
         }
     }
 
+    for (int h = nHeight; h >= 0; h--)
     {
-        for (int h = nHeight; h >= 0; h--)
-        {
-            if (ReadDB(address, h, packer, father, tc, ttc, value, dbOnly))
-                return;
-        }
+        if (ReadDB(address, h, packer, father, tc, ttc, value, dbOnly))
+            return;
     }
 }
 
@@ -719,48 +717,15 @@ bool CMemberInfoDB::EntrustByAddress(string inputAddr, string voutAddress, int n
     // Address of vout must have both father and packer of "0" in database or entrust itself
     bool changeRelationship = false;
 
-    // Compute the total TX count of the vin address and update the packer of the these members
-    vector<string> totalMembers;
-    if (!isUndo)
-        totalMembers = _pclubinfodb->GetTotalMembersByAddress(inputAddr, nHeight-1);
-    else
-        totalMembers = _pclubinfodb->GetTotalMembersByAddress(inputAddr, nHeight);
-    uint64_t ttcOfVin = GetTXCnt(inputAddr, nHeight-1);
-    for(size_t i = 0; i < totalMembers.size(); i++)
-    {
-        CAmount rwdbalance = 0;
-        string packerInput = " ";
-        string ft = " ";
-        uint64_t tc = 0;
-        uint64_t ttc = 0;
-        GetFullRecord(totalMembers[i], nHeight-1, packerInput, ft, tc, ttc, rwdbalance);
-        packerInput = voutAddress;
-        string newRecordInput = " ";
-        if (!GenerateRecord(packerInput, ft, tc, ttc, rwdbalance, newRecordInput))
-        {
-            LogPrintf("%s, GenerateRecord error, packer: %s, father: %s, tc: %d, ttc: %d, rwdbal: %d\n",
-                      __func__, packerInput, ft, tc, ttc, rwdbalance);
-            return false;
-        }
-        cacheRecord[totalMembers[i]] = newRecordInput;
-        if (isUndo)
-        {
-            if (!DeleteDB(totalMembers[i], nHeight+1))
-                return false;
-        }
-
-        ttcOfVin += tc;
-    }
-
     // Update club info
     // When the vout address is a club leader, the vin entrust the vout(not vin himself)
     if ((voutAddress.compare(inputAddr) != 0) && (fatherOfVin.compare(voutAddress) != 0) &&
         (fatherOfVout.compare("0") == 0) && (packerOfVout.compare("0") == 0))
     {
-        if ((fatherOfVin.compare("0") != 0) && (packerOfVin.compare("0") != 0))
+        if ((fatherOfVin.compare("0") != 0) && (packerOfVin.compare("0") != 0))// The father of vin is not a packer
             _pclubinfodb->UpdateMembersByFatherAddress(fatherOfVin, false, inputAddr, nHeight, isUndo);
-        else if((fatherOfVin.compare("0") == 0) && (packerOfVin.compare("0") == 0))
-            _pclubinfodb->UpdateMembersByFatherAddress(inputAddr, false, inputAddr, nHeight, isUndo);
+        else if((fatherOfVin.compare("0") == 0) && (packerOfVin.compare("0") == 0))// The father of vin is a packer
+            ;//_pclubinfodb->UpdateMembersByFatherAddress(inputAddr, false, inputAddr, nHeight, isUndo);
         else
         {
             //LogPrintf("%s, The input address is : %s, which is not valid\n", __func__, fatherAddress);
@@ -770,11 +735,11 @@ bool CMemberInfoDB::EntrustByAddress(string inputAddr, string voutAddress, int n
         newPackerAddr = voutAddress;
         changeRelationship = true;
 
-        // If input address is a club leader
+        // Remove this address from leader db
         if ((fatherOfVin.compare("0") == 0) && (packerOfVin.compare("0") == 0))
         {
             if (!isUndo)
-                _pclubinfodb->RemoveClubLeader(inputAddr, nHeight); // Remove this address from leader db
+                _pclubinfodb->RemoveClubLeader(inputAddr, nHeight);
             else
                 _pclubinfodb->AddClubLeader(inputAddr, nHeight);
         }
@@ -786,6 +751,8 @@ bool CMemberInfoDB::EntrustByAddress(string inputAddr, string voutAddress, int n
     {
         _pclubinfodb->UpdateMembersByFatherAddress(fatherOfVin, false, inputAddr, nHeight, isUndo);
         newPackerAddr = "0";
+        if (!UpdateCacheTtcByChange(voutAddress, nHeight, 0, false, isUndo))
+            return false;
         changeRelationship = true;
 
         if (!isUndo)
@@ -797,6 +764,39 @@ bool CMemberInfoDB::EntrustByAddress(string inputAddr, string voutAddress, int n
 
     if (changeRelationship)
     {
+        // Compute the ttc of the vin address and update the packer of the these members
+        vector<string> totalMembers;
+        if (!isUndo)
+            totalMembers = _pclubinfodb->GetTotalMembersByAddress(inputAddr, nHeight-1);
+        else
+            totalMembers = _pclubinfodb->GetTotalMembersByAddress(inputAddr, nHeight);
+        uint64_t ttcOfVin = GetTXCnt(inputAddr, nHeight-1);
+        for(size_t i = 0; i < totalMembers.size(); i++)
+        {
+            CAmount rwdbalance = 0;
+            string packerInput = " ";
+            string ft = " ";
+            uint64_t tc = 0;
+            uint64_t ttc = 0;
+            GetFullRecord(totalMembers[i], nHeight-1, packerInput, ft, tc, ttc, rwdbalance);
+            packerInput = voutAddress;
+            string newRecordInput = " ";
+            if (!GenerateRecord(packerInput, ft, tc, ttc, rwdbalance, newRecordInput))
+            {
+                LogPrintf("%s, GenerateRecord error, packer: %s, father: %s, tc: %d, ttc: %d, rwdbal: %d\n",
+                          __func__, packerInput, ft, tc, ttc, rwdbalance);
+                return false;
+            }
+            cacheRecord[totalMembers[i]] = newRecordInput;
+            if (isUndo)
+            {
+                if (!DeleteDB(totalMembers[i], nHeight+1))
+                    return false;
+            }
+
+            ttcOfVin += tc;
+        }
+
         // Update the father of the vin address
         if (!UpdateCacheFather(inputAddr, nHeight, newPackerAddr, isUndo))
             return false;
@@ -825,7 +825,8 @@ bool CMemberInfoDB::EntrustByAddress(string inputAddr, string voutAddress, int n
     // TX count add one, including vout address and packer of vout
     if (!UpdateCacheTcAddOne(voutAddress, nHeight, isUndo))
         return false;
-    if (packerOfVout.compare("0") != 0)
+    string newPackerOfVout = GetPacker(voutAddress, nHeight);
+    if (newPackerOfVout.compare("0") != 0)
     {
         if (!UpdateCacheTtcByChange(packerOfVout, nHeight, 1, true, isUndo))
             return false;
@@ -960,7 +961,7 @@ bool CMemberInfoDB::UpdateTcAndTtcByAddress(string address, int nHeight, string 
         return false;
     }
 
-    // TX count of the address add one
+    // Tc of the address add one
     if (addressUpdated)
         GetFullRecord(address, nHeight-1, packer, ft, tc, ttc, rewardbalance);
     tc++;
