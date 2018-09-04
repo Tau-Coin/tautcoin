@@ -2403,6 +2403,8 @@ bool DisconnectBlock(CBlock& block, CValidationState& state, CBlockIndex* pindex
         return error("DisconnectBlock(): block and undo data inconsistent");
 
     // undo transactions in reverse order
+    vector<string> bestFather;
+    bestFather.resize(block.vtx.size());
     for (int i = block.vtx.size() - 1; i >= 0; i--) {
         const CTransaction &tx = block.vtx[i];
         uint256 hash = tx.GetHash();
@@ -2436,6 +2438,12 @@ bool DisconnectBlock(CBlock& block, CValidationState& state, CBlockIndex* pindex
                 const CTxInUndo &undo = txundo.vprevout[j];
                 if (!ApplyTxInUndo(undo, view, out))
                     fClean = false;
+
+                CBitcoinAddress addr;
+                string address;
+                if (!addr.ScriptPub2Addr(undo.txout.scriptPubKey, address))
+                    return false;
+                bestFather[i] = address;
             }
         }
     }
@@ -2473,19 +2481,33 @@ bool DisconnectBlock(CBlock& block, CValidationState& state, CBlockIndex* pindex
 
         // restore rewards and relationship
         bool isUndo = true;
+        pmemberinfodb->ClearReadCache();
         pmemberinfodb->ClearCache();
         pclubinfodb->ClearCache();
         pclubinfodb->ClearReadCache();
         CAmount nFees = DEFAULT_TRANSACTION_MAXFEE * block.vtx.size();
-        if (!UpdateRewards(block, nFees, pindex->nHeight-1, isUndo))
-            return error("DisconnectBlock(): UpdateRewards failed");
-        for (size_t k = 0; k < block.vtx.size(); k++)
+        if (pmemberinfodb->GetCurrentHeight() == -1)
         {
-            const CTransaction &tx = block.vtx[k];
-            if (!pmemberinfodb->UpdateFatherAndTCByTX(tx, view, pindex->nHeight-1, true))
-                return error("DisconnectBlock(): UpdateFatherAndTCByTX failed");
+            pmemberinfodb->SetCurrentHeight(pindex->nHeight);
+            pclubinfodb->SetCurrentHeight(pindex->nHeight);
         }
+        if (pmemberinfodb->GetCurrentHeight() > pindex->nHeight-1)
+        {
+            if (!UpdateRewards(block, nFees, pindex->nHeight-1, isUndo))
+                return error("DisconnectBlock(): UpdateRewards failed");
+            for (size_t k = 0; k < block.vtx.size(); k++)
+            {
+                const CTransaction &tx = block.vtx[k];
+                vector<string> vfather;
+                vfather.push_back(bestFather[k]);
+                if (!pmemberinfodb->UpdateFatherAndTCByTX(tx, view, pindex->nHeight-1, vfather, true))
+                    return error("DisconnectBlock(): UpdateFatherAndTCByTX failed");
+            }
+        }
+        pmemberinfodb->SetCurrentHeight(pindex->nHeight-1);
+        pclubinfodb->SetCurrentHeight(pindex->nHeight-1);
         // Clear all cache
+        pmemberinfodb->ClearReadCache();
         pmemberinfodb->ClearCache();
         pclubinfodb->ClearCache();
         pclubinfodb->ClearReadCache();
@@ -3022,7 +3044,7 @@ bool ConnectBlock(const CBlock& block, CValidationState& state, CBlockIndex* pin
         {
             if (pclubinfodb->GetCurrentHeight() < pindex->nHeight)
             {
-                if (!pmemberinfodb->UpdateFatherAndTCByTX(tx, view, pindex->nHeight, false))
+                if (!pmemberinfodb->UpdateFatherAndTCByTX(tx, view, pindex->nHeight))
                 {
                     pmemberinfodb->ClearCache();
                     pclubinfodb->ClearCache();

@@ -148,7 +148,7 @@ bool CClubInfoDB::DeleteDB(std::string key, int nHeight)
     return true;
 }
 
-CClubInfoDB::CClubInfoDB()
+CClubInfoDB::CClubInfoDB() : currentHeight(-1)
 {
     options.create_if_missing = true;
 
@@ -163,7 +163,7 @@ CClubInfoDB::CClubInfoDB()
     pclubleaderdb = new CClubLeaderDB();
 }
 
-CClubInfoDB::CClubInfoDB(CRewardRateViewDB *prewardratedbview) : _prewardratedbview(prewardratedbview)
+CClubInfoDB::CClubInfoDB(CRewardRateViewDB *prewardratedbview) : _prewardratedbview(prewardratedbview),  currentHeight(-1)
 {
     options.create_if_missing = true;
 
@@ -196,7 +196,7 @@ CRewardRateViewDB* CClubInfoDB::GetRewardRateDBPointer() const
 bool CClubInfoDB::AddressIsValid(string address)
 {
     CBitcoinAddress addr = CBitcoinAddress(address);
-    if (!addr.IsValid() || addr.IsScript())
+    if (!addr.IsValid())
         return false;
     return true;
 }

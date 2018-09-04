@@ -61,6 +61,8 @@ private:
 
     bool UpdateCachePacker(std::string address, int inputHeight, std::string newPacker, bool isUndo);
 
+    bool UpdateCacheFatherAndPacker(std::string address, int inputHeight, std::string newAddr, bool isUndo);
+
     bool UpdateCacheTcAddOne(std::string address, int inputHeight, bool isUndo);
 
     bool UpdateCacheTtcByChange(std::string address, int nHeight, uint64_t count, bool isAdd, bool isUndo);
@@ -135,7 +137,8 @@ public:
     bool UpdateRewardsByTX(const CTransaction& tx, CAmount blockReward, int nHeight, bool isUndo);
 
     //! Update the TX count and the father
-    bool UpdateFatherAndTCByTX(const CTransaction& tx, const CCoinsViewCache &view, int nHeight, bool isUndo);
+    bool UpdateFatherAndTCByTX(const CTransaction& tx, const CCoinsViewCache &view, int nHeight,
+                               std::vector<std::string> father=std::vector<std::string>(), bool isUndo=false);
 
     //! Update the club leader's distribution rate
     bool RewardRateUpdate(CAmount blockReward, CAmount distributedRewards, std::string clubLeaderAddress, int nHeight);
