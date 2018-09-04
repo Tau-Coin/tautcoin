@@ -35,6 +35,9 @@ private:
     //! clubinfo database used
     CClubInfoDB* _pclubinfodb;
 
+    //! Current updated height
+    int currentHeight;
+
     bool RewardChangeUpdateByPubkey(CAmount rewardChange, std::string pubKey, int nHeight, bool isUndo);
 
     bool RewardChangeUpdate(CAmount rewardChange, std::string address, int nHeight, bool isUndo);
@@ -74,8 +77,17 @@ public:
     //! Clear the rwdbalance cache
     void ClearCache();
 
+    //! Clear the rwdbalance accelerating cache
+    void ClearReadCache();
+
     //! Commit the database transaction
     bool Commit(int nHeight);
+
+    //! Set current updated height
+    void SetCurrentHeight(int nHeight);
+
+    //! Get current updated height
+    int GetCurrentHeight() const;
 
     //! Init the father and tc of the address from genesis block
     bool InitGenesisDB(std::vector<std::string> addresses);

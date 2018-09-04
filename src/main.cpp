@@ -1978,6 +1978,8 @@ void UpdateCoins(const CTransaction& tx, CCoinsViewCache& inputs, int nHeight)
 bool UpdateRewards(const CBlock& block, CAmount blockReward, int nHeight, bool isUndo)
 {
     //pmemberinfodb->ClearCache();
+    if (pmemberinfodb->GetCurrentHeight() == nHeight)
+        return true;
 
     for (unsigned int j = 0; j < block.vtx.size(); j++)
     {
@@ -1997,6 +1999,9 @@ bool UpdateRewards(const CBlock& block, CAmount blockReward, int nHeight, bool i
 
     pmemberinfodb->Commit(nHeight);
     pmemberinfodb->ClearCache();
+    if (nHeight % (30 * 1440) == 0)
+        pmemberinfodb->ClearReadCache();
+    pmemberinfodb->SetCurrentHeight(nHeight);
 
     return true;
 }
@@ -2842,6 +2847,8 @@ bool ConnectBlock(const CBlock& block, CValidationState& state, CBlockIndex* pin
 
             if (!pmemberinfodb->InitGenesisDB(addresses))
                 return error("%s: pmemberinfodb::InitGenesisDB error", __func__);
+            pclubinfodb->SetCurrentHeight(0);
+            pmemberinfodb->SetCurrentHeight(0);
         }
 
         UpdateCoins(block.vtx[0], view, 0);
@@ -3006,11 +3013,14 @@ bool ConnectBlock(const CBlock& block, CValidationState& state, CBlockIndex* pin
         // Update the TX count and the father
         if (!fJustCheck)
         {
-            if (!pmemberinfodb->UpdateFatherAndTCByTX(tx, view, pindex->nHeight, false))
+            if (pclubinfodb->GetCurrentHeight() < pindex->nHeight)
             {
-                pmemberinfodb->ClearCache();
-                pclubinfodb->ClearCache();
-                return error("ConnectBlock(): UpdateFatherAndTC failed");
+                if (!pmemberinfodb->UpdateFatherAndTCByTX(tx, view, pindex->nHeight, false))
+                {
+                    pmemberinfodb->ClearCache();
+                    pclubinfodb->ClearCache();
+                    return error("ConnectBlock(): UpdateFatherAndTC failed");
+                }
             }
         }
 
@@ -3301,6 +3311,7 @@ bool ConnectBlock(const CBlock& block, CValidationState& state, CBlockIndex* pin
         // Commit relationship to database
         pclubinfodb->Commit(pindex->nHeight);
         pclubinfodb->ClearCache();
+        pclubinfodb->SetCurrentHeight(pindex->nHeight);
     }
 
 

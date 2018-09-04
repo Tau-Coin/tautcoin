@@ -236,6 +236,17 @@ bool CClubInfoDB::Commit(int nHeight)
     return true;
 }
 
+void CClubInfoDB::SetCurrentHeight(int nHeight)
+{
+    currentHeight = nHeight;
+}
+
+
+int CClubInfoDB::GetCurrentHeight() const
+{
+    return currentHeight;
+}
+
 bool CClubInfoDB::UpdateMembersByFatherAddress(std::string fatherAddress, bool add, std::string address,
                                                int nHeight, bool isUndo)
 {

@@ -149,6 +149,11 @@ bool CMemberInfoDB::DeleteDB(std::string key, int nHeight)
 void CMemberInfoDB::ClearCache()
 {
     cacheRecord.clear();
+    //cacheForRead.clear();
+}
+
+void CMemberInfoDB::ClearReadCache()
+{
     cacheForRead.clear();
 }
 
@@ -304,11 +309,23 @@ bool CMemberInfoDB::Commit(int nHeight)
     {
         string address = it->first;
         string strValue = it->second;
+        cacheForRead[address] = strValue;
         if (!WriteDB(address, nHeight, strValue))
             return false;
     }
 
     return true;
+}
+
+void CMemberInfoDB::SetCurrentHeight(int nHeight)
+{
+    currentHeight = nHeight;
+}
+
+
+int CMemberInfoDB::GetCurrentHeight() const
+{
+    return currentHeight;
 }
 
 bool CMemberInfoDB::InitGenesisDB(std::vector<std::string> addresses)

@@ -66,6 +66,9 @@ private:
     //! cache for accelerating
     std::map<std::string, std::vector<std::string> > cacheForRead;
 
+    //! Current updated height
+    int currentHeight;
+
     bool WriteDB(std::string key, int nHeight, std::string strValue);
 
     bool ReadDB(std::string key, int nHeight, std::string& strValue);
@@ -94,6 +97,12 @@ public:
 
     //! Commit the database transaction
     bool Commit(int nHeight);
+
+    //! Set current updated height
+    void SetCurrentHeight(int nHeight);
+
+    //! Get current updated height
+    int GetCurrentHeight() const;
 
     //! Update the leader's members
     bool UpdateMembersByFatherAddress(std::string fatherAddress, bool add, std::string address,
