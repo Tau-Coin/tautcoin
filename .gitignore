@@ -6,7 +6,6 @@ src/taucoind
 src/taucoin-cli
 src/taucoin-tx
 src/test/test_taucoin
-src/test/test_taucoin_fuzzy
 src/qt/test/test_taucoin-qt
 
 # autoreconf
@@ -44,12 +43,6 @@ src/qt/forms/ui_*.h
 
 src/qt/test/moc*.cpp
 
-src/qt/taucoin-qt.config
-src/qt/taucoin-qt.creator
-src/qt/taucoin-qt.creator.user
-src/qt/taucoin-qt.files
-src/qt/taucoin-qt.includes
-
 .deps
 .dirstamp
 .libs
@@ -62,6 +55,7 @@ src/qt/taucoin-qt.includes
 *.o
 *.o-*
 *.patch
+.taucoin
 *.a
 *.pb.cc
 *.pb.h
@@ -81,12 +75,12 @@ src/qt/taucoin-qt.includes
 *.qm
 Makefile
 taucoin-qt
-Bitcoin-Qt.app
-background.tiff*
+Taucoin-Qt.app
 
 # Unit-tests
 Makefile.test
 taucoin-qt_test
+src/test/buildenv.py
 
 # Resources cpp
 qrc_*.cpp
@@ -107,8 +101,13 @@ coverage_percent.txt
 linux-coverage-build
 linux-build
 win32-build
-test/config.ini
-test/cache/*
+qa/pull-tester/run-taucoind-for-test.sh
+qa/pull-tester/tests_config.py
+qa/pull-tester/cache/*
+qa/pull-tester/test.*/*
+qa/tmp
+cache/
+share/BitcoindComparisonTool.jar
 
 !src/leveldb*/Makefile
 
@@ -116,3 +115,6 @@ test/cache/*
 
 libtaucoinconsensus.pc
 contrib/devtools/split-debug.sh
+
+src/qt/test/test_bitcoin-qt
+src/test/test_bitcoin
