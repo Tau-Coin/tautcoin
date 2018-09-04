@@ -56,9 +56,9 @@ bool CMemberInfoDB::WriteDB(std::string key, int nHeight, string packer, string 
 }
 
 bool CMemberInfoDB::ReadDB(std::string key, int nHeight, string &packer, string& father,
-                           uint64_t& tc, uint64_t &ttc, CAmount& value)
+                           uint64_t& tc, uint64_t &ttc, CAmount& value, bool dbOnly)
 {
-    if (cacheForRead.find(key) != cacheForRead.end())
+    if (!dbOnly && (cacheForRead.find(key) != cacheForRead.end()))
     {
         if (!ParseRecord(cacheForRead[key], packer, father, tc, ttc, value))
             return false;
@@ -90,7 +90,8 @@ bool CMemberInfoDB::ReadDB(std::string key, int nHeight, string &packer, string&
         return false;
     }
 
-    cacheForRead[key] = strValue;// Add to cache for accelerating
+    if (!dbOnly)
+        cacheForRead[key] = strValue;// Add to cache for accelerating
     if (!ParseRecord(strValue, packer, father, tc, ttc, value))
         return false;
 
@@ -122,6 +123,7 @@ bool CMemberInfoDB::ReadDB(std::string key, int nHeight, std::string& strValue)
         }
         return false;
     }
+
 
     cacheForRead[key] = strValue;// Add to cache for accelerating
 
@@ -447,18 +449,21 @@ CAmount CMemberInfoDB::GetRwdBalance(std::string address, int nHeight)
 }
 
 void CMemberInfoDB::GetFullRecord(string address, int nHeight, string& packer, string& father,
-                                  uint64_t& tc, uint64_t& ttc, CAmount& value)
+                                  uint64_t& tc, uint64_t& ttc, CAmount& value, bool dbOnly)
 {
-    if (cacheRecord.find(address) != cacheRecord.end())
+    if (!dbOnly)
     {
-        ParseRecord(cacheRecord[address], packer, father, tc, ttc, value);
-        return;
+        if (cacheRecord.find(address) != cacheRecord.end())
+        {
+            ParseRecord(cacheRecord[address], packer, father, tc, ttc, value);
+            return;
+        }
     }
-    else
+
     {
         for (int h = nHeight; h >= 0; h--)
         {
-            if (ReadDB(address, h, packer, father, tc, ttc, value))
+            if (ReadDB(address, h, packer, father, tc, ttc, value, dbOnly))
                 return;
         }
     }

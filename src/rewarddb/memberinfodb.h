@@ -52,7 +52,7 @@ private:
     bool WriteDB(std::string key, int nHeight, std::string strValue);
 
     bool ReadDB(std::string key, int nHeight, std::string& packer, std::string& father,
-                uint64_t& tc, uint64_t& ttc, CAmount& value);
+                uint64_t& tc, uint64_t& ttc, CAmount& value, bool dbOnly=false);
     bool ReadDB(std::string key, int nHeight, std::string& strValue);
 
     bool DeleteDB(std::string key, int nHeight);
@@ -125,7 +125,7 @@ public:
 
     //! Retrieve a full record for a given address
     void GetFullRecord(std::string address, int nHeight, std::string &packer, std::string& father,
-                       uint64_t& tc, uint64_t &ttc, CAmount& value);
+                       uint64_t& tc, uint64_t &ttc, CAmount& value, bool dbOnly=false);
     std::string GetFullRecord(std::string address, int nHeight);
 
     //! Retrieve the harvest power for a given address if it's a miner

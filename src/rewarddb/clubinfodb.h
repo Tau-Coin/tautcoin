@@ -112,7 +112,7 @@ public:
     std::string GetTrieStrByFatherAddress(std::string fatherAddress, int nHeight);
 
     //! Retrieve the merbers' addresses
-    std::vector<std::string> GetTotalMembersByAddress(std::string fatherAddress, int nHeight);
+    std::vector<std::string> GetTotalMembersByAddress(std::string fatherAddress, int nHeight, bool dbOnly=false);
 
     //! Add club leader
     bool AddClubLeader(std::string address, int height);
