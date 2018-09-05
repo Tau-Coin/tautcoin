@@ -195,10 +195,11 @@ bool CClubLeaderDB::DeleteClubLeader(std::string address, int height)
         return false;
     }
 
+    key = address + "_" + strHeight;
     std::map<std::string, std::string>::iterator it = cache.find(key);
     if (it != cache.end())
     {
-        cache.erase(key);
+        cache.erase(it);
     }
 
     leveldb::Status status = pdb->Delete(leveldb::WriteOptions(),
