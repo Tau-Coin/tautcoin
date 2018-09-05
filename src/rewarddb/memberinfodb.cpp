@@ -830,7 +830,7 @@ bool CMemberInfoDB::EntrustByAddress(string inputAddr, string voutAddress, int n
         if (!isUndo)
             _pclubinfodb->AddClubLeader(inputAddr, nHeight);
         else
-            _pclubinfodb->RemoveClubLeader(inputAddr, nHeight + 1);
+            _pclubinfodb->RemoveClubLeader(inputAddr, nHeight+1);
 
     }
 

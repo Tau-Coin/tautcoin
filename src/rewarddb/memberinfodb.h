@@ -46,6 +46,9 @@ private:
 
     bool UpdateTcAndTtcByAddress(std::string address, int nHeight, std::string father, bool isUndo);
 
+    bool GetBestFather(const CTransaction& tx, const CCoinsViewCache &view, std::string& bestFather,
+                       std::map<std::string, CAmount> vin_val=std::map<std::string, CAmount>(), bool isUndo=false);
+
     bool WriteDB(std::string key, int nHeight, std::string packer, std::string father,
                  uint64_t tc, uint64_t ttc, CAmount value);
 
@@ -97,9 +100,6 @@ public:
     //! Init the distribution of the reward and check if everything is ok
     bool InitRewardsDist(CAmount memberTotalRewards, const CScript& scriptPubKey, int nHeight, std::string& clubLeaderAddress,
                          CAmount& distributedRewards, std::map<std::string, CAmount>& memberRewards);
-
-    bool GetBestFather(const CTransaction& tx, const CCoinsViewCache &view, std::string& bestFather,
-                       std::map<std::string, CAmount> vin_val=std::map<std::string, CAmount>(), bool isUndo=false);
 
     //! Compute the reward of each member
     bool ComputeMemberReward(const uint64_t& txCnt, const uint64_t& totalTXCnt,

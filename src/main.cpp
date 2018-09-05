@@ -2576,6 +2576,8 @@ bool ConnectBlock(const CBlock& block, CValidationState& state, CBlockIndex* pin
         return true;
     }
 
+    clock_t start1 = clock();
+
     int64_t nTimeStart = GetTimeMicros();
 
     // Check it again in case a previous version let a bad block in
@@ -2591,7 +2593,7 @@ bool ConnectBlock(const CBlock& block, CValidationState& state, CBlockIndex* pin
 //        }
 //        if (block.harvestPower != pmemberinfodb->GetHarvestPowerByAddress(addrStr, pindex->nHeight - 1))
 //                cout<<"=====addrStr: "<<addrStr<<endl;
-        if (!CheckBlockHarvestPower(block, state, chainparams.GetConsensus(), pindex->nHeight - 1))
+        if (!CheckBlockHarvestPower(block, state, pindex->nHeight - 1))
             return error("%s: Check harvest power: %s", __func__, FormatStateMessage(state));
     }
 
@@ -2678,8 +2680,6 @@ bool ConnectBlock(const CBlock& block, CValidationState& state, CBlockIndex* pin
 
     int64_t nTime2 = GetTimeMicros(); nTimeForks += nTime2 - nTime1;
     LogPrint("bench", "    - Fork checks: %.2fms [%.2fs]\n", 0.001 * (nTime2 - nTime1), nTimeForks * 0.000001);
-
-    //CBlockUndo blockundo;
 
     CCheckQueueControl<CScriptCheck> control(fScriptChecks && nScriptCheckThreads ? &scriptcheckqueue : NULL);
 
@@ -2780,7 +2780,6 @@ bool ConnectBlock(const CBlock& block, CValidationState& state, CBlockIndex* pin
         vPos.push_back(std::make_pair(tx.GetHash(), pos));
         pos.nTxOffset += ::GetSerializeSize(tx, SER_DISK, CLIENT_VERSION);
     }
-
 
     if (!fJustCheck)
     {
@@ -3809,27 +3808,19 @@ bool CheckBlockHeader(const CBlockHeader& block, CValidationState& state, const 
 
 // Check whether allowed to forge or not. And check whether harverst power
 // is consistent with database.
-bool CheckBlockHarvestPower(const CBlock& block, CValidationState& state, const Consensus::Params& consensusParams, int height)
+bool CheckBlockHarvestPower(const CBlock& block, CValidationState& state, int height)
 {
-    static ClubManager* clubMgr = NULL;
-    if (!clubMgr)
-    {
-        clubMgr = ClubManager::GetInstance();
-    }
-
+    std::string addrStr;
+    if (!ConvertPubkeyToAddress(block.pubKeyOfpackager, addrStr))
+        return false;
     if (height <= -1)
     {
         LOCK(cs_main);
         height = chainActive.Height();
     }
-
-    if (block.GetHash() == consensusParams.hashGenesisBlock || height == 0)
-        return true;
-
-    uint64_t harvestPower;
-    if (!clubMgr->IsAllowForge(block.pubKeyOfpackager, height, harvestPower))
+    uint64_t harvestPower = pmemberinfodb->GetHarvestPowerByAddress(addrStr, height);
+    if (harvestPower == 0)
         return state.DoS(100, false, REJECT_INVALID, "not allowed to forge", false, "bad forger");
-
     if (block.harvestPower != harvestPower)
     {
         LogPrintf("%s block hp %d not consistent with db %d\n", __func__, block.harvestPower, harvestPower);
@@ -4243,7 +4234,7 @@ bool ProcessNewBlock(CValidationState& state, const CChainParams& chainparams, C
         {
             CBlockIndex *tip = chainActive.Tip();
             if (pindex->pprev->GetBlockHash() == tip->GetBlockHash())
-                ret &= CheckBlockHarvestPower(*pblock, state, chainparams.GetConsensus(), pindex->pprev->nHeight);
+                ret &= CheckBlockHarvestPower(*pblock, state, pindex->pprev->nHeight);
         }
 
         if (!ret)
@@ -6425,6 +6416,7 @@ bool static ProcessMessage(CNode* pfrom, string strCommand, CDataStream& vRecv, 
         // conditions in AcceptBlock().
         bool forceProcessing = pfrom->fWhitelisted && !IsInitialBlockDownload();
         ProcessNewBlock(state, chainparams, pfrom, &block, forceProcessing, NULL);
+
         int nDoS;
         if (state.IsInvalid(nDoS)) {
             assert (state.GetRejectCode() < REJECT_INTERNAL); // Blocks are never rejected with internal reject codes
@@ -6435,7 +6427,6 @@ bool static ProcessMessage(CNode* pfrom, string strCommand, CDataStream& vRecv, 
                 Misbehaving(pfrom->GetId(), nDoS);
             }
         }
-
     }
 
 
