@@ -115,7 +115,6 @@ OptionsDialog::OptionsDialog(QWidget *parent, bool enableWallet) :
 #endif
 
     ui->unit->setModel(new BitcoinUnits(this));
-    ui->coinControlFeatures->setChecked(true);
 
     /* Widget-to-option mapper */
     mapper = new QDataWidgetMapper(this);
