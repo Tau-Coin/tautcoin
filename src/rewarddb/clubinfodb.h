@@ -120,6 +120,9 @@ public:
     //! Remove club leader
     bool RemoveClubLeader(std::string address, int height);
 
+    //! Delete club leader from db
+    bool DeleteClubLeader(std::string address, int height);
+
     //! Retrieve all the club leaders
     bool GetAllClubLeaders(std::vector<std::string>& leaders, int height);
 };

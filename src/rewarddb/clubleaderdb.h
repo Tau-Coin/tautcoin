@@ -95,6 +95,9 @@ public:
     //! Remove club leader
     bool RemoveClubLeader(std::string address, int height);
 
+    // ! Delete club leader from db
+    bool DeleteClubLeader(std::string address, int height);
+
     //! Retrieve all the club leaders
     // Note: this method is just for debug!
     bool GetAllClubLeaders(std::vector<std::string>& leaders, int height);

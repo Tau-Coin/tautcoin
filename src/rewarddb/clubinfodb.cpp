@@ -387,6 +387,17 @@ bool CClubInfoDB::RemoveClubLeader(std::string address, int height)
     return pclubleaderdb->RemoveClubLeader(address, height);
 }
 
+bool CClubInfoDB::DeleteClubLeader(std::string address, int height)
+{
+    if (!CClubInfoDB::AddressIsValid(address))
+    {
+        LogPrintf("%s, The input address is : %s, which is not valid\n", __func__, address);
+        return false;
+    }
+
+    return pclubleaderdb->DeleteClubLeader(address, height);
+}
+
 bool CClubInfoDB::GetAllClubLeaders(std::vector<std::string>& leaders, int height)
 {
     return pclubleaderdb->GetAllClubLeaders(leaders, height);
