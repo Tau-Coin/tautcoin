@@ -98,6 +98,9 @@ public:
     bool InitRewardsDist(CAmount memberTotalRewards, const CScript& scriptPubKey, int nHeight, std::string& clubLeaderAddress,
                          CAmount& distributedRewards, std::map<std::string, CAmount>& memberRewards);
 
+    bool GetBestFather(const CTransaction& tx, const CCoinsViewCache &view, std::string& bestFather,
+                       std::map<std::string, CAmount> vin_val=std::map<std::string, CAmount>(), bool isUndo=false);
+
     //! Compute the reward of each member
     bool ComputeMemberReward(const uint64_t& txCnt, const uint64_t& totalTXCnt,
                              const CAmount& totalRewards, CAmount& memberReward) const;
@@ -138,7 +141,7 @@ public:
 
     //! Update the TX count and the father
     bool UpdateFatherAndTCByTX(const CTransaction& tx, const CCoinsViewCache &view, int nHeight,
-                               std::vector<std::string> father=std::vector<std::string>(), bool isUndo=false);
+                               std::map<std::string, CAmount> vin_val=std::map<std::string, CAmount>(), bool isUndo=false);
 
     //! Update the club leader's distribution rate
     bool RewardRateUpdate(CAmount blockReward, CAmount distributedRewards, std::string clubLeaderAddress, int nHeight);

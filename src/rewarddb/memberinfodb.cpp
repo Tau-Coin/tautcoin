@@ -1053,8 +1053,72 @@ bool CMemberInfoDB::UpdateTcAndTtcByAddress(string address, int nHeight, string 
     return true;
 }
 
+bool CMemberInfoDB::GetBestFather(const CTransaction& tx, const CCoinsViewCache& view, string& bestFather,
+                                  map<string, CAmount> vin_val, bool isUndo)
+{
+    bestFather = " ";
+    CAmount maxValue = 0;
+    if (isUndo)
+    {
+        for(map<string, CAmount>::const_iterator it = vin_val.begin(); it != vin_val.end(); it++)
+        {
+            if (it->second > maxValue)
+            {
+                maxValue = it->second;
+                bestFather = it->first;
+            }
+        }
+    }
+    else
+    {
+        for(unsigned int j = 0; j < tx.vin.size(); j++)
+        {
+            const CCoins* coins;
+            coins = view.AccessCoins(tx.vin[j].prevout.hash);
+            if (coins == NULL)
+            {
+                LogPrintf("%s, AccessCoins() failed, no specific coins\n", __func__);
+                return false;
+            }
+
+            //CTxOut out = view.GetOutputFor(tx.vin[j]);
+            CTxOut out;
+            CAmount val = 0;
+            if (coins->vout.size() > 0)
+            {
+                out = coins->vout[tx.vin[j].prevout.n];
+                val = out.nValue;
+            }
+            if (val > maxValue)
+            {
+                maxValue = val;
+
+                const CScript script = out.scriptPubKey;
+                CBitcoinAddress addr;
+                if (!addr.ScriptPub2Addr(script, bestFather))
+                    return false;
+            }
+        }
+    }
+    for(unsigned int k = 0; k < tx.vreward.size(); k++)
+    {
+        CAmount val = tx.vreward[k].rewardBalance;
+        if (val > maxValue)
+        {
+            maxValue = val;
+
+            const CScript script = CScript() << ParseHex(tx.vreward[k].senderPubkey) << OP_CHECKSIG;
+            CBitcoinAddress addr;
+            if (!addr.ScriptPub2Addr(script, bestFather))
+                return false;
+        }
+    }
+
+    return true;
+}
+
 bool CMemberInfoDB::UpdateFatherAndTCByTX(const CTransaction& tx, const CCoinsViewCache& view, int nHeight,
-                                          vector<string> father, bool isUndo)
+                                          map<string, CAmount> vin_val, bool isUndo)
 {
     if (tx.IsCoinBase() && isUndo)
     {
@@ -1069,54 +1133,10 @@ bool CMemberInfoDB::UpdateFatherAndTCByTX(const CTransaction& tx, const CCoinsVi
     {
         // Get best father
         string bestFather = " ";
-        CAmount maxValue = 0;
-        for(unsigned int j = 0; j < tx.vin.size(); j++)
+        if (!GetBestFather(tx, view, bestFather, vin_val, isUndo))
         {
-            if (!isUndo)
-            {
-                const CCoins* coins = view.AccessCoins(tx.vin[j].prevout.hash);
-                if (coins == NULL)
-                {
-                    LogPrintf("%s, AccessCoins() failed, no specific coins\n", __func__);
-                    return false;
-                }
-
-                //CTxOut out = view.GetOutputFor(tx.vin[j]);
-                CTxOut out;
-                CAmount val = 0;
-                if (coins->vout.size() > 0)
-                {
-                    out = coins->vout[tx.vin[j].prevout.n];
-                    val = out.nValue;
-                }
-                if (val > maxValue)
-                {
-                    maxValue = val;
-
-                    const CScript script = out.scriptPubKey;
-                    CBitcoinAddress addr;
-                    if (!addr.ScriptPub2Addr(script, bestFather))
-                        return false;
-                }
-            }
-            else
-            {
-                bestFather = father[0];
-                //maxValue =
-            }
-        }
-        for(unsigned int k = 0; k < tx.vreward.size(); k++)
-        {
-            CAmount val = tx.vreward[k].rewardBalance;
-            if (val > maxValue)
-            {
-                maxValue = val;
-
-                const CScript script = CScript() << ParseHex(tx.vreward[k].senderPubkey) << OP_CHECKSIG;
-                CBitcoinAddress addr;
-                if (!addr.ScriptPub2Addr(script, bestFather))
-                    return false;
-            }
+            LogPrintf("%s, GetBestFather() failed\n", __func__);
+            return false;
         }
 
         if (bestFather.compare(" ") == 0)
