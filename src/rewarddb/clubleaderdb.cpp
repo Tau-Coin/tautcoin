@@ -176,6 +176,46 @@ bool CClubLeaderDB::RemoveClubLeader(std::string address, int height)
     return true;
 }
 
+bool CClubLeaderDB::DeleteClubLeader(std::string address, int height)
+{
+    if (height < 0)
+    {
+        return false;
+    }
+
+    std::string key;
+    std::string strHeight;
+    try
+    {
+        strHeight = lexical_cast<std::string>(height);
+    }
+    catch(boost::bad_lexical_cast& e)
+    {
+        LogPrintf("type cast err %s %s\n", __func__, e.what());
+        return false;
+    }
+
+    key = address + "_" + strHeight;
+    std::map<std::string, std::string>::iterator it = cache.find(key);
+    if (it != cache.end())
+    {
+        cache.erase(it);
+    }
+
+    leveldb::Status status = pdb->Delete(leveldb::WriteOptions(),
+            DB_LEADER + KEY_SPERATOR + strHeight + KEY_SPERATOR + address);
+    if(!status.ok() && !status.IsNotFound())
+    {
+        LogPrintf("LevelDB delete failure in clubleader module: %s\n", status.ToString());
+        dbwrapper_private::HandleError(status);
+        return false;
+    }
+
+    return true;
+
+}
+
+
 void CClubLeaderDB::DumpDBCache()
 {
     LogPrintf("dump db cache begin\n");

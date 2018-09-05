@@ -148,7 +148,7 @@ bool CClubInfoDB::DeleteDB(std::string key, int nHeight)
     return true;
 }
 
-CClubInfoDB::CClubInfoDB()
+CClubInfoDB::CClubInfoDB() : currentHeight(-1)
 {
     options.create_if_missing = true;
 
@@ -163,7 +163,7 @@ CClubInfoDB::CClubInfoDB()
     pclubleaderdb = new CClubLeaderDB();
 }
 
-CClubInfoDB::CClubInfoDB(CRewardRateViewDB *prewardratedbview) : _prewardratedbview(prewardratedbview)
+CClubInfoDB::CClubInfoDB(CRewardRateViewDB *prewardratedbview) : _prewardratedbview(prewardratedbview),  currentHeight(-1)
 {
     options.create_if_missing = true;
 
@@ -196,7 +196,7 @@ CRewardRateViewDB* CClubInfoDB::GetRewardRateDBPointer() const
 bool CClubInfoDB::AddressIsValid(string address)
 {
     CBitcoinAddress addr = CBitcoinAddress(address);
-    if (!addr.IsValid() || addr.IsScript())
+    if (!addr.IsValid())
         return false;
     return true;
 }
@@ -385,6 +385,17 @@ bool CClubInfoDB::RemoveClubLeader(std::string address, int height)
 
 
     return pclubleaderdb->RemoveClubLeader(address, height);
+}
+
+bool CClubInfoDB::DeleteClubLeader(std::string address, int height)
+{
+    if (!CClubInfoDB::AddressIsValid(address))
+    {
+        LogPrintf("%s, The input address is : %s, which is not valid\n", __func__, address);
+        return false;
+    }
+
+    return pclubleaderdb->DeleteClubLeader(address, height);
 }
 
 bool CClubInfoDB::GetAllClubLeaders(std::vector<std::string>& leaders, int height)

@@ -2350,6 +2350,8 @@ bool DisconnectBlock(CBlock& block, CValidationState& state, CBlockIndex* pindex
         return error("DisconnectBlock(): block and undo data inconsistent");
 
     // undo transactions in reverse order
+    vector<map<string, CAmount> > vfather_amount;
+    vfather_amount.resize(block.vtx.size());
     for (int i = block.vtx.size() - 1; i >= 0; i--) {
         const CTransaction &tx = block.vtx[i];
         uint256 hash = tx.GetHash();
@@ -2376,6 +2378,7 @@ bool DisconnectBlock(CBlock& block, CValidationState& state, CBlockIndex* pindex
         // restore inputs
         if (i > 0) { // not coinbases
             const CTxUndo &txundo = blockUndo.vtxundo[i-1];
+            map<string, CAmount> father_amount;
             if (txundo.vprevout.size() != tx.vin.size())
                 return error("DisconnectBlock(): transaction and undo data inconsistent");
             for (unsigned int j = tx.vin.size(); j-- > 0;) {
@@ -2383,7 +2386,14 @@ bool DisconnectBlock(CBlock& block, CValidationState& state, CBlockIndex* pindex
                 const CTxInUndo &undo = txundo.vprevout[j];
                 if (!ApplyTxInUndo(undo, view, out))
                     fClean = false;
+
+                CBitcoinAddress addr;
+                string address;
+                if (!addr.ScriptPub2Addr(undo.txout.scriptPubKey, address))
+                    return false;
+                father_amount[address] = undo.txout.nValue;
             }
+            vfather_amount[i] = father_amount;
         }
     }
 
@@ -2391,30 +2401,34 @@ bool DisconnectBlock(CBlock& block, CValidationState& state, CBlockIndex* pindex
     {
         // restore rewards and relationship
         bool isUndo = true;
+        pmemberinfodb->ClearReadCache();
         pmemberinfodb->ClearCache();
         pclubinfodb->ClearCache();
         pclubinfodb->ClearReadCache();
         CAmount nFees = DEFAULT_TRANSACTION_MAXFEE * block.vtx.size();
-        if (!UpdateRewards(block, nFees, pindex->nHeight-1, isUndo))
-            return error("DisconnectBlock(): UpdateRewards failed");
-        for (size_t k = 0; k < block.vtx.size(); k++)
+        if (pmemberinfodb->GetCurrentHeight() == -1)
         {
-            const CTransaction &tx = block.vtx[k];
-            if (!pmemberinfodb->UpdateFatherAndTCByTX(tx, view, pindex->nHeight-1, true))
-                return error("DisconnectBlock(): UpdateFatherAndTCByTX failed");
+            pmemberinfodb->SetCurrentHeight(pindex->nHeight);
+            pclubinfodb->SetCurrentHeight(pindex->nHeight);
         }
+        if (pmemberinfodb->GetCurrentHeight() > pindex->nHeight-1)
+        {
+            if (!UpdateRewards(block, nFees, pindex->nHeight-1, isUndo))
+                return error("DisconnectBlock(): UpdateRewards failed");
+            for (size_t k = 0; k < block.vtx.size(); k++)
+            {
+                const CTransaction &tx = block.vtx[k];
+                if (!pmemberinfodb->UpdateFatherAndTCByTX(tx, view, pindex->nHeight-1, vfather_amount[k], true))
+                    return error("DisconnectBlock(): UpdateFatherAndTCByTX failed");
+            }
+        }
+        pmemberinfodb->SetCurrentHeight(pindex->nHeight-1);
+        pclubinfodb->SetCurrentHeight(pindex->nHeight-1);
         // Clear all cache
+        pmemberinfodb->ClearReadCache();
         pmemberinfodb->ClearCache();
         pclubinfodb->ClearCache();
         pclubinfodb->ClearReadCache();
-        //RewardManager::GetInstance()->currentHeight = pindex->nHeight-1;
-
-//        for (int i = block.vtx.size() - 1; i >= 0; i--) {
-//            const CTransaction &tx = block.vtx[i];
-//            // Restore relationship
-//            if (!pmemberinfodb->UpdateFatherAndTCByTX(tx, view, pindex->nHeight-1, true))
-//                return error("DisconnectBlock(): UpdateFatherAndTCByTX failed");
-//        }
 
         // move best block pointer to prevout block
         view.SetBestBlock(pindex->pprev->GetBlockHash());
@@ -2540,24 +2554,24 @@ bool ConnectBlock(const CBlock& block, CValidationState& state, CBlockIndex* pin
         }
 
         UpdateCoins(block.vtx[0], view, 0);
-        // Write undo information to disk
-        if (pindex->GetUndoPos().IsNull() || !pindex->IsValid(BLOCK_VALID_SCRIPTS))
-        {
-            if (pindex->GetUndoPos().IsNull()) {
-                CDiskBlockPos pos;
-                if (!FindUndoPos(state, pindex->nFile, pos, ::GetSerializeSize(blockundo, SER_DISK, CLIENT_VERSION) + 40))
-                    return error("ConnectBlock(): FindUndoPos failed");
-                if (!UndoWriteToDisk(blockundo, pos, uint256S("0"), chainparams.MessageStart()))
-                    return AbortNode(state, "Failed to write undo data");
+//        // Write undo information to disk
+//        if (pindex->GetUndoPos().IsNull() || !pindex->IsValid(BLOCK_VALID_SCRIPTS))
+//        {
+//            if (pindex->GetUndoPos().IsNull()) {
+//                CDiskBlockPos pos;
+//                if (!FindUndoPos(state, pindex->nFile, pos, ::GetSerializeSize(blockundo, SER_DISK, CLIENT_VERSION) + 40))
+//                    return error("ConnectBlock(): FindUndoPos failed");
+//                if (!UndoWriteToDisk(blockundo, pos, uint256S("0"), chainparams.MessageStart()))
+//                    return AbortNode(state, "Failed to write undo data");
 
-                // update nUndoPos in block index
-                pindex->nUndoPos = pos.nPos;
-                pindex->nStatus |= BLOCK_HAVE_UNDO;
-            }
+//                // update nUndoPos in block index
+//                pindex->nUndoPos = pos.nPos;
+//                pindex->nStatus |= BLOCK_HAVE_UNDO;
+//            }
 
-            pindex->RaiseValidity(BLOCK_VALID_SCRIPTS);
-            setDirtyBlockIndex.insert(pindex);
-        }
+//            pindex->RaiseValidity(BLOCK_VALID_SCRIPTS);
+//            setDirtyBlockIndex.insert(pindex);
+//        }
 
         return true;
     }
@@ -2570,13 +2584,13 @@ bool ConnectBlock(const CBlock& block, CValidationState& state, CBlockIndex* pin
 
     if (!fJustCheck)
     {
-        std::string addrStr;
-        if (!ConvertPubkeyToAddress(block.pubKeyOfpackager, addrStr))
-        {
-            return false;
-        }
-        if (block.harvestPower != pmemberinfodb->GetHarvestPowerByAddress(addrStr, pindex->nHeight - 1))
-                cout<<"=====addrStr: "<<addrStr<<endl;
+//        std::string addrStr;
+//        if (!ConvertPubkeyToAddress(block.pubKeyOfpackager, addrStr))
+//        {
+//            return false;
+//        }
+//        if (block.harvestPower != pmemberinfodb->GetHarvestPowerByAddress(addrStr, pindex->nHeight - 1))
+//                cout<<"=====addrStr: "<<addrStr<<endl;
         if (!CheckBlockHarvestPower(block, state, chainparams.GetConsensus(), pindex->nHeight - 1))
             return error("%s: Check harvest power: %s", __func__, FormatStateMessage(state));
     }
@@ -2691,7 +2705,7 @@ bool ConnectBlock(const CBlock& block, CValidationState& state, CBlockIndex* pin
         {
             if (pclubinfodb->GetCurrentHeight() < pindex->nHeight)
             {
-                if (!pmemberinfodb->UpdateFatherAndTCByTX(tx, view, pindex->nHeight, false))
+                if (!pmemberinfodb->UpdateFatherAndTCByTX(tx, view, pindex->nHeight))
                 {
                     pmemberinfodb->ClearCache();
                     pclubinfodb->ClearCache();

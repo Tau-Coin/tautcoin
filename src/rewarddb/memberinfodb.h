@@ -61,6 +61,8 @@ private:
 
     bool UpdateCachePacker(std::string address, int inputHeight, std::string newPacker, bool isUndo);
 
+    bool UpdateCacheFatherAndPacker(std::string address, int inputHeight, std::string newAddr, bool isUndo);
+
     bool UpdateCacheTcAddOne(std::string address, int inputHeight, bool isUndo);
 
     bool UpdateCacheTtcByChange(std::string address, int nHeight, uint64_t count, bool isAdd, bool isUndo);
@@ -95,6 +97,9 @@ public:
     //! Init the distribution of the reward and check if everything is ok
     bool InitRewardsDist(CAmount memberTotalRewards, const CScript& scriptPubKey, int nHeight, std::string& clubLeaderAddress,
                          CAmount& distributedRewards, std::map<std::string, CAmount>& memberRewards);
+
+    bool GetBestFather(const CTransaction& tx, const CCoinsViewCache &view, std::string& bestFather,
+                       std::map<std::string, CAmount> vin_val=std::map<std::string, CAmount>(), bool isUndo=false);
 
     //! Compute the reward of each member
     bool ComputeMemberReward(const uint64_t& txCnt, const uint64_t& totalTXCnt,
@@ -135,7 +140,8 @@ public:
     bool UpdateRewardsByTX(const CTransaction& tx, CAmount blockReward, int nHeight, bool isUndo);
 
     //! Update the TX count and the father
-    bool UpdateFatherAndTCByTX(const CTransaction& tx, const CCoinsViewCache &view, int nHeight, bool isUndo);
+    bool UpdateFatherAndTCByTX(const CTransaction& tx, const CCoinsViewCache &view, int nHeight,
+                               std::map<std::string, CAmount> vin_val=std::map<std::string, CAmount>(), bool isUndo=false);
 
     //! Update the club leader's distribution rate
     bool RewardRateUpdate(CAmount blockReward, CAmount distributedRewards, std::string clubLeaderAddress, int nHeight);
