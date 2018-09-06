@@ -311,7 +311,7 @@ vector<string> CClubInfoDB::GetTotalMembersByAddress(std::string fatherAddress, 
             members = trieCache.ListAll();
             for(size_t i = 0; i < members.size(); i++)
             {
-                vector<string> childMembers = GetTotalMembersByAddress(members[i], nHeight);
+                vector<string> childMembers = GetTotalMembersByAddress(members[i], nHeight, dbOnly);
                 for(size_t k = 0; k < childMembers.size(); k++)
                     members.push_back(childMembers[k]);
             }
@@ -324,7 +324,7 @@ vector<string> CClubInfoDB::GetTotalMembersByAddress(std::string fatherAddress, 
             members = cacheForRead[fatherAddress];
             for(size_t i = 0; i < members.size(); i++)
             {
-                vector<string> childMembers = GetTotalMembersByAddress(members[i], nHeight);
+                vector<string> childMembers = GetTotalMembersByAddress(members[i], nHeight, dbOnly);
                 for(size_t k = 0; k < childMembers.size(); k++)
                     members.push_back(childMembers[k]);
             }
@@ -343,7 +343,7 @@ vector<string> CClubInfoDB::GetTotalMembersByAddress(std::string fatherAddress, 
             members = trie.ListAll();
             for(size_t i = 0; i < members.size(); i++)
             {
-                vector<string> childMembers = GetTotalMembersByAddress(members[i], nHeight);
+                vector<string> childMembers = GetTotalMembersByAddress(members[i], nHeight, dbOnly);
                 for(size_t k = 0; k < childMembers.size(); k++)
                     members.push_back(childMembers[k]);
             }
