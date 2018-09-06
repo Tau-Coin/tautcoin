@@ -84,7 +84,7 @@ UniValue generateBlocksWithPot(boost::shared_ptr<CReserveScript> coinbaseScript,
          uint64_t baseTarget = getNextPotRequired(prevIndex);
          PotErr error;
 
-         harverstPower = pClubMgr->GetHarvestPowerByAddress(strAddr, nHeight);
+         harverstPower = pClubMgr->GetHarvestPowerByAddress(strAddr, prevIndex->nHeight);
          if (harverstPower <= ClubManager::DEFAULT_HARVEST_POWER)
          {
              LogPrintf("%s harvest power:%d not support mining, stop mining\n", __func__, harverstPower);
