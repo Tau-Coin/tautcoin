@@ -528,6 +528,8 @@ string CMemberInfoDB::GetFullRecord(std::string address, int nHeight)
     if (cacheRecord.find(address) != cacheRecord.end())
     {
         strValue = cacheRecord[address];
+        LogPrint("memberinfo","%s, cache strv:%s, address is: %s, h:%d\n", __func__, strValue,
+            address, nHeight);
         return strValue;
     }
     else
@@ -535,7 +537,11 @@ string CMemberInfoDB::GetFullRecord(std::string address, int nHeight)
         for (int h = nHeight; h >= 0; h--)
         {
             if (ReadDB(address, h, strValue))
+            {
+                LogPrint("memberinfo","%s, db strv:%s, address is: %s, h:%d\n", __func__, strValue,
+                    address, nHeight);
                 return strValue;
+            }
         }
     }
 
@@ -646,6 +652,8 @@ bool CMemberInfoDB::InitRewardsDist(CAmount memberTotalRewards, const CScript& s
         return false;
 
     uint64_t harvestPower = GetHarvestPowerByAddress(clubLeaderAddress, nHeight-1);
+    LogPrint("memberinfo","%s, hp:%d, address is: %s, h:%d\n", __func__, harvestPower,
+        clubLeaderAddress, nHeight);
     vector<string> members = _pclubinfodb->GetTotalMembersByAddress(clubLeaderAddress, nHeight-1);
     for(size_t i = 0; i < members.size(); i++)
     {
@@ -696,6 +704,8 @@ uint64_t CMemberInfoDB::GetHarvestPowerByAddress(std::string address, int nHeigh
     uint64_t ttc = 0;
     CAmount value;
     GetFullRecord(address, nHeight, packer, ft, tc, ttc, value);
+    LogPrint("memberinfo","%s, hp:%d, address is: %s, h:%d\n", __func__, ttc,
+        address, nHeight);
     if ((packer.compare("0") == 0) && (ft.compare("0") == 0))
         return ttc;
     else
