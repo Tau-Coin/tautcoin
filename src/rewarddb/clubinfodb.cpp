@@ -271,9 +271,17 @@ bool CClubInfoDB::UpdateMembersByFatherAddress(std::string fatherAddress, bool a
     TAUAddrTrie::Trie trie;
     trie.BuildTreeFromStr(GetTrieStrByFatherAddress(fatherAddress, nHeight-1));
     if (add)
+    {
         trie.Insert(address);
+        LogPrint("clubinfo", "%s, father: %s, add an address to trie: %s, h:%d\n", __func__, fatherAddress,
+            address, nHeight);
+    }
     else
+    {
         trie.Remove(address);
+        LogPrint("clubinfo", "%s, father: %s, delete an address from trie: %s, h:%d\n", __func__, fatherAddress,
+            address, nHeight);
+    }
     string strUncompressed = "";
     trie.OuputTree(strUncompressed);
     string strCompressed = trie.CompressTrieOutput(strUncompressed);
@@ -313,7 +321,11 @@ vector<string> CClubInfoDB::GetTotalMembersByAddress(std::string fatherAddress, 
             {
                 vector<string> childMembers = GetTotalMembersByAddress(members[i], nHeight, dbOnly);
                 for(size_t k = 0; k < childMembers.size(); k++)
+                {
                     members.push_back(childMembers[k]);
+                    LogPrint("clubinfo", "%s, cache father: %s, get address added: %s, h:%d\n", __func__, members[i],
+                        childMembers[k], nHeight);
+                }
             }
 
             return members;
@@ -326,7 +338,11 @@ vector<string> CClubInfoDB::GetTotalMembersByAddress(std::string fatherAddress, 
             {
                 vector<string> childMembers = GetTotalMembersByAddress(members[i], nHeight, dbOnly);
                 for(size_t k = 0; k < childMembers.size(); k++)
+                {
                     members.push_back(childMembers[k]);
+                    LogPrint("clubinfo", "%s, cacheRead father: %s, get address added: %s, h:%d\n", __func__, members[i],
+                        childMembers[k], nHeight);
+                }
             }
 
             return members;
@@ -345,7 +361,11 @@ vector<string> CClubInfoDB::GetTotalMembersByAddress(std::string fatherAddress, 
             {
                 vector<string> childMembers = GetTotalMembersByAddress(members[i], nHeight, dbOnly);
                 for(size_t k = 0; k < childMembers.size(); k++)
+                {
                     members.push_back(childMembers[k]);
+                    LogPrint("clubinfo", "%s, db father: %s, get address added: %s, h:%d\n", __func__, members[i],
+                        childMembers[k], nHeight);
+                }
             }
 
             return members;
