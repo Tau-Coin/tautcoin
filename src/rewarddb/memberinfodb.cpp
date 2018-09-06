@@ -58,7 +58,7 @@ bool CMemberInfoDB::WriteDB(std::string key, int nHeight, string packer, string 
 bool CMemberInfoDB::ReadDB(std::string key, int nHeight, string &packer, string& father,
                            uint64_t& tc, uint64_t &ttc, CAmount& value, bool dbOnly)
 {
-    if (!dbOnly && (cacheForRead.find(key) != cacheForRead.end()))
+    if (nHeight == currentHeight && !dbOnly && (cacheForRead.find(key) != cacheForRead.end()))
     {
         if (!ParseRecord(cacheForRead[key], packer, father, tc, ttc, value))
             return false;
@@ -90,7 +90,7 @@ bool CMemberInfoDB::ReadDB(std::string key, int nHeight, string &packer, string&
         return false;
     }
 
-    if (!dbOnly)
+    if (nHeight == currentHeight && !dbOnly)
         cacheForRead[key] = strValue;// Add to cache for accelerating
     if (!ParseRecord(strValue, packer, father, tc, ttc, value))
         return false;
@@ -100,7 +100,7 @@ bool CMemberInfoDB::ReadDB(std::string key, int nHeight, string &packer, string&
 
 bool CMemberInfoDB::ReadDB(std::string key, int nHeight, std::string& strValue)
 {
-    if (cacheForRead.find(key) != cacheForRead.end())
+    if (nHeight == currentHeight && cacheForRead.find(key) != cacheForRead.end())
     {
         strValue = cacheForRead[key];
         LogPrint("memberinfo","%s, cache strv:%s, key: %s, h:%d\n", __func__, strValue,
@@ -126,8 +126,8 @@ bool CMemberInfoDB::ReadDB(std::string key, int nHeight, std::string& strValue)
         return false;
     }
 
-
-    cacheForRead[key] = strValue;// Add to cache for accelerating
+    if (nHeight == currentHeight)
+        cacheForRead[key] = strValue;// Add to cache for accelerating
 
     return true;
 }
@@ -654,8 +654,6 @@ bool CMemberInfoDB::InitRewardsDist(CAmount memberTotalRewards, const CScript& s
         return false;
 
     uint64_t harvestPower = GetHarvestPowerByAddress(clubLeaderAddress, nHeight-1);
-    LogPrint("memberinfo","%s, hp:%d, address is: %s, h:%d\n", __func__, harvestPower,
-        clubLeaderAddress, nHeight);
     vector<string> members = _pclubinfodb->GetTotalMembersByAddress(clubLeaderAddress, nHeight-1);
     for(size_t i = 0; i < members.size(); i++)
     {

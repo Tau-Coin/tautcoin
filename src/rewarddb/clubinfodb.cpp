@@ -331,7 +331,7 @@ vector<string> CClubInfoDB::GetTotalMembersByAddress(std::string fatherAddress, 
             return members;
         }
 
-        if (cacheForRead.find(fatherAddress) != cacheForRead.end())
+        if (nHeight == currentHeight && cacheForRead.find(fatherAddress) != cacheForRead.end())
         {
             members = cacheForRead[fatherAddress];
             for(size_t i = 0; i < members.size(); i++)
@@ -377,7 +377,7 @@ vector<string> CClubInfoDB::GetTotalMembersByAddress(std::string fatherAddress, 
         }
     }
 
-    if (!dbOnly)
+    if (nHeight == currentHeight && !dbOnly)
         cacheForRead[fatherAddress] = members;// Add to cache for accelerating
 
     return members;
