@@ -103,6 +103,8 @@ bool CMemberInfoDB::ReadDB(std::string key, int nHeight, std::string& strValue)
     if (cacheForRead.find(key) != cacheForRead.end())
     {
         strValue = cacheForRead[key];
+        LogPrint("memberinfo","%s, cache strv:%s, key: %s, h:%d\n", __func__, strValue,
+                    key, nHeight);
         return true;
     }
 
