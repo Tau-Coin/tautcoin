@@ -2558,8 +2558,6 @@ bool ConnectBlock(const CBlock& block, CValidationState& state, CBlockIndex* pin
         return true;
     }
 
-    clock_t start1 = clock();
-
     int64_t nTimeStart = GetTimeMicros();
 
     // Check it again in case a previous version let a bad block in
