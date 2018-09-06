@@ -189,7 +189,7 @@ bool CMemberInfoDB::UpdateCacheFather(string address, int inputHeight, string ne
     string ftInput = " ";
     uint64_t tc = 0;
     uint64_t ttc = 0;
-    GetFullRecord(address, inputHeight-1, packer, ftInput, tc, ttc, rwdbalance);
+    GetFullRecord(address, inputHeight-1, packer, ftInput, tc, ttc, rwdbalance, true);
     ftInput = newFather;
     string newRecordInput = " ";//GenerateRecord(packer, ftInput, tc, ttc, rwdbalance);
     if (!GenerateRecord(packer, ftInput, tc, ttc, rwdbalance, newRecordInput))
@@ -231,7 +231,7 @@ bool CMemberInfoDB::UpdateCacheFatherAndPacker(string address, int inputHeight, 
     string ftInput = " ";
     uint64_t tc = 0;
     uint64_t ttc = 0;
-    GetFullRecord(address, inputHeight-1, packerInput, ftInput, tc, ttc, rwdbalance);
+    GetFullRecord(address, inputHeight-1, packerInput, ftInput, tc, ttc, rwdbalance, true);
     ftInput = newAddr;
     packerInput = newAddr;
     string newRecordInput = " ";
@@ -274,7 +274,7 @@ bool CMemberInfoDB::UpdateCachePacker(std::string address, int inputHeight, std:
     string ft = " ";
     uint64_t tc = 0;
     uint64_t ttc = 0;
-    GetFullRecord(address, inputHeight-1, packerInput, ft, tc, ttc, rwdbalance);
+    GetFullRecord(address, inputHeight-1, packerInput, ft, tc, ttc, rwdbalance, true);
     packerInput = newPacker;
     string newRecordInput = " ";//GenerateRecord(packerInput, ft, tc, ttc, rwdbalance);
     if (!GenerateRecord(packerInput, ft, tc, ttc, rwdbalance, newRecordInput))
@@ -308,7 +308,7 @@ bool CMemberInfoDB::UpdateCacheTcAddOne(string address, int inputHeight, bool is
     string ft = " ";
     uint64_t tcVout = 0;
     uint64_t ttc = 0;
-    GetFullRecord(address, inputHeight-1, packer, ft, tcVout, ttc, rwdbalance);
+    GetFullRecord(address, inputHeight-1, packer, ft, tcVout, ttc, rwdbalance, true);
     tcVout++;
     string newRecordVout = " ";//GenerateRecord(packer, ft, tcVout, ttc, rwdbalance);
     if (!GenerateRecord(packer, ft, tcVout, ttc, rwdbalance, newRecordVout))
@@ -342,7 +342,7 @@ bool CMemberInfoDB::UpdateCacheRewardChange(string address, int inputHeight, CAm
     string ft = " ";
     uint64_t tc = 0;
     uint64_t ttc = 0;
-    GetFullRecord(address, inputHeight-1, packer, ft, tc, ttc, rewardbalance_old);
+    GetFullRecord(address, inputHeight-1, packer, ft, tc, ttc, rewardbalance_old, true);
     CAmount newValue = rewardbalance_old + rewardChange;
     string newRecord = " ";
     if (!GenerateRecord(packer, ft, tc, ttc, newValue, newRecord))
@@ -380,7 +380,6 @@ void CMemberInfoDB::SetCurrentHeight(int nHeight)
 {
     currentHeight = nHeight;
 }
-
 
 int CMemberInfoDB::GetCurrentHeight() const
 {
@@ -450,67 +449,67 @@ bool CMemberInfoDB::GenerateRecord(string packer, string father, uint64_t tc, ui
     return true;
 }
 
-string CMemberInfoDB::GetPacker(string address, int nHeight)
+string CMemberInfoDB::GetPacker(string address, int nHeight, bool isConnecting)
 {
     string packer = " ";
     string ft = " ";
     uint64_t tc = 0;
     uint64_t ttc = 0;
     CAmount value;
-    GetFullRecord(address, nHeight, packer, ft, tc, ttc, value);
+    GetFullRecord(address, nHeight, packer, ft, tc, ttc, value, isConnecting);
     return packer;
 }
 
-string CMemberInfoDB::GetFather(string address, int nHeight)
+string CMemberInfoDB::GetFather(string address, int nHeight, bool isConnecting)
 {
     string packer = " ";
     string ft = " ";
     uint64_t tc = 0;
     uint64_t ttc = 0;
     CAmount value;
-    GetFullRecord(address, nHeight, packer, ft, tc, ttc, value);
+    GetFullRecord(address, nHeight, packer, ft, tc, ttc, value, isConnecting);
     return ft;
 }
 
-uint64_t CMemberInfoDB::GetTXCnt(string address, int nHeight)
+uint64_t CMemberInfoDB::GetTXCnt(string address, int nHeight, bool isConnecting)
 {
     string packer = " ";
     string ft = " ";
     uint64_t tc = 0;
     uint64_t ttc = 0;
     CAmount value;
-    GetFullRecord(address, nHeight, packer, ft, tc, ttc, value);
+    GetFullRecord(address, nHeight, packer, ft, tc, ttc, value, isConnecting);
     return tc;
 }
 
-uint64_t CMemberInfoDB::GetTotalTXCnt(string address, int nHeight)
+uint64_t CMemberInfoDB::GetTotalTXCnt(string address, int nHeight, bool isConnecting)
 {
     string packer = " ";
     string ft = " ";
     uint64_t tc = 0;
     uint64_t ttc = 0;
     CAmount value;
-    GetFullRecord(address, nHeight, packer, ft, tc, ttc, value);
+    GetFullRecord(address, nHeight, packer, ft, tc, ttc, value, isConnecting);
     return ttc;
 }
 
-CAmount CMemberInfoDB::GetRwdBalance(std::string address, int nHeight)
+CAmount CMemberInfoDB::GetRwdBalance(std::string address, int nHeight, bool isConnecting)
 {
     string packer = " ";
     string ft = " ";
     uint64_t tc = 0;
     uint64_t ttc = 0;
     CAmount value;
-    GetFullRecord(address, nHeight, packer, ft, tc, ttc, value);
+    GetFullRecord(address, nHeight, packer, ft, tc, ttc, value, isConnecting);
     return value;
 }
 
 void CMemberInfoDB::GetFullRecord(string address, int nHeight, string& packer, string& father,
-                                  uint64_t& tc, uint64_t& ttc, CAmount& value, bool dbOnly)
+                                  uint64_t& tc, uint64_t& ttc, CAmount& value, bool isConnecting, bool dbOnly)
 {
     if (!dbOnly)
     {
-        if (cacheRecord.find(address) != cacheRecord.end())
+        if (isConnecting && (cacheRecord.find(address) != cacheRecord.end()))
         {
             ParseRecord(cacheRecord[address], packer, father, tc, ttc, value);
             return;
@@ -524,10 +523,10 @@ void CMemberInfoDB::GetFullRecord(string address, int nHeight, string& packer, s
     }
 }
 
-string CMemberInfoDB::GetFullRecord(std::string address, int nHeight)
+string CMemberInfoDB::GetFullRecord(std::string address, int nHeight, bool isConnecting)
 {
     string strValue;
-    if (cacheRecord.find(address) != cacheRecord.end())
+    if (isConnecting && (cacheRecord.find(address) != cacheRecord.end()))
     {
         strValue = cacheRecord[address];
         LogPrint("memberinfo","%s, cache strv:%s, address is: %s, h:%d\n", __func__, strValue,
@@ -653,14 +652,14 @@ bool CMemberInfoDB::InitRewardsDist(CAmount memberTotalRewards, const CScript& s
     if (!addr.ScriptPub2Addr(scriptPubKey, clubLeaderAddress))
         return false;
 
-    uint64_t harvestPower = GetHarvestPowerByAddress(clubLeaderAddress, nHeight-1);
-    vector<string> members = _pclubinfodb->GetTotalMembersByAddress(clubLeaderAddress, nHeight-1);
+    uint64_t harvestPower = GetHarvestPowerByAddress(clubLeaderAddress, nHeight-1, true);
+    vector<string> members = _pclubinfodb->GetTotalMembersByAddress(clubLeaderAddress, nHeight-1, true);
     for(size_t i = 0; i < members.size(); i++)
     {
-        uint64_t tXCnt = GetTXCnt(members[i], nHeight-1);
+        uint64_t tXCnt = GetTXCnt(members[i], nHeight-1, true);
         addrToTC.insert(pair<string, uint64_t>(members[i], tXCnt));
     }
-    totalmemberTXCnt = harvestPower - GetTXCnt(clubLeaderAddress, nHeight-1);
+    totalmemberTXCnt = harvestPower - GetTXCnt(clubLeaderAddress, nHeight-1, true);
 
     distributedRewards = 0;
     if (totalmemberTXCnt > 0)
@@ -690,7 +689,7 @@ bool CMemberInfoDB::InitRewardsDist(CAmount memberTotalRewards, const CScript& s
     return true;
 }
 
-uint64_t CMemberInfoDB::GetHarvestPowerByAddress(std::string address, int nHeight)
+uint64_t CMemberInfoDB::GetHarvestPowerByAddress(std::string address, int nHeight, bool isConnecting)
 {
     if (!CClubInfoDB::AddressIsValid(address))
     {
@@ -703,7 +702,7 @@ uint64_t CMemberInfoDB::GetHarvestPowerByAddress(std::string address, int nHeigh
     uint64_t tc = 0;
     uint64_t ttc = 0;
     CAmount value;
-    GetFullRecord(address, nHeight, packer, ft, tc, ttc, value);
+    GetFullRecord(address, nHeight, packer, ft, tc, ttc, value, isConnecting);
     LogPrint("memberinfo","%s, hp:%d, address is: %s, h:%d\n", __func__, ttc,
         address, nHeight);
     if ((packer.compare("0") == 0) && (ft.compare("0") == 0))
@@ -732,7 +731,7 @@ bool CMemberInfoDB::UpdateRewardsByTX(const CTransaction& tx, CAmount blockRewar
         string clubLeaderAddress;
         if (!addr.ScriptPub2Addr(tx.vout[0].scriptPubKey, clubLeaderAddress))
             return false;
-        vector<string> members = _pclubinfodb->GetTotalMembersByAddress(clubLeaderAddress, nHeight);
+        vector<string> members = _pclubinfodb->GetTotalMembersByAddress(clubLeaderAddress, nHeight, true);
         for(size_t i = 0; i < members.size(); i++)
             ret &= RewardChangeUpdate(0, members[i], nHeight, isUndo);
         return ret;
@@ -784,10 +783,10 @@ bool CMemberInfoDB::EntrustByAddress(string inputAddr, string voutAddress, int n
         nHeightQuery = nHeight-1;
     else
         nHeightQuery = nHeight;
-    fatherOfVin = GetFather(inputAddr, nHeightQuery);
-    packerOfVin = GetPacker(inputAddr, nHeightQuery);
-    fatherOfVout = GetFather(voutAddress, nHeightQuery);
-    packerOfVout = GetPacker(voutAddress, nHeightQuery);
+    fatherOfVin = GetFather(inputAddr, nHeightQuery, true);
+    packerOfVin = GetPacker(inputAddr, nHeightQuery, true);
+    fatherOfVout = GetFather(voutAddress, nHeightQuery, true);
+    packerOfVout = GetPacker(voutAddress, nHeightQuery, true);
 
     string newPackerAddr = voutAddress;
     // The address is a new one on the chain
@@ -847,8 +846,8 @@ bool CMemberInfoDB::EntrustByAddress(string inputAddr, string voutAddress, int n
     if (changeRelationship)
     {
         // Compute the ttc of the vin address and update the packer of the these members
-        vector<string> totalMembers = _pclubinfodb->GetTotalMembersByAddress(inputAddr, nHeightQuery);
-        uint64_t ttcOfVin = GetTXCnt(inputAddr, nHeightQuery);
+        vector<string> totalMembers = _pclubinfodb->GetTotalMembersByAddress(inputAddr, nHeightQuery, true);
+        uint64_t ttcOfVin = GetTXCnt(inputAddr, nHeightQuery, true);
         for(size_t i = 0; i < totalMembers.size(); i++)
         {
             CAmount rwdbalance = 0;
@@ -856,7 +855,7 @@ bool CMemberInfoDB::EntrustByAddress(string inputAddr, string voutAddress, int n
             string ft = " ";
             uint64_t tc = 0;
             uint64_t ttc = 0;
-            GetFullRecord(totalMembers[i], nHeightQuery, packerInput, ft, tc, ttc, rwdbalance);
+            GetFullRecord(totalMembers[i], nHeightQuery, packerInput, ft, tc, ttc, rwdbalance, true);
             packerInput = voutAddress;
             string newRecordInput = " ";
             if (!GenerateRecord(packerInput, ft, tc, ttc, rwdbalance, newRecordInput))
@@ -903,7 +902,7 @@ bool CMemberInfoDB::EntrustByAddress(string inputAddr, string voutAddress, int n
     // TX count add one, including vout address and packer of vout
     if (!UpdateCacheTcAddOne(voutAddress, nHeight, isUndo))
         return false;
-    string newPackerOfVout = GetPacker(voutAddress, nHeight);
+    string newPackerOfVout = GetPacker(voutAddress, nHeight, true);
     if (newPackerOfVout.compare("0") != 0)
     {
         if (!UpdateCacheTtcByChange(packerOfVout, nHeight, 1, true, isUndo))
@@ -938,7 +937,7 @@ bool CMemberInfoDB::UpdateCacheTtcByChange(std::string address, int nHeight, uin
     uint64_t tc = 0;
     uint64_t ttcInput = 0;
     CAmount rewardbalance = 0;
-    GetFullRecord(address, nHeight-1, packer, ft, tc, ttcInput, rewardbalance);
+    GetFullRecord(address, nHeight-1, packer, ft, tc, ttcInput, rewardbalance, true);
     if (isAdd)
         ttcInput += count;
     else
@@ -989,7 +988,7 @@ bool CMemberInfoDB::UpdateTcAndTtcByAddress(string address, int nHeight, string 
     uint64_t ttc = 0;
     bool addressUpdated = false;
     if (!isUndo)
-        GetFullRecord(address, nHeight-1, packer, ft, tc, ttc, rewardbalance);
+        GetFullRecord(address, nHeight-1, packer, ft, tc, ttc, rewardbalance, true);
     else
         GetFullRecord(address, nHeight, packer, ft, tc, ttc, rewardbalance);
     if ((ft.compare(" ") == 0) && (packer.compare(" ") == 0))
@@ -1002,7 +1001,7 @@ bool CMemberInfoDB::UpdateTcAndTtcByAddress(string address, int nHeight, string 
         // Update packer
         string packerOfFather;
         if (!isUndo)
-            packerOfFather = GetPacker(father, nHeight-1);
+            packerOfFather = GetPacker(father, nHeight-1, true);
         else
             packerOfFather = GetPacker(father, nHeight);
 
@@ -1041,7 +1040,7 @@ bool CMemberInfoDB::UpdateTcAndTtcByAddress(string address, int nHeight, string 
 
     // Tc of the address add one
     if (addressUpdated)
-        GetFullRecord(address, nHeight-1, packer, ft, tc, ttc, rewardbalance);
+        GetFullRecord(address, nHeight-1, packer, ft, tc, ttc, rewardbalance, true);
     tc++;
 
     // Update cache

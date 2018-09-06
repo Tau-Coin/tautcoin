@@ -151,7 +151,7 @@ UniValue dumpclubmembers(const UniValue& params, bool fHelp)
         std::string dummyStr;
         uint64_t dummyInt;
         CAmount  dummyValue;
-        pmemberinfodb->GetFullRecord(address, height, dummyStr, dummyStr, dummyInt, ttc, dummyValue, true);
+        pmemberinfodb->GetFullRecord(address, height, dummyStr, dummyStr, dummyInt, ttc, dummyValue, false, true);
         totalTTC += ttc;
         file << i + 1 << "\t\t" << address << "\t" << ttc << "\n";
     }
@@ -176,7 +176,7 @@ UniValue dumpclubmembers(const UniValue& params, bool fHelp)
         std::string dummyStr;
         uint64_t dummyInt;
         CAmount  dummyValue;
-        pmemberinfodb->GetFullRecord(address, height, dummyStr, dummyStr, dummyInt, ttcleader, dummyValue, true);
+        pmemberinfodb->GetFullRecord(address, height, dummyStr, dummyStr, dummyInt, ttcleader, dummyValue, false, true);
         file << i << " club:" << address << ", ttc:" << ttcleader << "\n";
         file << "\t" << "index\t" << "address\t\t\t\t\t\t\t\t" << "packer\t" << "father\t"
              << "tc\t" << "reward" << "\n";
@@ -190,7 +190,7 @@ UniValue dumpclubmembers(const UniValue& params, bool fHelp)
 
         int j = 1;
 
-        pmemberinfodb->GetFullRecord(address, height, packer, father, tc, ttc, value, true);
+        pmemberinfodb->GetFullRecord(address, height, packer, father, tc, ttc, value, false, true);
         file << "\t" << j <<"\t\t" << address <<"\t" << packer <<"\t\t" << father << "\t\t"
              << tc << "\t\t" << value << "\n";
         itTC += tc;
@@ -198,11 +198,11 @@ UniValue dumpclubmembers(const UniValue& params, bool fHelp)
         j++;
 
         std::vector<std::string> members
-            = pclubinfodb->GetTotalMembersByAddress(address, height, true);
+            = pclubinfodb->GetTotalMembersByAddress(address, height, false, true);
         for (std::vector<std::string>::iterator itr = members.begin();
             itr != members.end(); itr++, j++)
         {
-            pmemberinfodb->GetFullRecord(*itr, height, packer, father, tc, ttc, value, true);
+            pmemberinfodb->GetFullRecord(*itr, height, packer, father, tc, ttc, value, false, true);
             file << "\t" << j <<"\t\t" << *itr <<"\t" << packer <<"\t\t" << father << "\t\t"
                 << tc << "\t\t" << value << "\n";
             itTC += tc;

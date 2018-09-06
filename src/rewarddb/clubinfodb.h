@@ -109,10 +109,11 @@ public:
                                       int nHeight, bool isUndo);
 
     //! Retrieve the merbers' addresses in type of trie
-    std::string GetTrieStrByFatherAddress(std::string fatherAddress, int nHeight);
+    std::string GetTrieStrByFatherAddress(std::string fatherAddress, int nHeight, bool isConnecting=false);
 
     //! Retrieve the merbers' addresses
-    std::vector<std::string> GetTotalMembersByAddress(std::string fatherAddress, int nHeight, bool dbOnly=false);
+    std::vector<std::string> GetTotalMembersByAddress(std::string fatherAddress, int nHeight,
+                                                      bool isConnecting=false, bool dbOnly=false);
 
     //! Add club leader
     bool AddClubLeader(std::string address, int height);
