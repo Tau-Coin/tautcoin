@@ -2554,24 +2554,6 @@ bool ConnectBlock(const CBlock& block, CValidationState& state, CBlockIndex* pin
         }
 
         UpdateCoins(block.vtx[0], view, 0);
-//        // Write undo information to disk
-//        if (pindex->GetUndoPos().IsNull() || !pindex->IsValid(BLOCK_VALID_SCRIPTS))
-//        {
-//            if (pindex->GetUndoPos().IsNull()) {
-//                CDiskBlockPos pos;
-//                if (!FindUndoPos(state, pindex->nFile, pos, ::GetSerializeSize(blockundo, SER_DISK, CLIENT_VERSION) + 40))
-//                    return error("ConnectBlock(): FindUndoPos failed");
-//                if (!UndoWriteToDisk(blockundo, pos, uint256S("0"), chainparams.MessageStart()))
-//                    return AbortNode(state, "Failed to write undo data");
-
-//                // update nUndoPos in block index
-//                pindex->nUndoPos = pos.nPos;
-//                pindex->nStatus |= BLOCK_HAVE_UNDO;
-//            }
-
-//            pindex->RaiseValidity(BLOCK_VALID_SCRIPTS);
-//            setDirtyBlockIndex.insert(pindex);
-//        }
 
         return true;
     }
@@ -2586,13 +2568,6 @@ bool ConnectBlock(const CBlock& block, CValidationState& state, CBlockIndex* pin
 
     if (!fJustCheck)
     {
-//        std::string addrStr;
-//        if (!ConvertPubkeyToAddress(block.pubKeyOfpackager, addrStr))
-//        {
-//            return false;
-//        }
-//        if (block.harvestPower != pmemberinfodb->GetHarvestPowerByAddress(addrStr, pindex->nHeight - 1))
-//                cout<<"=====addrStr: "<<addrStr<<endl;
         if (!CheckBlockHarvestPower(block, state, pindex->nHeight - 1))
             return error("%s: Check harvest power: %s", __func__, FormatStateMessage(state));
     }
