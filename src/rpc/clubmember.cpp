@@ -350,28 +350,28 @@ UniValue getmemberinfo(const UniValue& params, bool fHelp)
 
     std::string leader;
     std::string father;
-    uint64_t personMP;
-    uint64_t leaderMP;
+    uint64_t selfMP;
+    uint64_t clubMP;
     CAmount rewards;
-    uint64_t miningpower;
-    pmemberinfodb->GetFullRecord(addrStr, height, leader, father, personMP, leaderMP, rewards, true);
+    pmemberinfodb->GetFullRecord(addrStr, height, leader, father, selfMP, clubMP, rewards, true);
 
     // In this case, addrStr is a mining club leader
     if (leader.compare("0") == 0 && father.compare("0") == 0)
     {
-        miningpower = leaderMP;
         leader = addrStr;
+        father = addrStr;
     }
     else
     {
-        miningpower = personMP;
+        clubMP = pmemberinfodb->GetHarvestPowerByAddress(leader, height);
     }
 
     UniValue result(UniValue::VOBJ);
     result.push_back(Pair("address", addrStr));
     result.push_back(Pair("height", height));
     result.push_back(Pair("clubleader", leader));
-    result.push_back(Pair("miningpower", miningpower));
+    result.push_back(Pair("clubpower", clubMP));
+    result.push_back(Pair("selfpower", selfMP));
     result.push_back(Pair("father", father));
     result.push_back(Pair("rewards", rewards));
 
