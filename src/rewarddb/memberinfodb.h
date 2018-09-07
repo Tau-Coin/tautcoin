@@ -15,6 +15,8 @@
 #include <utility>
 #include <vector>
 
+extern CCriticalSection cs_memberinfo;
+
 /** View on the reward balance dataset. */
 #define MEMBERINFODBPATH "/memberinfo"
 class CMemberInfoDB
@@ -114,27 +116,27 @@ public:
                         CAmount value, std::string& outputStr) const;
 
     //! Retrieve the packer for a given address
-    std::string GetPacker(std::string address, int nHeight, bool isConnecting=false);
+    std::string GetPacker(std::string address, int nHeight);
 
     //! Retrieve the father for a given address
-    std::string GetFather(std::string address, int nHeight, bool isConnecting=false);
+    std::string GetFather(std::string address, int nHeight);
 
     //! Retrieve the transaction count for a given address
-    uint64_t GetTXCnt(std::string address, int nHeight, bool isConnecting=false);
+    uint64_t GetTXCnt(std::string address, int nHeight);
 
     //! Retrieve the whole club's TX count where a given address in
-    uint64_t GetTotalTXCnt(std::string address, int nHeight, bool isConnecting=false);
+    uint64_t GetTotalTXCnt(std::string address, int nHeight);
 
     //! Retrieve the reward balance for a given address
-    CAmount GetRwdBalance(std::string address, int nHeight, bool isConnecting=false);
+    CAmount GetRwdBalance(std::string address, int nHeight);
 
     //! Retrieve a full record for a given address
     void GetFullRecord(std::string address, int nHeight, std::string &packer, std::string& father,
-                       uint64_t& tc, uint64_t &ttc, CAmount& value, bool isConnecting=false, bool dbOnly=false);
-    std::string GetFullRecord(std::string address, int nHeight, bool isConnecting=false);
+                       uint64_t& tc, uint64_t &ttc, CAmount& value, bool dbOnly=false);
+    std::string GetFullRecord(std::string address, int nHeight);
 
     //! Retrieve the harvest power for a given address if it's a miner
-    uint64_t GetHarvestPowerByAddress(std::string address, int nHeight, bool isConnecting=false);
+    uint64_t GetHarvestPowerByAddress(std::string address, int nHeight);
 
     //! Update the Balance dataset
     bool UpdateRewardsByTX(const CTransaction& tx, CAmount blockReward, int nHeight, bool isUndo);

@@ -1,7 +1,7 @@
 #include "addrtrie.h"
 #include "clubinfodb.h"
 
-CCriticalSection cs_cacheclub;
+CCriticalSection cs_clubinfo;
 
 using namespace std;
 
@@ -243,6 +243,7 @@ void CClubInfoDB::SetCurrentHeight(int nHeight)
     currentHeight = nHeight;
 }
 
+
 int CClubInfoDB::GetCurrentHeight() const
 {
     return currentHeight;
@@ -270,7 +271,7 @@ bool CClubInfoDB::UpdateMembersByFatherAddress(std::string fatherAddress, bool a
     }
 
     TAUAddrTrie::Trie trie;
-    trie.BuildTreeFromStr(GetTrieStrByFatherAddress(fatherAddress, nHeight-1, true));
+    trie.BuildTreeFromStr(GetTrieStrByFatherAddress(fatherAddress, nHeight-1));
     if (add)
     {
         trie.Insert(address);
@@ -291,9 +292,10 @@ bool CClubInfoDB::UpdateMembersByFatherAddress(std::string fatherAddress, bool a
     return true;
 }
 
-string CClubInfoDB::GetTrieStrByFatherAddress(std::string fatherAddress, int nHeight, bool isConnecting)
+string CClubInfoDB::GetTrieStrByFatherAddress(std::string fatherAddress, int nHeight)
 {
-    if (isConnecting && (cacheRecord.find(fatherAddress) != cacheRecord.end()))
+    TRY_LOCK(cs_clubinfo, cachelock);
+    if (cachelock && (cacheRecord.find(fatherAddress) != cacheRecord.end()))
         return cacheRecord[fatherAddress];
     else
     {
@@ -308,20 +310,20 @@ string CClubInfoDB::GetTrieStrByFatherAddress(std::string fatherAddress, int nHe
     return "";
 }
 
-vector<string> CClubInfoDB::GetTotalMembersByAddress(std::string fatherAddress, int nHeight,
-                                                     bool isConnecting, bool dbOnly)
+vector<string> CClubInfoDB::GetTotalMembersByAddress(std::string fatherAddress, int nHeight, bool dbOnly)
 {
     vector<string> members;
     if (!dbOnly)
     {
-        if (isConnecting && (cacheRecord.find(fatherAddress) != cacheRecord.end()))
+        TRY_LOCK(cs_clubinfo, cachelock);
+        if (cachelock && (cacheRecord.find(fatherAddress) != cacheRecord.end()))
         {
             TAUAddrTrie::Trie trieCache;
             trieCache.BuildTreeFromStr(cacheRecord[fatherAddress]);
             members = trieCache.ListAll();
             for(size_t i = 0; i < members.size(); i++)
             {
-                vector<string> childMembers = GetTotalMembersByAddress(members[i], nHeight, isConnecting, dbOnly);
+                vector<string> childMembers = GetTotalMembersByAddress(members[i], nHeight, dbOnly);
                 for(size_t k = 0; k < childMembers.size(); k++)
                 {
                     members.push_back(childMembers[k]);
@@ -338,7 +340,7 @@ vector<string> CClubInfoDB::GetTotalMembersByAddress(std::string fatherAddress, 
             members = cacheForRead[fatherAddress];
             for(size_t i = 0; i < members.size(); i++)
             {
-                vector<string> childMembers = GetTotalMembersByAddress(members[i], nHeight, isConnecting, dbOnly);
+                vector<string> childMembers = GetTotalMembersByAddress(members[i], nHeight, dbOnly);
                 for(size_t k = 0; k < childMembers.size(); k++)
                 {
                     members.push_back(childMembers[k]);
@@ -361,7 +363,7 @@ vector<string> CClubInfoDB::GetTotalMembersByAddress(std::string fatherAddress, 
             members = trie.ListAll();
             for(size_t i = 0; i < members.size(); i++)
             {
-                vector<string> childMembers = GetTotalMembersByAddress(members[i], nHeight, isConnecting, dbOnly);
+                vector<string> childMembers = GetTotalMembersByAddress(members[i], nHeight, dbOnly);
                 for(size_t k = 0; k < childMembers.size(); k++)
                 {
                     members.push_back(childMembers[k]);
