@@ -2681,8 +2681,10 @@ bool ConnectBlock(const CBlock& block, CValidationState& state, CBlockIndex* pin
             {
                 if (!pmemberinfodb->UpdateFatherAndTCByTX(tx, view, pindex->nHeight))
                 {
+                    pmemberinfodb->ClearReadCache();
                     pmemberinfodb->ClearCache();
                     pclubinfodb->ClearCache();
+                    pclubinfodb->ClearReadCache();
                     return error("ConnectBlock(): UpdateFatherAndTC failed");
                 }
             }
@@ -2760,8 +2762,10 @@ bool ConnectBlock(const CBlock& block, CValidationState& state, CBlockIndex* pin
         // Update rewards
         if (!UpdateRewards(block, nFees, pindex->nHeight))
         {
+            pmemberinfodb->ClearReadCache();
             pmemberinfodb->ClearCache();
             pclubinfodb->ClearCache();
+            pclubinfodb->ClearReadCache();
             return error("ConnectBlock(): UpdateRewards failed");
         }
 
