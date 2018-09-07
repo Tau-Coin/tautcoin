@@ -1,5 +1,6 @@
 #include "addrtrie.h"
 #include "clubinfodb.h"
+#include <time.h>
 
 CCriticalSection cs_clubinfo;
 
@@ -230,7 +231,7 @@ bool CClubInfoDB::Commit(int nHeight)
 
         // Add to cache for accelerating
         TAUAddrTrie::Trie trie;
-        trie.BuildTreeFromStr(strValue);
+        trie.BuildTreeFromStr(strValue, true);
         vector<string> members = trie.ListAll();
         cacheForRead[address] = members;
     }
@@ -252,6 +253,8 @@ int CClubInfoDB::GetCurrentHeight() const
 bool CClubInfoDB::UpdateMembersByFatherAddress(std::string fatherAddress, bool add, std::string address,
                                                int nHeight, bool isUndo)
 {
+    std::clock_t start, stop;
+    start = clock();
     if (!CClubInfoDB::AddressIsValid(fatherAddress))
     {
         LogPrintf("%s, The input address is : %s, which is not valid\n", __func__, fatherAddress);
@@ -271,7 +274,7 @@ bool CClubInfoDB::UpdateMembersByFatherAddress(std::string fatherAddress, bool a
     }
 
     TAUAddrTrie::Trie trie;
-    trie.BuildTreeFromStr(GetTrieStrByFatherAddress(fatherAddress, nHeight-1));
+    trie.BuildTreeFromStr(GetTrieStrByFatherAddress(fatherAddress, nHeight-1), true);
     if (add)
     {
         trie.Insert(address);
@@ -286,8 +289,14 @@ bool CClubInfoDB::UpdateMembersByFatherAddress(std::string fatherAddress, bool a
     }
     string strUncompressed = "";
     trie.OuputTree(strUncompressed);
-    string strCompressed = trie.CompressTrieOutput(strUncompressed);
-    cacheRecord[fatherAddress] = strCompressed;
+    //string strCompressed = trie.CompressTrieOutput(strUncompressed);
+    cacheRecord[fatherAddress] = strUncompressed;
+
+    stop = clock();
+    double t6 = (double)(stop - start) / CLOCKS_PER_SEC;
+    if (t6 > 0.01)
+        cout<<"=====UpdateMembersByFatherAddress_t6: "<<t6<<endl;
+    start = clock();
 
     return true;
 }
@@ -319,7 +328,7 @@ vector<string> CClubInfoDB::GetTotalMembersByAddress(std::string fatherAddress, 
         if (cachelock && (cacheRecord.find(fatherAddress) != cacheRecord.end()))
         {
             TAUAddrTrie::Trie trieCache;
-            trieCache.BuildTreeFromStr(cacheRecord[fatherAddress]);
+            trieCache.BuildTreeFromStr(cacheRecord[fatherAddress], true);
             members = trieCache.ListAll();
             for(size_t i = 0; i < members.size(); i++)
             {
@@ -359,7 +368,7 @@ vector<string> CClubInfoDB::GetTotalMembersByAddress(std::string fatherAddress, 
         string strCompressed;
         if (ReadDB(fatherAddress, h, strCompressed))
         {
-            trie.BuildTreeFromStr(strCompressed);
+            trie.BuildTreeFromStr(strCompressed, true);
             members = trie.ListAll();
             for(size_t i = 0; i < members.size(); i++)
             {
