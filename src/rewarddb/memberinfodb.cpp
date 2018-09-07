@@ -1173,7 +1173,7 @@ bool CMemberInfoDB::UpdateFatherAndTCByTX(const CTransaction& tx, const CCoinsVi
             string voutAddress = CBitcoinAddress(dst).ToString();
             CBitcoinAddress addrVout = CBitcoinAddress(voutAddress);
             if (addrVout.IsScript())
-                return true;
+                continue;
 
             if (tx.vout[i].nValue == 0)
             {
