@@ -2418,8 +2418,8 @@ bool DisconnectBlock(CBlock& block, CValidationState& state, CBlockIndex* pindex
             for (size_t k = 0; k < block.vtx.size(); k++)
             {
                 const CTransaction &tx = block.vtx[k];
-                if (!pmemberinfodb->UpdateFatherAndTCByTX(tx, view, pindex->nHeight-1, vfather_amount[k], true))
-                    return error("DisconnectBlock(): UpdateFatherAndTCByTX failed");
+                if (!pmemberinfodb->UpdateFatherAndMpByTX(tx, view, pindex->nHeight-1, vfather_amount[k], true))
+                    return error("DisconnectBlock(): UpdateFatherAndMpByTX failed");
             }
         }
         pmemberinfodb->SetCurrentHeight(pindex->nHeight-1);
@@ -2679,13 +2679,13 @@ bool ConnectBlock(const CBlock& block, CValidationState& state, CBlockIndex* pin
         {
             if (pclubinfodb->GetCurrentHeight() < pindex->nHeight)
             {
-                if (!pmemberinfodb->UpdateFatherAndTCByTX(tx, view, pindex->nHeight))
+                if (!pmemberinfodb->UpdateFatherAndMpByTX(tx, view, pindex->nHeight))
                 {
                     pmemberinfodb->ClearReadCache();
                     pmemberinfodb->ClearCache();
                     pclubinfodb->ClearCache();
                     pclubinfodb->ClearReadCache();
-                    return error("ConnectBlock(): UpdateFatherAndTC failed");
+                    return error("ConnectBlock(): UpdateFatherAndMp failed");
                 }
             }
         }

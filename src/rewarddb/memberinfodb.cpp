@@ -45,24 +45,24 @@ bool CMemberInfoDB::WriteDB(std::string key, int nHeight, string strValue)
 }
 
 bool CMemberInfoDB::WriteDB(std::string key, int nHeight, string packer, string father,
-                            uint64_t tc, uint64_t ttc, CAmount value)
+                            uint64_t mp, uint64_t tmp, CAmount value)
 {
     string newRecord = " ";
-    if (!GenerateRecord(packer, father, tc, ttc, value, newRecord))
+    if (!GenerateRecord(packer, father, mp, tmp, value, newRecord))
     {
-        LogPrintf("%s, GenerateRecord error, packer: %s, father: %s, tc: %d, ttc: %d, rwdbal: %d\n",
-                  __func__, packer, father, tc, ttc, value);
+        LogPrintf("%s, GenerateRecord error, packer: %s, father: %s, mp: %d, tmp: %d, rwdbal: %d\n",
+                  __func__, packer, father, mp, tmp, value);
         return false;
     }
     return WriteDB(key, nHeight, newRecord);
 }
 
 bool CMemberInfoDB::ReadDB(std::string key, int nHeight, string &packer, string& father,
-                           uint64_t& tc, uint64_t &ttc, CAmount& value, bool dbOnly)
+                           uint64_t& mp, uint64_t &tmp, CAmount& value, bool dbOnly)
 {
     if (nHeight == currentHeight && !dbOnly && (cacheForRead.find(key) != cacheForRead.end()))
     {
-        if (!ParseRecord(cacheForRead[key], packer, father, tc, ttc, value))
+        if (!ParseRecord(cacheForRead[key], packer, father, mp, tmp, value))
             return false;
         return true;
     }
@@ -80,8 +80,8 @@ bool CMemberInfoDB::ReadDB(std::string key, int nHeight, string &packer, string&
         {
             packer = " ";
             father = " ";
-            tc = 0;
-            ttc = 0;
+            mp = 0;
+            tmp = 0;
             value = 0;
         }
         else
@@ -94,7 +94,7 @@ bool CMemberInfoDB::ReadDB(std::string key, int nHeight, string &packer, string&
 
     if (nHeight == currentHeight && !dbOnly)
         cacheForRead[key] = strValue;// Add to cache for accelerating
-    if (!ParseRecord(strValue, packer, father, tc, ttc, value))
+    if (!ParseRecord(strValue, packer, father, mp, tmp, value))
         return false;
 
     return true;
@@ -189,15 +189,15 @@ bool CMemberInfoDB::UpdateCacheFather(string address, int inputHeight, string ne
     CAmount rwdbalance = 0;
     string packer = " ";
     string ftInput = " ";
-    uint64_t tc = 0;
-    uint64_t ttc = 0;
-    GetFullRecord(address, inputHeight-1, packer, ftInput, tc, ttc, rwdbalance);
+    uint64_t mp = 0;
+    uint64_t tmp = 0;
+    GetFullRecord(address, inputHeight-1, packer, ftInput, mp, tmp, rwdbalance);
     ftInput = newFather;
-    string newRecordInput = " ";//GenerateRecord(packer, ftInput, tc, ttc, rwdbalance);
-    if (!GenerateRecord(packer, ftInput, tc, ttc, rwdbalance, newRecordInput))
+    string newRecordInput = " ";//GenerateRecord(packer, ftInput, mp, tmp, rwdbalance);
+    if (!GenerateRecord(packer, ftInput, mp, tmp, rwdbalance, newRecordInput))
     {
-        LogPrintf("%s, GenerateRecord error, packer: %s, father: %s, tc: %d, ttc: %d, rwdbal: %d\n",
-                  __func__, packer, ftInput, tc, ttc, rwdbalance);
+        LogPrintf("%s, GenerateRecord error, packer: %s, father: %s, mp: %d, tmp: %d, rwdbal: %d\n",
+                  __func__, packer, ftInput, mp, tmp, rwdbalance);
         return false;
     }
     cacheRecord[address] = newRecordInput;
@@ -231,16 +231,16 @@ bool CMemberInfoDB::UpdateCacheFatherAndPacker(string address, int inputHeight, 
     CAmount rwdbalance = 0;
     string packerInput = " ";
     string ftInput = " ";
-    uint64_t tc = 0;
-    uint64_t ttc = 0;
-    GetFullRecord(address, inputHeight-1, packerInput, ftInput, tc, ttc, rwdbalance);
+    uint64_t mp = 0;
+    uint64_t tmp = 0;
+    GetFullRecord(address, inputHeight-1, packerInput, ftInput, mp, tmp, rwdbalance);
     ftInput = newAddr;
     packerInput = newAddr;
     string newRecordInput = " ";
-    if (!GenerateRecord(packerInput, ftInput, tc, ttc, rwdbalance, newRecordInput))
+    if (!GenerateRecord(packerInput, ftInput, mp, tmp, rwdbalance, newRecordInput))
     {
-        LogPrintf("%s, GenerateRecord error, packer: %s, father: %s, tc: %d, ttc: %d, rwdbal: %d\n",
-                  __func__, packerInput, ftInput, tc, ttc, rwdbalance);
+        LogPrintf("%s, GenerateRecord error, packer: %s, father: %s, mp: %d, tmp: %d, rwdbal: %d\n",
+                  __func__, packerInput, ftInput, mp, tmp, rwdbalance);
         return false;
     }
     cacheRecord[address] = newRecordInput;
@@ -274,15 +274,15 @@ bool CMemberInfoDB::UpdateCachePacker(std::string address, int inputHeight, std:
     CAmount rwdbalance = 0;
     string packerInput = " ";
     string ft = " ";
-    uint64_t tc = 0;
-    uint64_t ttc = 0;
-    GetFullRecord(address, inputHeight-1, packerInput, ft, tc, ttc, rwdbalance);
+    uint64_t mp = 0;
+    uint64_t tmp = 0;
+    GetFullRecord(address, inputHeight-1, packerInput, ft, mp, tmp, rwdbalance);
     packerInput = newPacker;
-    string newRecordInput = " ";//GenerateRecord(packerInput, ft, tc, ttc, rwdbalance);
-    if (!GenerateRecord(packerInput, ft, tc, ttc, rwdbalance, newRecordInput))
+    string newRecordInput = " ";//GenerateRecord(packerInput, ft, mp, tmp, rwdbalance);
+    if (!GenerateRecord(packerInput, ft, mp, tmp, rwdbalance, newRecordInput))
     {
-        LogPrintf("%s, GenerateRecord error, packer: %s, father: %s, tc: %d, ttc: %d, rwdbal: %d\n",
-                  __func__, packerInput, ft, tc, ttc, rwdbalance);
+        LogPrintf("%s, GenerateRecord error, packer: %s, father: %s, mp: %d, tmp: %d, rwdbal: %d\n",
+                  __func__, packerInput, ft, mp, tmp, rwdbalance);
         return false;
     }
     cacheRecord[address] = newRecordInput;
@@ -290,7 +290,7 @@ bool CMemberInfoDB::UpdateCachePacker(std::string address, int inputHeight, std:
     return true;
 }
 
-bool CMemberInfoDB::UpdateCacheTcAddOne(string address, int inputHeight, bool isUndo)
+bool CMemberInfoDB::UpdateCacheMpAddOne(string address, int inputHeight, bool isUndo)
 {
     if (!CClubInfoDB::AddressIsValid(address))
     {
@@ -308,15 +308,15 @@ bool CMemberInfoDB::UpdateCacheTcAddOne(string address, int inputHeight, bool is
     CAmount rwdbalance = 0;
     string packer = " ";
     string ft = " ";
-    uint64_t tcVout = 0;
-    uint64_t ttc = 0;
-    GetFullRecord(address, inputHeight-1, packer, ft, tcVout, ttc, rwdbalance);
-    tcVout++;
-    string newRecordVout = " ";//GenerateRecord(packer, ft, tcVout, ttc, rwdbalance);
-    if (!GenerateRecord(packer, ft, tcVout, ttc, rwdbalance, newRecordVout))
+    uint64_t mpVout = 0;
+    uint64_t tmp = 0;
+    GetFullRecord(address, inputHeight-1, packer, ft, mpVout, tmp, rwdbalance);
+    mpVout++;
+    string newRecordVout = " ";//GenerateRecord(packer, ft, mpVout, tmp, rwdbalance);
+    if (!GenerateRecord(packer, ft, mpVout, tmp, rwdbalance, newRecordVout))
     {
-        LogPrintf("%s, GenerateRecord error, packer: %s, father: %s, tc: %d, ttc: %d, rwdbal: %d\n",
-                  __func__, packer, ft, tcVout, ttc, rwdbalance);
+        LogPrintf("%s, GenerateRecord error, packer: %s, father: %s, mp: %d, tmp: %d, rwdbal: %d\n",
+                  __func__, packer, ft, mpVout, tmp, rwdbalance);
         return false;
     }
     cacheRecord[address] = newRecordVout;
@@ -342,15 +342,15 @@ bool CMemberInfoDB::UpdateCacheRewardChange(string address, int inputHeight, CAm
     CAmount rewardbalance_old = 0;
     string packer = " ";
     string ft = " ";
-    uint64_t tc = 0;
-    uint64_t ttc = 0;
-    GetFullRecord(address, inputHeight-1, packer, ft, tc, ttc, rewardbalance_old);
+    uint64_t mp = 0;
+    uint64_t tmp = 0;
+    GetFullRecord(address, inputHeight-1, packer, ft, mp, tmp, rewardbalance_old);
     CAmount newValue = rewardbalance_old + rewardChange;
     string newRecord = " ";
-    if (!GenerateRecord(packer, ft, tc, ttc, newValue, newRecord))
+    if (!GenerateRecord(packer, ft, mp, tmp, newValue, newRecord))
     {
-        LogPrintf("%s, GenerateRecord error, packer: %s, father: %s, tc: %d, ttc: %d, rwdbal: %d\n",
-                  __func__, packer, ft, tc, ttc, newValue);
+        LogPrintf("%s, GenerateRecord error, packer: %s, father: %s, mp: %d, tmp: %d, rwdbal: %d\n",
+                  __func__, packer, ft, mp, tmp, newValue);
         return false;
     }
     cacheRecord[address] = newRecord;
@@ -396,9 +396,9 @@ bool CMemberInfoDB::InitGenesisDB(std::vector<std::string> addresses)
         CAmount rewardbalance = 0;
         string packer = "0";
         string ft = "0";
-        uint64_t tc = 1;
-        uint64_t ttc = 1;
-        if (!WriteDB(addresses[i], 0, packer, ft, tc, ttc, rewardbalance))
+        uint64_t mp = 1;
+        uint64_t tmp = 1;
+        if (!WriteDB(addresses[i], 0, packer, ft, mp, tmp, rewardbalance))
             return false;
 
         if (!_pclubinfodb->AddClubLeader(addresses[i], 0))
@@ -410,7 +410,7 @@ bool CMemberInfoDB::InitGenesisDB(std::vector<std::string> addresses)
 }
 
 bool CMemberInfoDB::ParseRecord(string inputStr, string& packer, string& father,
-                                uint64_t& tc, uint64_t& ttc, CAmount& value) const
+                                uint64_t& mp, uint64_t& tmp, CAmount& value) const
 {
     vector<string> splitedStr;
     boost::split(splitedStr, inputStr, boost::is_any_of(DBSEPECTATOR));
@@ -422,16 +422,16 @@ bool CMemberInfoDB::ParseRecord(string inputStr, string& packer, string& father,
     packer = splitedStr[0];
     father = splitedStr[1];
     std::istringstream ssVal2(splitedStr[2]);
-    ssVal2 >> tc;
+    ssVal2 >> mp;
     std::istringstream ssVal3(splitedStr[3]);
-    ssVal3 >> ttc;
+    ssVal3 >> tmp;
     std::istringstream ssVal4(splitedStr[4]);
     ssVal4 >> value;
 
     return true;
 }
 
-bool CMemberInfoDB::GenerateRecord(string packer, string father, uint64_t tc, uint64_t ttc,
+bool CMemberInfoDB::GenerateRecord(string packer, string father, uint64_t mp, uint64_t tmp,
                                    CAmount value, string& outputStr) const
 {
     outputStr = "";
@@ -442,9 +442,9 @@ bool CMemberInfoDB::GenerateRecord(string packer, string father, uint64_t tc, ui
     ssVal << DBSEPECTATOR;
     ssVal << father;
     ssVal << DBSEPECTATOR;
-    ssVal << tc;
+    ssVal << mp;
     ssVal << DBSEPECTATOR;
-    ssVal << ttc;
+    ssVal << tmp;
     ssVal << DBSEPECTATOR;
     ssVal << value;
     ssVal >> outputStr;
@@ -456,10 +456,10 @@ string CMemberInfoDB::GetPacker(string address, int nHeight)
 {
     string packer = " ";
     string ft = " ";
-    uint64_t tc = 0;
-    uint64_t ttc = 0;
+    uint64_t mp = 0;
+    uint64_t tmp = 0;
     CAmount value;
-    GetFullRecord(address, nHeight, packer, ft, tc, ttc, value);
+    GetFullRecord(address, nHeight, packer, ft, mp, tmp, value);
     return packer;
 }
 
@@ -467,10 +467,10 @@ string CMemberInfoDB::GetFather(string address, int nHeight)
 {
     string packer = " ";
     string ft = " ";
-    uint64_t tc = 0;
-    uint64_t ttc = 0;
+    uint64_t mp = 0;
+    uint64_t tmp = 0;
     CAmount value;
-    GetFullRecord(address, nHeight, packer, ft, tc, ttc, value);
+    GetFullRecord(address, nHeight, packer, ft, mp, tmp, value);
     return ft;
 }
 
@@ -478,51 +478,51 @@ uint64_t CMemberInfoDB::GetTXCnt(string address, int nHeight)
 {
     string packer = " ";
     string ft = " ";
-    uint64_t tc = 0;
-    uint64_t ttc = 0;
+    uint64_t mp = 0;
+    uint64_t tmp = 0;
     CAmount value;
-    GetFullRecord(address, nHeight, packer, ft, tc, ttc, value);
-    return tc;
+    GetFullRecord(address, nHeight, packer, ft, mp, tmp, value);
+    return mp;
 }
 
 uint64_t CMemberInfoDB::GetTotalTXCnt(string address, int nHeight)
 {
     string packer = " ";
     string ft = " ";
-    uint64_t tc = 0;
-    uint64_t ttc = 0;
+    uint64_t mp = 0;
+    uint64_t tmp = 0;
     CAmount value;
-    GetFullRecord(address, nHeight, packer, ft, tc, ttc, value);
-    return ttc;
+    GetFullRecord(address, nHeight, packer, ft, mp, tmp, value);
+    return tmp;
 }
 
 CAmount CMemberInfoDB::GetRwdBalance(std::string address, int nHeight)
 {
     string packer = " ";
     string ft = " ";
-    uint64_t tc = 0;
-    uint64_t ttc = 0;
+    uint64_t mp = 0;
+    uint64_t tmp = 0;
     CAmount value;
-    GetFullRecord(address, nHeight, packer, ft, tc, ttc, value);
+    GetFullRecord(address, nHeight, packer, ft, mp, tmp, value);
     return value;
 }
 
 void CMemberInfoDB::GetFullRecord(string address, int nHeight, string& packer, string& father,
-                                  uint64_t& tc, uint64_t& ttc, CAmount& value, bool dbOnly)
+                                  uint64_t& mp, uint64_t& tmp, CAmount& value, bool dbOnly)
 {
     if (!dbOnly)
     {
         TRY_LOCK(cs_memberinfo, cachelock);
         if (cachelock && (cacheRecord.find(address) != cacheRecord.end()))
         {
-            ParseRecord(cacheRecord[address], packer, father, tc, ttc, value);
+            ParseRecord(cacheRecord[address], packer, father, mp, tmp, value);
             return;
         }
     }
 
     for (int h = nHeight; h >= 0; h--)
     {
-        if (ReadDB(address, h, packer, father, tc, ttc, value, dbOnly))
+        if (ReadDB(address, h, packer, father, mp, tmp, value, dbOnly))
             return;
     }
 }
@@ -620,12 +620,12 @@ bool CMemberInfoDB::ComputeMemberReward(const uint64_t& txCnt, const uint64_t& t
         return false;
     }
 
-    arith_uint256 ttc = totalTXCnt;
-    arith_uint256 tc = txCnt;
+    arith_uint256 tmp = totalTXCnt;
+    arith_uint256 mp = txCnt;
     arith_uint256 tRwd_1 = totalRewards / (CENT*CENT);
     arith_uint256 tRwd_2 = totalRewards % (CENT*CENT) / CENT;
     arith_uint256 tRwd_3 = totalRewards % (CENT*CENT) % CENT;
-    double ratio = tc.getdouble() / ttc.getdouble();
+    double ratio = mp.getdouble() / tmp.getdouble();
     CAmount memberReward_1 = ratio * tRwd_1.getdouble() * (CENT*CENT);
     CAmount memberReward_2 = ratio * tRwd_2.getdouble() * CENT;
     CAmount memberReward_3 = ratio * tRwd_3.getdouble();
@@ -652,7 +652,7 @@ bool CMemberInfoDB::InitRewardsDist(CAmount memberTotalRewards, const CScript& s
 
     memberRewards.clear();
     CBitcoinAddress addr;
-    map<string, uint64_t> addrToTC;
+    map<string, uint64_t> addrToMp;
     uint64_t totalmemberTXCnt = 0;
     if (!addr.ScriptPub2Addr(scriptPubKey, clubLeaderAddress))
         return false;
@@ -662,14 +662,14 @@ bool CMemberInfoDB::InitRewardsDist(CAmount memberTotalRewards, const CScript& s
     for(size_t i = 0; i < members.size(); i++)
     {
         uint64_t tXCnt = GetTXCnt(members[i], nHeight-1);
-        addrToTC.insert(pair<string, uint64_t>(members[i], tXCnt));
+        addrToMp.insert(pair<string, uint64_t>(members[i], tXCnt));
     }
     totalmemberTXCnt = harvestPower - GetTXCnt(clubLeaderAddress, nHeight-1);
 
     distributedRewards = 0;
     if (totalmemberTXCnt > 0)
     {
-        for(std::map<string, uint64_t>::const_iterator it = addrToTC.begin(); it != addrToTC.end(); it++)
+        for(std::map<string, uint64_t>::const_iterator it = addrToMp.begin(); it != addrToMp.end(); it++)
         {
             uint64_t TXCnt = it->second;
             CAmount memberReward = 0;
@@ -704,14 +704,14 @@ uint64_t CMemberInfoDB::GetHarvestPowerByAddress(std::string address, int nHeigh
 
     string packer;
     string ft;
-    uint64_t tc = 0;
-    uint64_t ttc = 0;
+    uint64_t mp = 0;
+    uint64_t tmp = 0;
     CAmount value;
-    GetFullRecord(address, nHeight, packer, ft, tc, ttc, value);
-    LogPrint("memberinfo","%s, hp:%d, address is: %s, h:%d\n", __func__, ttc,
+    GetFullRecord(address, nHeight, packer, ft, mp, tmp, value);
+    LogPrint("memberinfo","%s, hp:%d, address is: %s, h:%d\n", __func__, tmp,
         address, nHeight);
     if ((packer.compare("0") == 0) && (ft.compare("0") == 0))
-        return ttc;
+        return tmp;
     else
         return 0;
 }
@@ -837,7 +837,7 @@ bool CMemberInfoDB::EntrustByAddress(string inputAddr, string voutAddress, int n
     {
         _pclubinfodb->UpdateMembersByFatherAddress(fatherOfVin, false, inputAddr, nHeight, isUndo);
         newPackerAddr = "0";
-        if (!UpdateCacheTtcByChange(voutAddress, nHeight, 0, false, isUndo))
+        if (!UpdateCacheTmpByChange(voutAddress, nHeight, 0, false, isUndo))
             return false;
         changeRelationship = true;
 
@@ -850,23 +850,23 @@ bool CMemberInfoDB::EntrustByAddress(string inputAddr, string voutAddress, int n
 
     if (changeRelationship)
     {
-        // Compute the ttc of the vin address and update the packer of the these members
+        // Compute the tmp of the vin address and update the packer of the these members
         vector<string> totalMembers = _pclubinfodb->GetTotalMembersByAddress(inputAddr, nHeightQuery);
-        uint64_t ttcOfVin = GetTXCnt(inputAddr, nHeightQuery);
+        uint64_t tmpOfVin = GetTXCnt(inputAddr, nHeightQuery);
         for(size_t i = 0; i < totalMembers.size(); i++)
         {
             CAmount rwdbalance = 0;
             string packerInput = " ";
             string ft = " ";
-            uint64_t tc = 0;
-            uint64_t ttc = 0;
-            GetFullRecord(totalMembers[i], nHeightQuery, packerInput, ft, tc, ttc, rwdbalance);
+            uint64_t mp = 0;
+            uint64_t tmp = 0;
+            GetFullRecord(totalMembers[i], nHeightQuery, packerInput, ft, mp, tmp, rwdbalance);
             packerInput = voutAddress;
             string newRecordInput = " ";
-            if (!GenerateRecord(packerInput, ft, tc, ttc, rwdbalance, newRecordInput))
+            if (!GenerateRecord(packerInput, ft, mp, tmp, rwdbalance, newRecordInput))
             {
-                LogPrintf("%s, GenerateRecord error, packer: %s, father: %s, tc: %d, ttc: %d, rwdbal: %d\n",
-                          __func__, packerInput, ft, tc, ttc, rwdbalance);
+                LogPrintf("%s, GenerateRecord error, packer: %s, father: %s, mp: %d, tmp: %d, rwdbal: %d\n",
+                          __func__, packerInput, ft, mp, tmp, rwdbalance);
                 return false;
             }
             cacheRecord[totalMembers[i]] = newRecordInput;
@@ -876,7 +876,7 @@ bool CMemberInfoDB::EntrustByAddress(string inputAddr, string voutAddress, int n
                     return false;
             }
 
-            ttcOfVin += tc;
+            tmpOfVin += mp;
         }
 
         // Update the father and packer of the vin address
@@ -887,42 +887,42 @@ bool CMemberInfoDB::EntrustByAddress(string inputAddr, string voutAddress, int n
 //        if (!UpdateCachePacker(inputAddr, nHeight, newPackerAddr, isUndo))
 //            return false;
 
-        // Update the ttc of the vin's packer address
+        // Update the tmp of the vin's packer address
         if (packerOfVin.compare("0") != 0)
         {
-            if (!UpdateCacheTtcByChange(packerOfVin, nHeight, ttcOfVin, false, isUndo))
+            if (!UpdateCacheTmpByChange(packerOfVin, nHeight, tmpOfVin, false, isUndo))
                 return false;
         }
         else
         {
-            if (!UpdateCacheTtcByChange(inputAddr, nHeight, ttcOfVin, false, isUndo))
+            if (!UpdateCacheTmpByChange(inputAddr, nHeight, tmpOfVin, false, isUndo))
                 return false;
         }
 
-        // Update the ttc of the vout address
-        if (!UpdateCacheTtcByChange(voutAddress, nHeight, ttcOfVin, true, isUndo))
+        // Update the tmp of the vout address
+        if (!UpdateCacheTmpByChange(voutAddress, nHeight, tmpOfVin, true, isUndo))
             return false;
     }
 
     // TX count add one, including vout address and packer of vout
-    if (!UpdateCacheTcAddOne(voutAddress, nHeight, isUndo))
+    if (!UpdateCacheMpAddOne(voutAddress, nHeight, isUndo))
         return false;
     string newPackerOfVout = GetPacker(voutAddress, nHeight);
     if (newPackerOfVout.compare("0") != 0)
     {
-        if (!UpdateCacheTtcByChange(packerOfVout, nHeight, 1, true, isUndo))
+        if (!UpdateCacheTmpByChange(packerOfVout, nHeight, 1, true, isUndo))
             return false;
     }
     else
     {
-        if (!UpdateCacheTtcByChange(voutAddress, nHeight, 1, true, isUndo))
+        if (!UpdateCacheTmpByChange(voutAddress, nHeight, 1, true, isUndo))
             return false;
     }
 
     return true;
 }
 
-bool CMemberInfoDB::UpdateCacheTtcByChange(std::string address, int nHeight, uint64_t count, bool isAdd, bool isUndo)
+bool CMemberInfoDB::UpdateCacheTmpByChange(std::string address, int nHeight, uint64_t count, bool isAdd, bool isUndo)
 {
     if (isUndo)
     {
@@ -939,31 +939,31 @@ bool CMemberInfoDB::UpdateCacheTtcByChange(std::string address, int nHeight, uin
 
     string packer = " ";
     string ft = " ";
-    uint64_t tc = 0;
-    uint64_t ttcInput = 0;
+    uint64_t mp = 0;
+    uint64_t tmpInput = 0;
     CAmount rewardbalance = 0;
-    GetFullRecord(address, nHeight-1, packer, ft, tc, ttcInput, rewardbalance);
+    GetFullRecord(address, nHeight-1, packer, ft, mp, tmpInput, rewardbalance);
     if (isAdd)
-        ttcInput += count;
+        tmpInput += count;
     else
     {
         if (count == 0)
-            ttcInput = 0;
-        else if(ttcInput >= count)
-            ttcInput -= count;
+            tmpInput = 0;
+        else if(tmpInput >= count)
+            tmpInput -= count;
         else
         {
-            LogPrintf("%s, ttc - count error, address:%s, %d - %d\n", __func__, address, ttcInput, count);
+            LogPrintf("%s, tmp - count error, address:%s, %d - %d\n", __func__, address, tmpInput, count);
             return false;
         }
     }
 
     // Update cache
     string newRecord = " ";
-    if (!GenerateRecord(packer, ft, tc, ttcInput, rewardbalance, newRecord))
+    if (!GenerateRecord(packer, ft, mp, tmpInput, rewardbalance, newRecord))
     {
-        LogPrintf("%s, GenerateRecord error, packer: %s, father: %s, tc: %d, ttc: %d, rwdbal: %d\n",
-                  __func__, packer, ft, tc, ttcInput, rewardbalance);
+        LogPrintf("%s, GenerateRecord error, packer: %s, father: %s, mp: %d, tmp: %d, rwdbal: %d\n",
+                  __func__, packer, ft, mp, tmpInput, rewardbalance);
         return false;
     }
     cacheRecord[address] = newRecord;
@@ -973,7 +973,7 @@ bool CMemberInfoDB::UpdateCacheTtcByChange(std::string address, int nHeight, uin
     return true;
 }
 
-bool CMemberInfoDB::UpdateTcAndTtcByAddress(string address, int nHeight, string father, bool isUndo)
+bool CMemberInfoDB::UpdateMpAndTmpByAddress(string address, int nHeight, string father, bool isUndo)
 {
     if (!CClubInfoDB::AddressIsValid(address))
     {
@@ -989,13 +989,13 @@ bool CMemberInfoDB::UpdateTcAndTtcByAddress(string address, int nHeight, string 
     CAmount rewardbalance = 0;
     string packer = " ";
     string ft = " ";
-    uint64_t tc = 0;
-    uint64_t ttc = 0;
+    uint64_t mp = 0;
+    uint64_t tmp = 0;
     bool addressUpdated = false;
     if (!isUndo)
-        GetFullRecord(address, nHeight-1, packer, ft, tc, ttc, rewardbalance);
+        GetFullRecord(address, nHeight-1, packer, ft, mp, tmp, rewardbalance);
     else
-        GetFullRecord(address, nHeight, packer, ft, tc, ttc, rewardbalance);
+        GetFullRecord(address, nHeight, packer, ft, mp, tmp, rewardbalance);
     if ((ft.compare(" ") == 0) && (packer.compare(" ") == 0))
     {
         // It's a new address on the chain
@@ -1015,22 +1015,22 @@ bool CMemberInfoDB::UpdateTcAndTtcByAddress(string address, int nHeight, string 
         else
             packer = father;
 
-        // Ttc of the address' packer add one
-        if (!UpdateCacheTtcByChange(packer, nHeight, 1, true, isUndo))
+        // Tmp of the address' packer add one
+        if (!UpdateCacheTmpByChange(packer, nHeight, 1, true, isUndo))
             return false;
     }
     else if((ft.compare(" ") != 0) && (packer.compare(" ") != 0))
     {
         // It's an existed address on the chain
-        // Ttc of the address' packer add one
+        // Tmp of the address' packer add one
         if (packer.compare("0") != 0)
         {
-            if (!UpdateCacheTtcByChange(packer, nHeight, 1, true, isUndo))
+            if (!UpdateCacheTmpByChange(packer, nHeight, 1, true, isUndo))
                 return false;
         }
         else
         {
-            if (!UpdateCacheTtcByChange(address, nHeight, 1, true, isUndo))
+            if (!UpdateCacheTmpByChange(address, nHeight, 1, true, isUndo))
                 return false;
             addressUpdated = true;
         }
@@ -1043,17 +1043,17 @@ bool CMemberInfoDB::UpdateTcAndTtcByAddress(string address, int nHeight, string 
         return false;
     }
 
-    // Tc of the address add one
+    // Mp of the address add one
     if (addressUpdated)
-        GetFullRecord(address, nHeight-1, packer, ft, tc, ttc, rewardbalance);
-    tc++;
+        GetFullRecord(address, nHeight-1, packer, ft, mp, tmp, rewardbalance);
+    mp++;
 
     // Update cache
     string newRecord = " ";
-    if (!GenerateRecord(packer, ft, tc, ttc, rewardbalance, newRecord))
+    if (!GenerateRecord(packer, ft, mp, tmp, rewardbalance, newRecord))
     {
-        LogPrintf("%s, GenerateRecord error, packer: %s, father: %s, tc: %d, ttc: %d, rwdbal: %d\n",
-                  __func__, packer, ft, tc, ttc, rewardbalance);
+        LogPrintf("%s, GenerateRecord error, packer: %s, father: %s, mp: %d, tmp: %d, rwdbal: %d\n",
+                  __func__, packer, ft, mp, tmp, rewardbalance);
         return false;
     }
     cacheRecord[address] = newRecord;
@@ -1137,7 +1137,7 @@ bool CMemberInfoDB::GetBestFather(const CTransaction& tx, const CCoinsViewCache&
     return true;
 }
 
-bool CMemberInfoDB::UpdateFatherAndTCByTX(const CTransaction& tx, const CCoinsViewCache& view, int nHeight,
+bool CMemberInfoDB::UpdateFatherAndMpByTX(const CTransaction& tx, const CCoinsViewCache& view, int nHeight,
                                           map<string, CAmount> vin_val, bool isUndo)
 {
     if (tx.IsCoinBase() && isUndo)
@@ -1168,7 +1168,7 @@ bool CMemberInfoDB::UpdateFatherAndTCByTX(const CTransaction& tx, const CCoinsVi
         if (addrFt.IsScript())
             return true;
 
-        // Update packer, father, ttc and tc
+        // Update packer, father, tmp and tc
         for(unsigned int i = 0; i < tx.vout.size(); i++)
         {
             CBitcoinAddress addr;
@@ -1186,7 +1186,7 @@ bool CMemberInfoDB::UpdateFatherAndTCByTX(const CTransaction& tx, const CCoinsVi
             }
             else
             {
-                if (!UpdateTcAndTtcByAddress(voutAddress, nHeight, bestFather, isUndo))
+                if (!UpdateMpAndTmpByAddress(voutAddress, nHeight, bestFather, isUndo))
                     return false;
             }
         }

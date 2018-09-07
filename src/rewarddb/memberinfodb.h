@@ -46,18 +46,18 @@ private:
 
     bool EntrustByAddress(std::string inputAddr, std::string voutAddress, int nHeight, bool isUndo);
 
-    bool UpdateTcAndTtcByAddress(std::string address, int nHeight, std::string father, bool isUndo);
+    bool UpdateMpAndTmpByAddress(std::string address, int nHeight, std::string father, bool isUndo);
 
     bool GetBestFather(const CTransaction& tx, const CCoinsViewCache &view, std::string& bestFather,
                        std::map<std::string, CAmount> vin_val=std::map<std::string, CAmount>(), bool isUndo=false);
 
     bool WriteDB(std::string key, int nHeight, std::string packer, std::string father,
-                 uint64_t tc, uint64_t ttc, CAmount value);
+                 uint64_t mp, uint64_t tmp, CAmount value);
 
     bool WriteDB(std::string key, int nHeight, std::string strValue);
 
     bool ReadDB(std::string key, int nHeight, std::string& packer, std::string& father,
-                uint64_t& tc, uint64_t& ttc, CAmount& value, bool dbOnly=false);
+                uint64_t& mp, uint64_t& tmp, CAmount& value, bool dbOnly=false);
     bool ReadDB(std::string key, int nHeight, std::string& strValue);
 
     bool DeleteDB(std::string key, int nHeight);
@@ -68,9 +68,9 @@ private:
 
     bool UpdateCacheFatherAndPacker(std::string address, int inputHeight, std::string newAddr, bool isUndo);
 
-    bool UpdateCacheTcAddOne(std::string address, int inputHeight, bool isUndo);
+    bool UpdateCacheMpAddOne(std::string address, int inputHeight, bool isUndo);
 
-    bool UpdateCacheTtcByChange(std::string address, int nHeight, uint64_t count, bool isAdd, bool isUndo);
+    bool UpdateCacheTmpByChange(std::string address, int nHeight, uint64_t count, bool isAdd, bool isUndo);
 
     bool UpdateCacheRewardChange(std::string address, int inputHeight, CAmount rewardChange, bool isUndo);
 
@@ -96,7 +96,7 @@ public:
     //! Get current updated height
     int GetCurrentHeight() const;
 
-    //! Init the father and tc of the address from genesis block
+    //! Init the father and mp of the address from genesis block
     bool InitGenesisDB(std::vector<std::string> addresses);
 
     //! Init the distribution of the reward and check if everything is ok
@@ -109,10 +109,10 @@ public:
 
     //! Parse the record
     bool ParseRecord(std::string inputStr, std::string &packer, std::string& father,
-                     uint64_t& tc, uint64_t &ttc, CAmount& value) const;
+                     uint64_t& mp, uint64_t &tmp, CAmount& value) const;
 
     //! Generate a record
-    bool GenerateRecord(std::string packer, std::string father, uint64_t tc, uint64_t ttc,
+    bool GenerateRecord(std::string packer, std::string father, uint64_t mp, uint64_t tmp,
                         CAmount value, std::string& outputStr) const;
 
     //! Retrieve the packer for a given address
@@ -121,10 +121,10 @@ public:
     //! Retrieve the father for a given address
     std::string GetFather(std::string address, int nHeight);
 
-    //! Retrieve the transaction count for a given address
+    //! Retrieve the mining power for a given address
     uint64_t GetTXCnt(std::string address, int nHeight);
 
-    //! Retrieve the whole club's TX count where a given address in
+    //! Retrieve the total mining power of the whole club where a given address in
     uint64_t GetTotalTXCnt(std::string address, int nHeight);
 
     //! Retrieve the reward balance for a given address
@@ -132,7 +132,7 @@ public:
 
     //! Retrieve a full record for a given address
     void GetFullRecord(std::string address, int nHeight, std::string &packer, std::string& father,
-                       uint64_t& tc, uint64_t &ttc, CAmount& value, bool dbOnly=false);
+                       uint64_t& mp, uint64_t &tmp, CAmount& value, bool dbOnly=false);
     std::string GetFullRecord(std::string address, int nHeight);
 
     //! Retrieve the harvest power for a given address if it's a miner
@@ -142,7 +142,7 @@ public:
     bool UpdateRewardsByTX(const CTransaction& tx, CAmount blockReward, int nHeight, bool isUndo);
 
     //! Update the TX count and the father
-    bool UpdateFatherAndTCByTX(const CTransaction& tx, const CCoinsViewCache &view, int nHeight,
+    bool UpdateFatherAndMpByTX(const CTransaction& tx, const CCoinsViewCache &view, int nHeight,
                                std::map<std::string, CAmount> vin_val=std::map<std::string, CAmount>(), bool isUndo=false);
 
     //! Update the club leader's distribution rate
