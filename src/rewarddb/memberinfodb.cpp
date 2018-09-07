@@ -512,7 +512,7 @@ void CMemberInfoDB::GetFullRecord(string address, int nHeight, string& packer, s
 {
     if (!dbOnly)
     {
-        TRY_LOCK(cs_memberinfo, cachelock);if (!cachelock) cout<<"=====TYR_LOCK failed"<<endl;
+        TRY_LOCK(cs_memberinfo, cachelock);
         if (cachelock && (cacheRecord.find(address) != cacheRecord.end()))
         {
             ParseRecord(cacheRecord[address], packer, father, tc, ttc, value);
@@ -530,7 +530,7 @@ void CMemberInfoDB::GetFullRecord(string address, int nHeight, string& packer, s
 string CMemberInfoDB::GetFullRecord(std::string address, int nHeight)
 {
     string strValue;
-    TRY_LOCK(cs_memberinfo, cachelock);if (!cachelock) cout<<"=====TYR_LOCK failed"<<endl;
+    TRY_LOCK(cs_memberinfo, cachelock);
     if (cachelock && (cacheRecord.find(address) != cacheRecord.end()))
     {
         strValue = cacheRecord[address];
@@ -1130,6 +1130,9 @@ bool CMemberInfoDB::GetBestFather(const CTransaction& tx, const CCoinsViewCache&
                 return false;
         }
     }
+
+    if (!_pclubinfodb->AddressIsValid(bestFather))
+        return false;
 
     return true;
 }
