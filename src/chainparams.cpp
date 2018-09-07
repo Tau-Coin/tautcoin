@@ -430,7 +430,7 @@ public:
         pchMessageStart[1] = 0x6d;
         pchMessageStart[2] = 0x63;
         pchMessageStart[3] = 0x74;
-        nDefaultPort = 18668;
+        nDefaultPort = 18686;
 
         nPruneAfterHeight = 1000;
 
@@ -451,8 +451,8 @@ public:
         consensus.genesisCumulativeDifficulty = genesis.cumulativeDifficulty;
         consensus.genesisBaseTarget = genesis.baseTarget;
         consensus.genesisharvestPower = genesis.harvestPower;
-      //  assert(consensus.hashGenesisBlock == uint256S("0000d1c99848875f4508fe8d7f132734e3aa961571eeadb772b316bc9d5931a2"));
-      //  assert(genesis.hashMerkleRoot == uint256S("a9da8df30aa8c4d26d9ca33568a5235b193d65446297cdded39058cbee51d36b"));
+        assert(consensus.hashGenesisBlock == uint256S("f0c341f7769d87113d2cb8661db06a16c7483a067442579c91246fa432003e21"));
+        assert(genesis.hashMerkleRoot == uint256S("031b3f6f8c4a8942f981c5b6bcc41cb132f6256ea2301eda579b37a334e7a9c4"));
 
         vFixedSeeds.clear();
         vSeeds.clear();
@@ -514,7 +514,7 @@ public:
         pchMessageStart[1] = 0x6d;
         pchMessageStart[2] = 0x63;
         pchMessageStart[3] = 0x72;
-        nDefaultPort = 18669;
+        nDefaultPort = 28686;
 
         nPruneAfterHeight = 1000;
 
