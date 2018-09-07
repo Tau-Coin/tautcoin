@@ -28,7 +28,9 @@
 
 #include <stdint.h>
 #include <fstream>
+#include <sstream>
 
+#include <boost/algorithm/string.hpp>
 #include <boost/assign/list_of.hpp>
 #include <boost/shared_ptr.hpp>
 
@@ -228,12 +230,162 @@ UniValue dumpclubmembers(const UniValue& params, bool fHelp)
     return ret;
 }
 
+UniValue getrewardrate(const UniValue& params, bool fHelp)
+{
+    if (fHelp || params.size() > 2)
+        throw runtime_error(
+            "getrewardrate height\n"
+            "\nGet reward rate by chain height.\n"
+            "\nArguments:\n"
+            "1. height     (numeric, required) the blockchain height.\n"
+            "\nResult\n"
+            "{\n"
+            "    \"height\": <height>\n"
+            "    \"address\": <addr>\n"
+            "    \"rewardrate\": <rewardrate>\n"
+            "}\n"
+            "\nExamples:\n"
+            "\nGet  reward rate at height 1000\n"
+            + HelpExampleCli("getrewardrate", "1000")
+        );
+
+    RPCTypeCheck(params, boost::assign::list_of(UniValue::VNUM), true);
+
+    int chainHeight = 0;
+    {
+        LOCK(cs_main);
+        chainHeight = chainActive.Height();
+    }
+
+    int height = 0;
+    if (params.size() == 0)
+    {
+        height = chainHeight;
+    }
+    else
+    {
+        height = params[0].get_int();
+        if (height < 0 || height > chainHeight)
+            throw JSONRPCError(RPC_INVALID_PARAMETER, "Error: Invalid height");
+    }
+
+    static CRewardRateViewDB *pRewardRateView = NULL;
+    if (pRewardRateView == NULL)
+    {
+        pRewardRateView = pclubinfodb->GetRewardRateDBPointer();
+    }
+
+    std::string addr_rate;
+    if (!pRewardRateView->GetRewardRate(height, addr_rate))
+    {
+        throw JSONRPCError(RPC_INVALID_PARAMETER, "Error: get reward rate fail");
+    }
+
+    std::vector<string> fields;
+    boost::split(fields, addr_rate, boost::is_any_of("_"));
+    if (fields.size() != 2)
+        throw JSONRPCError(RPC_INVALID_PARAMETER, "Error: incorrect reward rate data");
+
+    std::string address = fields[0];
+    double rate = 0;
+    stringstream stream(fields[1]);
+    stream >> rate;
+
+    UniValue result(UniValue::VOBJ);
+    result.push_back(Pair("height", height));
+    result.push_back(Pair("address", address));
+    result.push_back(Pair("rewardrate", rate));
+
+    return result;
+}
+
+UniValue getmemberinfo(const UniValue& params, bool fHelp)
+{
+    if (fHelp || params.size() < 1 || params.size() > 2)
+        throw runtime_error(
+            "getmemberinfo address height\n"
+            "\nGet member information by address and chain height.\n"
+            "\nArguments:\n"
+            "1. address    (string, required) The address to get member info.\n"
+            "2. height     (numeric, optinal) the blockchain height.\n"
+            "\nResult\n"
+            "{\n"
+            "    \"height\": <height>\n"
+            "    \"address\": <addr>\n"
+            "    \"clubleader\": <mining club leader>\n"
+            "    \"father\": <address father>\n"
+            "    \"miningpower\": <address's miningpower>\n"
+            "    \"rewards\": <address's rewards>\n"
+            "}\n"
+            "\nExamples:\n"
+            "\nGet member info by address at height 1000\n"
+            + HelpExampleCli("getmemberinfo", "\"myaddress\" 1000")
+        );
+
+    RPCTypeCheck(params, boost::assign::list_of(UniValue::VSTR)(UniValue::VNUM), true);
+
+    int chainHeight = 0;
+    {
+        LOCK(cs_main);
+        chainHeight = chainActive.Height();
+    }
+
+    std::string addrStr = params[0].get_str();
+
+    int height = 0;
+    if (params.size() == 1)
+    {
+        height = chainHeight;
+    }
+    else if (params.size() == 2)
+    {
+        height = params[1].get_int();
+        if (height < 0 || height > chainHeight)
+            throw JSONRPCError(RPC_INVALID_PARAMETER, "Error: Invalid height");
+    }
+
+    CBitcoinAddress address(addrStr);
+    if (!address.IsValid())
+        throw JSONRPCError(RPC_INVALID_ADDRESS_OR_KEY, "Error: Invalid address");
+
+    std::string leader;
+    std::string father;
+    uint64_t personMP;
+    uint64_t leaderMP;
+    CAmount rewards;
+    uint64_t miningpower;
+    pmemberinfodb->GetFullRecord(addrStr, height, leader, father, personMP, leaderMP, rewards, true);
+
+    // In this case, addrStr is a mining club leader
+    if (leader.compare("0") == 0 && father.compare("0") == 0)
+    {
+        miningpower = leaderMP;
+        leader = addrStr;
+    }
+    else
+    {
+        miningpower = personMP;
+    }
+
+    UniValue result(UniValue::VOBJ);
+    result.push_back(Pair("address", addrStr));
+    result.push_back(Pair("height", height));
+    result.push_back(Pair("clubleader", leader));
+    result.push_back(Pair("miningpower", miningpower));
+    result.push_back(Pair("father", father));
+    result.push_back(Pair("rewards", rewards));
+
+    return result;
+}
+
 
 static const CRPCCommand commands[] =
 { //  category              name                        actor (function)           okSafeMode
   //  --------------------- ------------------------    -----------------------    ----------
     { "clubmember",         "getminingpowerbyaddress",  &getminingpowerbyaddress,  true  },
     { "clubmember",         "dumpclubmembers",          &dumpclubmembers,          true  },
+    { "clubmember",         "getrewardrate",            &getrewardrate,            true  },
+    { "clubmember",         "getmemberinfo",            &getmemberinfo,            true  },
 };
 
 void RegisterClubmemberRPCCommands(CRPCTable &tableRPC)
