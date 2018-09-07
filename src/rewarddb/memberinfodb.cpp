@@ -512,7 +512,7 @@ void CMemberInfoDB::GetFullRecord(string address, int nHeight, string& packer, s
 {
     if (!dbOnly)
     {
-        TRY_LOCK(cs_memberinfo, cachelock);
+        TRY_LOCK(cs_memberinfo, cachelock);if (!cachelock) cout<<"=====TYR_LOCK failed"<<endl;
         if (cachelock && (cacheRecord.find(address) != cacheRecord.end()))
         {
             ParseRecord(cacheRecord[address], packer, father, tc, ttc, value);
@@ -530,7 +530,7 @@ void CMemberInfoDB::GetFullRecord(string address, int nHeight, string& packer, s
 string CMemberInfoDB::GetFullRecord(std::string address, int nHeight)
 {
     string strValue;
-    TRY_LOCK(cs_memberinfo, cachelock);
+    TRY_LOCK(cs_memberinfo, cachelock);if (!cachelock) cout<<"=====TYR_LOCK failed"<<endl;
     if (cachelock && (cacheRecord.find(address) != cacheRecord.end()))
     {
         strValue = cacheRecord[address];
@@ -1168,9 +1168,10 @@ bool CMemberInfoDB::UpdateFatherAndTCByTX(const CTransaction& tx, const CCoinsVi
         // Update packer, father, ttc and tc
         for(unsigned int i = 0; i < tx.vout.size(); i++)
         {
-            CTxDestination dst;
-            ExtractDestinationFromP2PKAndP2PKH(tx.vout[i].scriptPubKey, dst);
-            string voutAddress = CBitcoinAddress(dst).ToString();
+            CBitcoinAddress addr;
+            string voutAddress;
+            if (!addr.ScriptPub2Addr(tx.vout[i].scriptPubKey, voutAddress))
+                return false;
             CBitcoinAddress addrVout = CBitcoinAddress(voutAddress);
             if (addrVout.IsScript())
                 continue;

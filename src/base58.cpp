@@ -286,7 +286,9 @@ bool CBitcoinAddress::ScriptPub2Addr(const CScript& scriptPub, std::string& addr
 {
     CTxDestination dest;
     if (!ExtractDestination(scriptPub, dest))
+    {
         return false;
+    }
     address = CBitcoinAddress(dest).ToString();
 
     return true;
