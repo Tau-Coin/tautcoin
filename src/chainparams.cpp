@@ -346,7 +346,7 @@ public:
         pchMessageStart[1] = 0x6d;
         pchMessageStart[2] = 0x63;
         pchMessageStart[3] = 0x6d;
-        nDefaultPort = 8669;
+        nDefaultPort = 8686;
         nPruneAfterHeight = 100000;
 
         std::vector<CAmount> genesisReward;
