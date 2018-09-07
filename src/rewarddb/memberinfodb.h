@@ -141,7 +141,7 @@ public:
     //! Update the Balance dataset
     bool UpdateRewardsByTX(const CTransaction& tx, CAmount blockReward, int nHeight, bool isUndo);
 
-    //! Update the TX count and the father
+    //! Update the mining power and the father
     bool UpdateFatherAndMpByTX(const CTransaction& tx, const CCoinsViewCache &view, int nHeight,
                                std::map<std::string, CAmount> vin_val=std::map<std::string, CAmount>(), bool isUndo=false);
 

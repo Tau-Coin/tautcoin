@@ -193,7 +193,7 @@ bool CMemberInfoDB::UpdateCacheFather(string address, int inputHeight, string ne
     uint64_t tmp = 0;
     GetFullRecord(address, inputHeight-1, packer, ftInput, mp, tmp, rwdbalance);
     ftInput = newFather;
-    string newRecordInput = " ";//GenerateRecord(packer, ftInput, mp, tmp, rwdbalance);
+    string newRecordInput = " ";
     if (!GenerateRecord(packer, ftInput, mp, tmp, rwdbalance, newRecordInput))
     {
         LogPrintf("%s, GenerateRecord error, packer: %s, father: %s, mp: %d, tmp: %d, rwdbal: %d\n",
@@ -278,7 +278,7 @@ bool CMemberInfoDB::UpdateCachePacker(std::string address, int inputHeight, std:
     uint64_t tmp = 0;
     GetFullRecord(address, inputHeight-1, packerInput, ft, mp, tmp, rwdbalance);
     packerInput = newPacker;
-    string newRecordInput = " ";//GenerateRecord(packerInput, ft, mp, tmp, rwdbalance);
+    string newRecordInput = " ";
     if (!GenerateRecord(packerInput, ft, mp, tmp, rwdbalance, newRecordInput))
     {
         LogPrintf("%s, GenerateRecord error, packer: %s, father: %s, mp: %d, tmp: %d, rwdbal: %d\n",
@@ -312,7 +312,7 @@ bool CMemberInfoDB::UpdateCacheMpAddOne(string address, int inputHeight, bool is
     uint64_t tmp = 0;
     GetFullRecord(address, inputHeight-1, packer, ft, mpVout, tmp, rwdbalance);
     mpVout++;
-    string newRecordVout = " ";//GenerateRecord(packer, ft, mpVout, tmp, rwdbalance);
+    string newRecordVout = " ";
     if (!GenerateRecord(packer, ft, mpVout, tmp, rwdbalance, newRecordVout))
     {
         LogPrintf("%s, GenerateRecord error, packer: %s, father: %s, mp: %d, tmp: %d, rwdbal: %d\n",
@@ -883,10 +883,6 @@ bool CMemberInfoDB::EntrustByAddress(string inputAddr, string voutAddress, int n
         if (!UpdateCacheFatherAndPacker(inputAddr, nHeight, newPackerAddr, isUndo))
             return false;
 
-//        // Update the packer of the vin address
-//        if (!UpdateCachePacker(inputAddr, nHeight, newPackerAddr, isUndo))
-//            return false;
-
         // Update the tmp of the vin's packer address
         if (packerOfVin.compare("0") != 0)
         {
@@ -904,7 +900,7 @@ bool CMemberInfoDB::EntrustByAddress(string inputAddr, string voutAddress, int n
             return false;
     }
 
-    // TX count add one, including vout address and packer of vout
+    // Mining power add one, including vout address and packer of vout
     if (!UpdateCacheMpAddOne(voutAddress, nHeight, isUndo))
         return false;
     string newPackerOfVout = GetPacker(voutAddress, nHeight);
@@ -1140,7 +1136,7 @@ bool CMemberInfoDB::GetBestFather(const CTransaction& tx, const CCoinsViewCache&
 bool CMemberInfoDB::UpdateFatherAndMpByTX(const CTransaction& tx, const CCoinsViewCache& view, int nHeight,
                                           map<string, CAmount> vin_val, bool isUndo)
 {
-    if (tx.IsCoinBase() && isUndo)
+    if (isUndo && tx.IsCoinBase())
     {
         string packer;
         CBitcoinAddress addr;
