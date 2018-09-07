@@ -18,7 +18,7 @@
 #include <boost/test/unit_test.hpp>
 
 typedef unsigned int uint;
-
+using namespace std;
 namespace
 {
 class CCoinsViewTest : public CCoinsView
@@ -290,7 +290,7 @@ static CBlock BuildBlockTestCase3(const CAmount* memberRBalance, const string* m
     block.hashMerkleRoot = GetRandHash();
     return block;
 }
-
+#if 0
 static long AddNewLeader(ISNDB* pdb, string addr)
 {
     long clubId;
@@ -309,10 +309,12 @@ static long AddNewLeader(ISNDB* pdb, string addr)
     pdb->ISNSqlInsert(tableMember, values);
 
     return clubId;
+
 }
 
 static void AddNewMemberToClub(ISNDB* pdb, string leaderAddr, string memberAddr)
 {
+
     std::vector<std::string> field, tableMemberValues;
     field.clear();
     field.push_back(memFieldID);
@@ -325,14 +327,17 @@ static void AddNewMemberToClub(ISNDB* pdb, string leaderAddr, string memberAddr)
     tableMemberValues.push_back("0");
     tableMemberValues.push_back("0");
     pdb->ISNSqlInsert(tableMember, tableMemberValues);
+
 }
 
 static void TCAddOneByAddress(ISNDB* pdb, string address)
 {
+
     std::vector<std::string> field;
     field.clear();
     field.push_back(memFieldCount);
     pdb->ISNSqlAddOne(tableMember, field, memFieldAddress, address);
+
 }
 
 static void TTCAddOneByAddress(ISNDB* pdb, string leaderAddress)
@@ -345,6 +350,7 @@ static void TTCAddOneByAddress(ISNDB* pdb, string leaderAddress)
     field.push_back(clubFieldCount);
     pdb->ISNSqlAddOne(tableClub, field, clubFieldID, data[0]["club_id"].c_str());
 }
+#endif
 
 static string ScriptToPubKey(const CScript& script)
 {

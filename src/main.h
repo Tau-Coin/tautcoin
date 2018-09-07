@@ -21,7 +21,6 @@
 #include "sync.h"
 #include "versionbits.h"
 #include "txdb.h"
-#include "isndb.h"
 #include "rewarddb/memberinfodb.h"
 #include "rewarddb/clubinfodb.h"
 

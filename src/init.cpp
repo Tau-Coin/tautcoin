@@ -18,7 +18,6 @@
 #include "consensus/validation.h"
 #include "httpserver.h"
 #include "httprpc.h"
-#include "isndb.h"
 #include "key.h"
 #include "main.h"
 #include "miner.h"
@@ -262,9 +261,6 @@ void Shutdown()
 #endif
     globalVerifyHandle.reset();
     ECC_Stop();
-
-    // Stop ISNDB service
-    ISNDB::StopISNDBService();
 
     LogPrintf("%s: done\n", __func__);
 }
@@ -589,8 +585,6 @@ void ThreadImport(std::vector<boost::filesystem::path> vImportFiles)
 
     // -reindex
     if (fReindex) {
-        // First of all, remove mysql db records
-        ISNDB::GetInstance()->TruncateTables();
         // Then, remove rewards balance db records
         std::string memberinfodb_path = GetDataDir(true).string() + std::string(MEMBERINFODBPATH);
         if (boost::filesystem::exists(memberinfodb_path))
@@ -1086,14 +1080,6 @@ bool AppInit2(boost::thread_group& threadGroup, CScheduler& scheduler)
         if (!AppInitServers(threadGroup))
             return InitError(_("Unable to start HTTP server. See debug log for details."));
     }
-
-    if (!ISNDB::BootupPreCheck())
-    {
-        return InitError(_("Please specify mysql username and password by -mysqlusername and -mysqlpassword."));
-    }
-
-    // Here start ISNDB service ASAP
-    ISNDB::StartISNDBService();
 
     int64_t nStart;
 

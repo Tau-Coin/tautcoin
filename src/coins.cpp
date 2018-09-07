@@ -5,7 +5,6 @@
 #include "coins.h"
 #include "tool.h"
 #include "util.h"
-#include "isndb.h"
 
 #include "memusage.h"
 #include "random.h"

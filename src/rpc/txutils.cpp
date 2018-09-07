@@ -37,6 +37,7 @@
 #include <boost/assign/list_of.hpp>
 
 #include <univalue.h>
+using namespace std;
 
 struct CompareValueOnly
 {
