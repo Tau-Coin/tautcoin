@@ -120,7 +120,7 @@ bool CClubInfoDB::ReadDB(std::string key, int nHeight, std::string& strValue)
     if(!status.ok())
     {
         if (status.IsNotFound())
-            strValue = "";
+            strValue = " ";
         else
         {
             strValue = "#";
@@ -230,10 +230,16 @@ bool CClubInfoDB::Commit(int nHeight)
             return false;
 
         // Add to cache for accelerating
-        TAUAddrTrie::Trie trie;
-        trie.BuildTreeFromStr(strValue, true);
-        vector<string> members = trie.ListAll();
-        cacheForRead[address] = members;
+//        TAUAddrTrie::Trie trie;
+//        trie.BuildTreeFromStr(strValue, false);
+//        vector<string> members = trie.ListAll();
+//        cacheForRead[address] = members;
+
+        // =====Temporary program
+        vector<string> splitedStr;
+        boost::split(splitedStr, strValue, boost::is_any_of(DBSEPECTATOR));
+        if (splitedStr.size() > 0)
+            cacheForRead[address] = splitedStr;
     }
 
     return true;
@@ -273,28 +279,71 @@ bool CClubInfoDB::UpdateMembersByFatherAddress(std::string fatherAddress, bool a
         return true;
     }
 
-    TAUAddrTrie::Trie trie;
-    trie.BuildTreeFromStr(GetTrieStrByFatherAddress(fatherAddress, nHeight-1), true);
+//    TAUAddrTrie::Trie trie;
+//    trie.BuildTreeFromStr(GetTrieStrByFatherAddress(fatherAddress, nHeight-1), false);
+//    if (add)
+//    {
+//        trie.Insert(address);
+//        LogPrint("clubinfo", "%s, father: %s, add an address to trie: %s, h:%d\n", __func__, fatherAddress,
+//            address, nHeight);
+//    }
+//    else
+//    {
+//        trie.Remove(address);
+//        LogPrint("clubinfo", "%s, father: %s, delete an address from trie: %s, h:%d\n", __func__, fatherAddress,
+//            address, nHeight);
+//    }
+//    string strUncompressed = "";
+//    trie.OuputTree(strUncompressed);
+//    //string strCompressed = trie.CompressTrieOutput(strUncompressed);
+//    cacheRecord[fatherAddress] = strUncompressed;
+
+    // =====Temporary program
+    string strUncompressed = " ";
+    TRY_LOCK(cs_clubinfo, cachelock);
+    if (cachelock && (cacheRecord.find(fatherAddress) != cacheRecord.end()))
+        strUncompressed = cacheRecord[fatherAddress];
+    else
+    {
+        for (int h = nHeight; h >= 0; h--)
+        {
+            if (ReadDB(fatherAddress, h, strUncompressed))
+                break;
+        }
+    }
     if (add)
     {
-        trie.Insert(address);
-        LogPrint("clubinfo", "%s, father: %s, add an address to trie: %s, h:%d\n", __func__, fatherAddress,
-            address, nHeight);
+        if (strUncompressed.compare(" ") == 0)
+            strUncompressed = address;
+        else
+            strUncompressed = strUncompressed + DBSEPECTATOR + address;
     }
     else
     {
-        trie.Remove(address);
-        LogPrint("clubinfo", "%s, father: %s, delete an address from trie: %s, h:%d\n", __func__, fatherAddress,
-            address, nHeight);
+        if (strUncompressed.compare(" ") != 0)
+        {
+            vector<string> splitedStr;
+            boost::split(splitedStr, strUncompressed, boost::is_any_of(DBSEPECTATOR));
+            strUncompressed = " ";
+            if (address.compare(splitedStr[0]) != 0)
+                strUncompressed = splitedStr[0];
+            for(size_t i = 1; i < splitedStr.size(); i++)
+            {
+                if (address.compare(splitedStr[i]) != 0)
+                {
+                    if (strUncompressed.compare(" ") == 0)
+                        strUncompressed = splitedStr[i];
+                    else
+                        strUncompressed = strUncompressed + DBSEPECTATOR + splitedStr[i];
+                }
+            }
+        }
     }
-    string strUncompressed = "";
-    trie.OuputTree(strUncompressed);
-    //string strCompressed = trie.CompressTrieOutput(strUncompressed);
     cacheRecord[fatherAddress] = strUncompressed;
 
     stop = clock();
     double t6 = (double)(stop - start) / CLOCKS_PER_SEC;
-    if (t6 > 0.01)
+    if (t6 > 0.001)
         cout<<"=====UpdateMembersByFatherAddress_t6: "<<t6<<endl;
     start = clock();
 
@@ -322,14 +371,19 @@ string CClubInfoDB::GetTrieStrByFatherAddress(std::string fatherAddress, int nHe
 vector<string> CClubInfoDB::GetTotalMembersByAddress(std::string fatherAddress, int nHeight, bool dbOnly)
 {
     vector<string> members;
+    TAUAddrTrie::Trie trie;
     if (!dbOnly)
     {
         TRY_LOCK(cs_clubinfo, cachelock);
         if (cachelock && (cacheRecord.find(fatherAddress) != cacheRecord.end()))
         {
-            TAUAddrTrie::Trie trieCache;
-            trieCache.BuildTreeFromStr(cacheRecord[fatherAddress], true);
-            members = trieCache.ListAll();
+//            trieCache.BuildTreeFromStr(cacheRecord[fatherAddress], false);
+//            members = trieCache.ListAll();
+            // =====Temporary program
+            vector<string> splitedStr;
+            boost::split(splitedStr, cacheRecord[fatherAddress], boost::is_any_of(DBSEPECTATOR));
+            if (splitedStr.size() > 0)
+                members = splitedStr;
             for(size_t i = 0; i < members.size(); i++)
             {
                 vector<string> childMembers = GetTotalMembersByAddress(members[i], nHeight, dbOnly);
@@ -362,14 +416,18 @@ vector<string> CClubInfoDB::GetTotalMembersByAddress(std::string fatherAddress, 
         }
     }
 
-    TAUAddrTrie::Trie trie;
     for (int h = nHeight; h >= 0; h--)
     {
         string strCompressed;
         if (ReadDB(fatherAddress, h, strCompressed))
         {
-            trie.BuildTreeFromStr(strCompressed, true);
-            members = trie.ListAll();
+//            trie.BuildTreeFromStr(strCompressed, false);
+//            members = trie.ListAll();
+            // =====Temporary program
+            vector<string> splitedStr;
+            boost::split(splitedStr, strCompressed, boost::is_any_of(DBSEPECTATOR));
+            if (splitedStr.size() > 0)
+                members = splitedStr;
             for(size_t i = 0; i < members.size(); i++)
             {
                 vector<string> childMembers = GetTotalMembersByAddress(members[i], nHeight, dbOnly);

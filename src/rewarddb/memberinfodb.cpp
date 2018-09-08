@@ -1175,6 +1175,7 @@ bool CMemberInfoDB::UpdateFatherAndMpByTX(const CTransaction& tx, const CCoinsVi
             if (addrVout.IsScript())
                 continue;
 
+
             if (tx.vout[i].nValue == 0)
             {
                 if (!EntrustByAddress(bestFather, voutAddress, nHeight, isUndo))
@@ -1186,6 +1187,8 @@ bool CMemberInfoDB::UpdateFatherAndMpByTX(const CTransaction& tx, const CCoinsVi
                     return false;
             }
         }
+
+
     }
 
     return true;
