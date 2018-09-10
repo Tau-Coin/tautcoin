@@ -259,8 +259,6 @@ int CClubInfoDB::GetCurrentHeight() const
 bool CClubInfoDB::UpdateMembersByFatherAddress(std::string fatherAddress, bool add, std::string address,
                                                int nHeight, bool isUndo)
 {
-    std::clock_t start, stop;
-    start = clock();
     if (!CClubInfoDB::AddressIsValid(fatherAddress))
     {
         LogPrintf("%s, The input address is : %s, which is not valid\n", __func__, fatherAddress);
@@ -340,12 +338,6 @@ bool CClubInfoDB::UpdateMembersByFatherAddress(std::string fatherAddress, bool a
         }
     }
     cacheRecord[fatherAddress] = strUncompressed;
-
-    stop = clock();
-    double t6 = (double)(stop - start) / CLOCKS_PER_SEC;
-    if (t6 > 0.001)
-        cout<<"=====UpdateMembersByFatherAddress_t6: "<<t6<<endl;
-    start = clock();
 
     return true;
 }
