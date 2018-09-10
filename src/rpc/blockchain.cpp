@@ -673,8 +673,8 @@ UniValue gettxout(const UniValue& params, bool fHelp)
             "     \"hex\" : \"hex\",        (string) \n"
             "     \"reqSigs\" : n,          (numeric) Number of required signatures\n"
             "     \"type\" : \"pubkeyhash\", (string) The type, eg pubkeyhash\n"
-            "     \"addresses\" : [          (array of string) array of bitcoin addresses\n"
-            "        \"bitcoinaddress\"     (string) bitcoin address\n"
+            "     \"addresses\" : [          (array of string) array of taucoin addresses\n"
+            "        \"taucoinaddress\"     (string) taucoin address\n"
             "        ,...\n"
             "     ]\n"
             "  },\n"
@@ -1136,12 +1136,12 @@ UniValue gettxoutsbyaddress(const UniValue& params, bool fHelp)
             "\nReturns a list of unspent transaction outputs by address (or script).\n"
             "The list is ordered by confirmations in descending order.\n"
             "Note that passing minconf=0 will include the mempool.\n"
-            "\nTo use this function, you must start bitcoin with the -txoutsbyaddressindex parameter.\n"
+            "\nTo use this function, you must start taucoin with the -txoutsbyaddressindex parameter.\n"
             "\nArguments:\n"
             "1. minconf          (numeric) Minimum confirmations\n"
-            "2. \"addresses\"    (string) A json array of bitcoin addresses (or scripts)\n"
+            "2. \"addresses\"    (string) A json array of taucoin addresses (or scripts)\n"
             "    [\n"
-            "      \"address\"   (string) bitcoin address (or script)\n"
+            "      \"address\"   (string) taucoin address (or script)\n"
             "      ,...\n"
             "    ]\n"
             "3. count            (numeric, optional, default=999999999) The number of outputs to return\n"
@@ -1158,8 +1158,8 @@ UniValue gettxoutsbyaddress(const UniValue& params, bool fHelp)
             "       \"hex\" : \"hex\",         (string) \n"
             "       \"reqSigs\" : n,           (numeric) Number of required signatures\n"
             "       \"type\" : \"pubkeyhash\", (string) The type, eg pubkeyhash\n"
-            "       \"addresses\" : [          (array of string) array of bitcoin addresses\n"
-            "          \"bitcoinaddress\"      (string) bitcoin address\n"
+            "       \"addresses\" : [          (array of string) array of taucoin addresses\n"
+            "          \"taucoinaddress\"      (string) taucoin address\n"
             "          ,...\n"
             "       ]\n"
             "    },\n"
@@ -1175,13 +1175,13 @@ UniValue gettxoutsbyaddress(const UniValue& params, bool fHelp)
             "  ,...\n"
             "]\n"
             "\nExamples:\n"
-            + HelpExampleCli("gettxoutsbyaddress", "6 \"[\\\"1PGFqEzfmQch1gKD3ra4k18PNj3tTUUSqg\\\",\\\"1LtvqCaApEdUGFkpKMM4MstjcaL4dKg8SP\\\"]\"")
+            + HelpExampleCli("gettxoutsbyaddress", "6 \"[\\\"TMDn4wYB3iEc2eiDHBLGx1zGkqBPgYV3AT\\\",\\\"TGwH9btZVNtP7HqLyULt2e8EmFkqfJJCbZ\\\"]\"")
             + "\nAs a json rpc call\n"
-            + HelpExampleRpc("gettxoutsbyaddress", "6, \"[\\\"1PGFqEzfmQch1gKD3ra4k18PNj3tTUUSqg\\\",\\\"1LtvqCaApEdUGFkpKMM4MstjcaL4dKg8SP\\\"]\"")
+            + HelpExampleRpc("gettxoutsbyaddress", "6, \"[\\\"TMDn4wYB3iEc2eiDHBLGx1zGkqBPgYV3AT\\\",\\\"TGwH9btZVNtP7HqLyULt2e8EmFkqfJJCbZ\\\"]\"")
         );
 
     if (!fTxOutsByAddressIndex)
-        throw JSONRPCError(RPC_METHOD_NOT_FOUND, "To use this function, you must start bitcoin with the -txoutsbyaddressindex parameter.");
+        throw JSONRPCError(RPC_METHOD_NOT_FOUND, "To use this function, you must start taucoin with the -txoutsbyaddressindex parameter.");
 
     RPCTypeCheck(params, boost::assign::list_of(UniValue::VNUM)(UniValue::VARR)(UniValue::VNUM)(UniValue::VNUM), true);
 
@@ -1214,7 +1214,7 @@ UniValue gettxoutsbyaddress(const UniValue& params, bool fHelp)
             std::vector<unsigned char> data(ParseHex(input));
             script = CScript(data.begin(), data.end());
         } else {
-            throw JSONRPCError(RPC_INVALID_ADDRESS_OR_KEY, "Invalid Bitcoin address or script: " + input);
+            throw JSONRPCError(RPC_INVALID_ADDRESS_OR_KEY, "Invalid Taucoin address or script: " + input);
         }
 
         CCoinsByScript coinsByScript;

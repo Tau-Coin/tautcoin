@@ -268,7 +268,7 @@ bool CTransactionUtils::AvailableCoins(const std::string& pubKey, std::vector<CO
     }
     else
     {
-        LogPrintf("Invalid Bitcoin address or script: %s\n", pubKey);
+        LogPrintf("Invalid Taucoin address or script: %s\n", pubKey);
         return false;
     }
 
