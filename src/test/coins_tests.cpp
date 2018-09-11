@@ -290,67 +290,6 @@ static CBlock BuildBlockTestCase3(const CAmount* memberRBalance, const string* m
     block.hashMerkleRoot = GetRandHash();
     return block;
 }
-#if 0
-static long AddNewLeader(ISNDB* pdb, string addr)
-{
-    long clubId;
-    std::vector<std::string> values;
-
-    values.push_back(addr);
-    values.push_back("1");
-    clubId = pdb->ISNSqlInsert(tableClub, values);
-
-    values.clear();
-    values.push_back(addr);
-    values.push_back(std::to_string(clubId));
-    values.push_back("0");
-    values.push_back("1");
-    values.push_back("0");
-    pdb->ISNSqlInsert(tableMember, values);
-
-    return clubId;
-
-}
-
-static void AddNewMemberToClub(ISNDB* pdb, string leaderAddr, string memberAddr)
-{
-
-    std::vector<std::string> field, tableMemberValues;
-    field.clear();
-    field.push_back(memFieldID);
-    field.push_back(memFieldClub);
-    mysqlpp::StoreQueryResult data = pdb->ISNSqlSelectAA(tableMember, field, memFieldAddress, leaderAddr);
-    tableMemberValues.clear();
-    tableMemberValues.push_back(memberAddr);
-    tableMemberValues.push_back(data[0]["club_id"].c_str());
-    tableMemberValues.push_back(data[0]["address_id"].c_str());
-    tableMemberValues.push_back("0");
-    tableMemberValues.push_back("0");
-    pdb->ISNSqlInsert(tableMember, tableMemberValues);
-
-}
-
-static void TCAddOneByAddress(ISNDB* pdb, string address)
-{
-
-    std::vector<std::string> field;
-    field.clear();
-    field.push_back(memFieldCount);
-    pdb->ISNSqlAddOne(tableMember, field, memFieldAddress, address);
-
-}
-
-static void TTCAddOneByAddress(ISNDB* pdb, string leaderAddress)
-{
-    std::vector<std::string> field;
-    field.clear();
-    field.push_back(memFieldClub);
-    mysqlpp::StoreQueryResult data = pdb->ISNSqlSelectAA(tableMember, field, memFieldAddress, leaderAddress);
-    field.clear();
-    field.push_back(clubFieldCount);
-    pdb->ISNSqlAddOne(tableClub, field, clubFieldID, data[0]["club_id"].c_str());
-}
-#endif
 
 static string ScriptToPubKey(const CScript& script)
 {
@@ -687,24 +626,6 @@ static string ScriptToPubKey(const CScript& script)
 //        }
 //    }
 //}
-
-static string GetRandomAddress()
-{
-    CKey secret;
-    secret.MakeNewKey(true);
-    CPubKey pubkey = secret.GetPubKey();
-
-    //std::cout<<"{PublicKey: \""<<HexStr(ToByteVector(pubkey))<<"\","<<std::endl;
-    //std::cout<<"PrivateKey: \""<<CBitcoinSecret(secret).ToString()<<"\","<<std::endl;
-
-    const CScript genesisOutputScript0 = CScript() << ParseHex(HexStr(ToByteVector(pubkey))) << OP_CHECKSIG;
-    CBitcoinAddress addr;
-    std::string address;
-    addr.ScriptPub2Addr(genesisOutputScript0, address);
-    //std::cout<<"Address: \""<<address<<"\"}"<<std::endl;
-
-    return address;
-}
 
 //BOOST_AUTO_TEST_CASE(RewardChangeUpdate_simulation_test)
 //{

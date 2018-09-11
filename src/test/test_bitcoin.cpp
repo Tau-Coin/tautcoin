@@ -48,22 +48,25 @@ BasicTestingSetup::~BasicTestingSetup()
 TestingSetup::TestingSetup(const std::string& chainName) : BasicTestingSetup(chainName)
 {
     const CChainParams& chainparams = Params();
-        // Ideally we'd move all the RPC tests to the functional testing framework
-        // instead of unit tests, but for now we need these here.
-        RegisterAllCoreRPCCommands(tableRPC);
-        ClearDatadirCache();
-        pathTemp = GetTempPath() / strprintf("test_bitcoin_%lu_%i", (unsigned long)GetTime(), (int)(GetRand(100000)));
-        boost::filesystem::create_directories(pathTemp);
-        mapArgs["-datadir"] = pathTemp.string();
-        mempool.setSanityCheck(1.0);
-        pblocktree = new CBlockTreeDB(1 << 20, true);
-        pcoinsdbview = new CCoinsViewDB(1 << 23, true);
-        pcoinsTip = new CCoinsViewCache(pcoinsdbview);
-        InitBlockIndex(chainparams);
-        nScriptCheckThreads = 3;
-        for (int i=0; i < nScriptCheckThreads-1; i++)
-            threadGroup.create_thread(&ThreadScriptCheck);
-        RegisterNodeSignals(GetNodeSignals());
+    // Ideally we'd move all the RPC tests to the functional testing framework
+    // instead of unit tests, but for now we need these here.
+    RegisterAllCoreRPCCommands(tableRPC);
+    ClearDatadirCache();
+    pathTemp = GetTempPath() / strprintf("test_bitcoin_%lu_%i", (unsigned long)GetTime(), (int)(GetRand(100000)));
+    boost::filesystem::create_directories(pathTemp);
+    mapArgs["-datadir"] = pathTemp.string();
+    std::cout<<pathTemp.string()<<std::endl;
+    pclubinfodb = new CClubInfoDB();
+    pmemberinfodb = new CMemberInfoDB(pclubinfodb);
+    mempool.setSanityCheck(1.0);
+    pblocktree = new CBlockTreeDB(1 << 20, true);
+    pcoinsdbview = new CCoinsViewDB(1 << 23, true);
+    pcoinsTip = new CCoinsViewCache(pcoinsdbview);
+    InitBlockIndex(chainparams);
+    nScriptCheckThreads = 3;
+    for (int i=0; i < nScriptCheckThreads-1; i++)
+        threadGroup.create_thread(&ThreadScriptCheck);
+    RegisterNodeSignals(GetNodeSignals());
 }
 
 TestingSetup::~TestingSetup()
@@ -75,6 +78,10 @@ TestingSetup::~TestingSetup()
         delete pcoinsTip;
         delete pcoinsdbview;
         delete pblocktree;
+        delete pmemberinfodb;
+        pmemberinfodb = NULL;
+        delete pclubinfodb;
+        pclubinfodb = NULL;
         boost::filesystem::remove_all(pathTemp);
 }
 
