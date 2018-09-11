@@ -596,8 +596,6 @@ else
     use_boost=yes
 fi
 
-MYSQL_LIBS="-L/usr/lib/x86_64-linux-gnu/  -lmysqlclient"
-MYSQLPP_LIBS="-L/usr/local/lib/  -lmysqlpp"
 
 if test x$use_boost = xyes; then
 

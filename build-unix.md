@@ -31,7 +31,6 @@ These dependencies are required:
 
  Library     | Purpose          | Description
  ------------|------------------|----------------------
- libmysql++  | Reward           | Harvesting club reward distribution
  libssl      | Crypto           | Random Number Generation, Elliptic Curve Cryptography
  libboost    | Utility          | Library for threading, data structures, etc
  libevent    | Networking       | OS independent asynchronous networking
@@ -41,7 +40,6 @@ Optional dependencies:
  Library     | Purpose          | Description
  ------------|------------------|----------------------
  miniupnpc   | UPnP Support     | Firewall-jumping support
- mysql       | database         | Recording harvest club
  libdb4.8    | Berkeley DB      | Wallet storage (only needed when wallet enabled)
  qt          | GUI              | GUI toolkit (only needed when GUI enabled)
  protobuf    | Payments in GUI  | Data interchange format used for payment protocol (only needed when GUI enabled)
@@ -99,58 +97,18 @@ ZMQ dependencies:
 
     sudo apt-get install libzmq3-dev (provides ZMQ API 4.x)
     
-Database for harvest club: Ubuntu
------------------------------------------
-### MySQL
-
-If you need to build mysql yourself:
-
-	sudo apt-get install mysql-server
-	sudo apt-get install libmysqlclient-dev
-
-We have prepared the tables for harvest club.
-	
-    wget https://www.taucoin.io/download/taureward.sql
-
-enter database by root:
-	
-    mysql> create database taureward;
-    mysql> use taureward;
-    mysql> source taureward.sql;
-
-create an user for taucoin harvest club relationship.
-
-	mysql> CREATE USER 'username'@'localhost' IDENTIFIED BY 'password';
-    mysql> GRANT SELECT,UPDATE,INSERT,DELETE on taureward.* to 'username'@'localhost';
-
-After these, we have created a database named "taureward", has two tables - "clubinfo" and "memberinfo", more details can be seen in src/isndb.h.
-	
-     //Database info
-     const char DBName[32]= "taureward";
-     const char hostName[32]= "localhost";
-     const char userName[32]= "username";
-     const char passWord[32]= "password";
-
-
-### MySQL++
-
-If you need to build mysql++ yourself:
-
-	wget https://www.taucoin.io/download/mysql++_3.2.2.tar.gz
-	tar -zvxf mysql++_3.2.2.tar.gz
-	cd mysql++_3.2.2
 
 ubuntu 14.04, follow these steps:
 
 	cat "/usr/share/libtool/config/ltmain.sh" > ltmain.sh
-	./configure --with-mysql-lib=/usr/lib/x86_64-linux-gnu/
+	./configure 
 	make
 	sudo make install
 
 ubuntu 16.04, should follow thest steps:
 
 	cat "/usr/share/libtool/build-aux/ltmain.sh" > ltmain.sh
-	./configure --with-mysql-lib=/usr/lib/x86_64-linux-gnu/
+	./configure 
 	make
 	sudo make install
 
@@ -261,7 +219,7 @@ Hardening enables the following features:
 
     To test that you have built PIE executable, install scanelf, part of paxutils, and use:
 
-    	scanelf -e ./bitcoin
+    	scanelf -e ./taucoin
 
     The output should contain:
 
@@ -276,7 +234,7 @@ Hardening enables the following features:
     executable without the non-executable stack protection.
 
     To verify that the stack is non-executable after compiling use:
-    `scanelf -e ./bitcoin`
+    `scanelf -e ./taucoin`
 
     the output should contain:
 	STK/REL/PTL
@@ -308,8 +266,8 @@ Setup and Build Example: Arch Linux
 This example lists the steps necessary to setup and build a command line only, non-wallet distribution of the latest changes on Arch Linux:
 
     pacman -S git base-devel boost libevent python
-    git clone https://github.com/bitcoin/bitcoin.git
-    cd bitcoin/
+    git clone https://github.com/Tau-Coin/taucoin
+    cd taucoin/
     ./autogen.sh
     ./configure --disable-wallet --without-gui --without-miniupnpc
     make check
