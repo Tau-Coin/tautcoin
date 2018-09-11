@@ -245,8 +245,8 @@ UniValue getrewardrate(const UniValue& params, bool fHelp)
             "    \"rewardrate\": <rewardrate>\n"
             "}\n"
             "\nExamples:\n"
-            "\nGet  reward rate at height 1000\n"
             + HelpExampleCli("getrewardrate", "1000")
+            + HelpExampleRpc("getrewardrate", "1000")
         );
 
     RPCTypeCheck(params, boost::assign::list_of(UniValue::VNUM), true);
@@ -318,8 +318,8 @@ UniValue getmemberinfo(const UniValue& params, bool fHelp)
             "    \"rewards\": <address's rewards>\n"
             "}\n"
             "\nExamples:\n"
-            "\nGet member info by address at height 1000\n"
             + HelpExampleCli("getmemberinfo", "\"myaddress\" 1000")
+            + HelpExampleRpc("getmemberinfo", "\"myaddress\" 1000")
         );
 
     RPCTypeCheck(params, boost::assign::list_of(UniValue::VSTR)(UniValue::VNUM), true);
