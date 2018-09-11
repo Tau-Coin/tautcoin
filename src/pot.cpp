@@ -49,7 +49,6 @@ const static bool fDebugPODS = true;
 std::string getLatestBlockGenerationSignature(){
     //LOCK(cs_main);
     uint32_t nHeight = chainActive.Height();
-    //std::cout<<"current main chain height is "<<nHeight<<std::endl;
     CBlockIndex* pblockindex = chainActive[nHeight];
     return pblockindex->GetBlockGenerationSignature();
 }
@@ -105,7 +104,7 @@ std::string GetPubKeyForPackage(){
 
     // If the keypool is exhausted, no script is returned at all.  Catch this.
     if (!coinbaseScript || coinbaseScript->reserveScript.empty()){
-        std::cout<<" error please check your wallet"<<std::endl;
+        //std::cout<<" error please check your wallet"<<std::endl;
     }
     CPubKey pubkey;
     pubkey = coinbaseScript->Packagerpubkey;
@@ -113,12 +112,11 @@ std::string GetPubKeyForPackage(){
     if(pubkey.Decompress()){
        std::vector<unsigned char> ret = ToByteVector(pubkey);
        pukstr = HexStr(ret);
-       std::cout<<"public key string is like " << pukstr<<std::endl;
     }
     return pukstr;
 }
 uint64_t calculateHitOfPOT(const uint256 &phash){
-    LogPrintf("Generation Signature Hash is %s\n",HexStr(phash));
+    //LogPrintf("Generation Signature Hash is %s\n",HexStr(phash));
     uint64_t hit=0;
     memcpy(&hit,phash.begin(),8);
     arith_uint256 temp = hit+1;
@@ -128,7 +126,7 @@ uint64_t calculateHitOfPOT(const uint256 &phash){
     arith_uint256 arihit = UintToArith256(DiffAdjustNumeratorfor55) * arith_uint256(ulogarithm) / 1000;
     return ArithToUint256(arihit).GetUint64(0);
 }
-//watch out that CblockHeader is parent of Cblock
+
 uint64_t getNextPotRequired(const CBlockIndex* pindexLast){
    uint64_t baseTargetLimt = 0x369D0369D036978; //genesis block base target
    const CBlockIndex* ancestor = NULL;
@@ -158,7 +156,7 @@ uint64_t getNextPotRequired(const CBlockIndex* pindexLast){
        }
        newBaseTarget = pindexLast->baseTarget - ((60 - max) * GAMMA * pindexLast->baseTarget)/60;
    }
-   LogPrintf("NewBaseTarget is %s last time is %s lastBlockParentTime %s\n",newBaseTarget,lastTime,lastBlockParentTime);
+   //LogPrintf("NewBaseTarget is %s last time is %s lastBlockParentTime %s\n",newBaseTarget,lastTime,lastBlockParentTime);
    return newBaseTarget;
 }
 
