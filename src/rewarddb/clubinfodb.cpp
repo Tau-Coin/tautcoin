@@ -337,11 +337,7 @@ bool CClubInfoDB::UpdateMembersByFatherAddress(std::string fatherAddress, bool a
             }
         }
     }
-
-    if (strUncompressed.compare(" ") != 0)
-    {
-        cacheRecord[fatherAddress] = strUncompressed;
-    }
+    cacheRecord[fatherAddress] = strUncompressed;
 
     return true;
 }
@@ -379,25 +375,15 @@ vector<string> CClubInfoDB::GetTotalMembersByAddress(std::string fatherAddress, 
             vector<string> splitedStr;
             boost::split(splitedStr, cacheRecord[fatherAddress], boost::is_any_of(DBSEPECTATOR));
             if (splitedStr.size() > 0)
-            {
-                for(size_t j = 0; j < splitedStr.size(); j++)
-                {
-                    if (AddressIsValid(splitedStr[j]))
-                        members.push_back(splitedStr[j]);
-                }
-            }
-
+                members = splitedStr;
             for(size_t i = 0; i < members.size(); i++)
             {
                 vector<string> childMembers = GetTotalMembersByAddress(members[i], nHeight, dbOnly);
                 for(size_t k = 0; k < childMembers.size(); k++)
                 {
-                    if (AddressIsValid(childMembers[k]))
-                    {
-                        members.push_back(childMembers[k]);
-                        LogPrint("clubinfo", "%s, cache father: %s, get address added: %s, h:%d\n", __func__, members[i],
-                            childMembers[k], nHeight);
-                    }
+                    members.push_back(childMembers[k]);
+                    LogPrint("clubinfo", "%s, cache father: %s, get address added: %s, h:%d\n", __func__, members[i],
+                        childMembers[k], nHeight);
                 }
             }
 
@@ -412,12 +398,9 @@ vector<string> CClubInfoDB::GetTotalMembersByAddress(std::string fatherAddress, 
                 vector<string> childMembers = GetTotalMembersByAddress(members[i], nHeight, dbOnly);
                 for(size_t k = 0; k < childMembers.size(); k++)
                 {
-                    if (AddressIsValid(childMembers[k]))
-                    {
-                        members.push_back(childMembers[k]);
-                        LogPrint("clubinfo", "%s, cache father: %s, get address added: %s, h:%d\n", __func__, members[i],
-                            childMembers[k], nHeight);
-                    }
+                    members.push_back(childMembers[k]);
+                    LogPrint("clubinfo", "%s, cacheRead father: %s, get address added: %s, h:%d\n", __func__, members[i],
+                        childMembers[k], nHeight);
                 }
             }
 
@@ -436,24 +419,15 @@ vector<string> CClubInfoDB::GetTotalMembersByAddress(std::string fatherAddress, 
             vector<string> splitedStr;
             boost::split(splitedStr, strCompressed, boost::is_any_of(DBSEPECTATOR));
             if (splitedStr.size() > 0)
-            {
-                for(size_t j = 0; j < splitedStr.size(); j++)
-                {
-                    if (AddressIsValid(splitedStr[j]))
-                        members.push_back(splitedStr[j]);
-                }
-            }
+                members = splitedStr;
             for(size_t i = 0; i < members.size(); i++)
             {
                 vector<string> childMembers = GetTotalMembersByAddress(members[i], nHeight, dbOnly);
                 for(size_t k = 0; k < childMembers.size(); k++)
                 {
-                    if (AddressIsValid(childMembers[k]))
-                    {
-                        members.push_back(childMembers[k]);
-                        LogPrint("clubinfo", "%s, cache father: %s, get address added: %s, h:%d\n", __func__, members[i],
-                            childMembers[k], nHeight);
-                    }
+                    members.push_back(childMembers[k]);
+                    LogPrint("clubinfo", "%s, db father: %s, get address added: %s, h:%d\n", __func__, members[i],
+                        childMembers[k], nHeight);
                 }
             }
 
