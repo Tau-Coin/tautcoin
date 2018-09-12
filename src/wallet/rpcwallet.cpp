@@ -404,7 +404,7 @@ UniValue sendtoaddress(const UniValue& params, bool fHelp)
 
     // Amount
     CAmount nAmount = AmountFromValue(params[1]);
-    if (nAmount <= 0)
+    if (nAmount < 0)
         throw JSONRPCError(RPC_TYPE_ERROR, "Invalid amount for send");
 
     // Wallet comments
