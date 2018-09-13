@@ -1986,8 +1986,11 @@ bool UpdateRewards(const CBlock& block, CAmount blockReward, int nHeight, bool i
     const CTransaction coinbase = block.vtx[0];
     if (!coinbase.IsCoinBase())
         return false;
-    if (!pmemberinfodb->UpdateRewardsByTX(coinbase, blockReward, nHeight, isUndo))
-        return false;
+    if (blockReward > 0)
+    {
+        if (!pmemberinfodb->UpdateRewardsByTX(coinbase, blockReward, nHeight, isUndo))
+            return false;
+    }
 
     pmemberinfodb->Commit(nHeight);
     pmemberinfodb->ClearCache();
