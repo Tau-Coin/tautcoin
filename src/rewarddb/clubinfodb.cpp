@@ -378,7 +378,7 @@ vector<string> CClubInfoDB::GetTotalMembersByAddress(std::string fatherAddress, 
             for (vector<string>::iterator it = splitedStr.begin();
                  it != splitedStr.end(); it++)
             {
-                if ((*it).compare(" "))
+                if (it->compare(" ") && !it->empty())
                     members.push_back(*it);
             }
 
@@ -387,7 +387,7 @@ vector<string> CClubInfoDB::GetTotalMembersByAddress(std::string fatherAddress, 
                 vector<string> childMembers = GetTotalMembersByAddress(members[i], nHeight, dbOnly);
                 for(size_t k = 0; k < childMembers.size(); k++)
                 {
-                    if (childMembers[k].compare(" "))
+                    if (childMembers[k].compare(" ") && !childMembers[k].empty())
                     {
                         members.push_back(childMembers[k]);
                         LogPrint("clubinfo", "%s, cache father: %s, get address added: %s, h:%d\n", __func__, members[i],
@@ -405,7 +405,7 @@ vector<string> CClubInfoDB::GetTotalMembersByAddress(std::string fatherAddress, 
             for (vector<string>::iterator it = tempVec.begin();
                  it != tempVec.end(); it++)
             {
-                if ((*it).compare(" "))
+                if (it->compare(" ") && !it->empty())
                     members.push_back(*it);
             }
 
@@ -414,7 +414,7 @@ vector<string> CClubInfoDB::GetTotalMembersByAddress(std::string fatherAddress, 
                 vector<string> childMembers = GetTotalMembersByAddress(members[i], nHeight, dbOnly);
                 for(size_t k = 0; k < childMembers.size(); k++)
                 {
-                    if (childMembers[k].compare(" "))
+                    if (childMembers[k].compare(" ") && !childMembers[k].empty())
                     {
                         members.push_back(childMembers[k]);
                         LogPrint("clubinfo", "%s, cacheRead father: %s, get address added: %s, h:%d\n", __func__, members[i],
@@ -441,7 +441,7 @@ vector<string> CClubInfoDB::GetTotalMembersByAddress(std::string fatherAddress, 
             for (vector<string>::iterator it = splitedStr.begin();
                  it != splitedStr.end(); it++)
             {
-                if ((*it).compare(" "))
+                if (it->compare(" ") && !it->empty())
                     members.push_back(*it);
             }
 
@@ -450,7 +450,7 @@ vector<string> CClubInfoDB::GetTotalMembersByAddress(std::string fatherAddress, 
                 vector<string> childMembers = GetTotalMembersByAddress(members[i], nHeight, dbOnly);
                 for(size_t k = 0; k < childMembers.size(); k++)
                 {
-                    if (childMembers[k].compare(" "))
+                    if (childMembers[k].compare(" ") && !childMembers[k].empty())
                     {
                         members.push_back(childMembers[k]);
                         LogPrint("clubinfo", "%s, db father: %s, get address added: %s, h:%d\n", __func__, members[i],
