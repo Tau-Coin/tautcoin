@@ -374,8 +374,14 @@ vector<string> CClubInfoDB::GetTotalMembersByAddress(std::string fatherAddress, 
             // =====Temporary program
             vector<string> splitedStr;
             boost::split(splitedStr, cacheRecord[fatherAddress], boost::is_any_of(DBSEPECTATOR));
-            if (splitedStr.size() > 0)
-                members = splitedStr;
+
+            for (vector<string>::iterator it = splitedStr.begin();
+                 it != splitedStr.end(); it++)
+            {
+                if ((*it).compare(" "))
+                    members.push_back(*it);
+            }
+
             for(size_t i = 0; i < members.size(); i++)
             {
                 vector<string> childMembers = GetTotalMembersByAddress(members[i], nHeight, dbOnly);
@@ -395,7 +401,14 @@ vector<string> CClubInfoDB::GetTotalMembersByAddress(std::string fatherAddress, 
 
         if (nHeight == currentHeight && cacheForRead.find(fatherAddress) != cacheForRead.end())
         {
-            members = cacheForRead[fatherAddress];
+            vector<string> tempVec = cacheForRead[fatherAddress];
+            for (vector<string>::iterator it = tempVec.begin();
+                 it != tempVec.end(); it++)
+            {
+                if ((*it).compare(" "))
+                    members.push_back(*it);
+            }
+
             for(size_t i = 0; i < members.size(); i++)
             {
                 vector<string> childMembers = GetTotalMembersByAddress(members[i], nHeight, dbOnly);
@@ -424,8 +437,14 @@ vector<string> CClubInfoDB::GetTotalMembersByAddress(std::string fatherAddress, 
             // =====Temporary program
             vector<string> splitedStr;
             boost::split(splitedStr, strCompressed, boost::is_any_of(DBSEPECTATOR));
-            if (splitedStr.size() > 0)
-                members = splitedStr;
+
+            for (vector<string>::iterator it = splitedStr.begin();
+                 it != splitedStr.end(); it++)
+            {
+                if ((*it).compare(" "))
+                    members.push_back(*it);
+            }
+
             for(size_t i = 0; i < members.size(); i++)
             {
                 vector<string> childMembers = GetTotalMembersByAddress(members[i], nHeight, dbOnly);
