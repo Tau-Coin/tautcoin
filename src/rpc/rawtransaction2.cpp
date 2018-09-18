@@ -964,32 +964,24 @@ static bool parseStringIntoReceivers(const string &rawStr, map<string, CAmount>&
 }
 
 UniValue sendtransactiontoaddress(const UniValue& params, bool fHelp){
-    if(fHelp||params.size() < 2 || params.size() > 5){
+    if(fHelp||params.size() < 3 || params.size() > 5){
         throw runtime_error(
-            "sendtransactiontoaddress ([{\"peeraddress\":\"address\",\"value\":v},...] feerate )\n"
-            "\nReturn the transaction id of current transaction.\n"
+            "sendtransactiontoaddress \"address_value|address_value|...\" (subtractFeeFromReceipts (feerate) )\n"
+            "\nReturn the transaction id of current transaction and fee.\n"
             "Note that passing feerate will override the default feerate.\n"
             "\nArguments:\n"
-            "1. \"transactions\"        (string, required) A json array of json objects\n"
-            "    [\n"
-            "      {\n"
-            "         \"peeraddress\":\"address\",    (string, required) The received address\n"
-            "         \"value\":v                     (numeric, required)The money peer will receive\n"
-            "      }\n"
-            "      ,...\n"
-            "    ]\n"
+            "1. address_value|address_value|...    (string, required) address:the received address,value:the money peer will receive(The unit is " + CURRENCY_UNIT + ")\n"
             "2. privatekey       (string,requried) privatekey of sender\n"
             "3. pubkey           (string,optional) publickey of sender\n"
-            "4. feerate            (numeric, optional, default=0.34IM/KB) The number of fee per KB transaction data\n"
+            "4. subtractFeeFromReceipts    (bool,optional, default=false) the receipts pay the transaction fee\n"
+            "5. feerate            (numeric, optional, default=0.34" + CURRENCY_UNIT + "/KB) The number of fee per KB transaction data\n"
             "\nResult\n"
-            "[ (array of txid)\n"
-            "    \"txid\" : \"txid\",          (string)  The transaction id \n"
-            "  ,...\n"
-            "]\n"
+            "{\n"
+            "    \"txid\"          (string)  The transaction id \n"
+            "    \"fee\"           (string)  The transaction fee\n"
+            "}\n"
             "\nExamples:\n"
-+ HelpExampleCli("sendtransactiontoaddress", "\"[{\\\"peeraddress\\\":\\\"TTyTEaDzojDQqBzLrrtQYT9YUZthi1SJXSgK\\\",\\\"value\\\":49999.9}]"  "\\\"L35LBkkxttvrxFCD7Cev795fGfcUku6LGopDwZq4ET5XchebUHNjcKt9\\\" " "\\\"0349c77ccs818633dbuxd670a1abdbaf4f8270601181c1dab697e99010e775bc486\\\" "
-                 "\\\"optional\\\" "
-           )
++ HelpExampleCli("sendtransactiontoaddress", "\\\"TUfXK8vE8D3i4PRKdjbupCAW1MezHYqnyM_1|TNCheRFvMezqigydYwP5ej56ZaP7vLWhu5_1\\\"  \\\"L35LBkkxttvrxFCD7Cev795fGfcUku6LGopDwZq4ET5XchebUHNjcKt9\\\" \\\"0349c77ccs818633dbuxd670a1abdbaf4f8270601181c1dab697e99010e775bc486\\\" true 2 ")
             +"\nAs a json rpc call\n"
             );
     }
@@ -997,15 +989,19 @@ UniValue sendtransactiontoaddress(const UniValue& params, bool fHelp){
     if (!fTxOutsByAddressIndex)
         throw JSONRPCError(RPC_METHOD_NOT_FOUND, "To use this function, you must start taucoin with the -txoutsbyaddressindex parameter.");
 
-    RPCTypeCheck(params, boost::assign::list_of(UniValue::VSTR)(UniValue::VSTR)(UniValue::VSTR)(UniValue::VNUM), true);
+    RPCTypeCheck(params, boost::assign::list_of(UniValue::VSTR)(UniValue::VSTR)(UniValue::VSTR)(UniValue::VBOOL)(UniValue::VNUM), true);
 
+    string inputs = params[0].get_str();
     UniValue privatekey = params[1];
     UniValue pubkey = params[2];
-    string inputs = params[0].get_str();
+    bool bSubtractFeeFromReceipts = false;
+    if (!params[3].isNull()) {
+        bSubtractFeeFromReceipts = params[3].get_bool();
+    }
     CAmount feerate = DEFAULT_MIN_RELAY_TX_FEE;
     // Here feerate has uint of Tau
-    if(!params[3].isNull())
-       feerate = params[3].get_real() * COIN;
+    if(!params[4].isNull())
+       feerate = params[4].get_real() * COIN;
     map<string, CAmount> recipientor;
 
     if (!parseStringIntoReceivers(inputs, recipientor))
@@ -1034,7 +1030,7 @@ UniValue sendtransactiontoaddress(const UniValue& params, bool fHelp){
     CAmount nFeeRet = 0;
     string strFailReason;
     CFeeRate feeRate(feerate);
-    fCreated = CTransactionUtils::CreateTransaction(recipientor, pubkey.get_str(),
+    fCreated = CTransactionUtils::CreateTransaction(recipientor, bSubtractFeeFromReceipts, pubkey.get_str(),
                 privatekey.get_str(), feeRate, tx, nFeeRet, strFailReason);
     if (!fCreated) {
         throw JSONRPCError(RPC_INVALID_PARAMETER, strFailReason);

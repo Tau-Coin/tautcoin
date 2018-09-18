@@ -349,7 +349,7 @@ CAmount CTransactionUtils::GetMinimumFee(unsigned int nTxBytes, unsigned int nCo
     return nFeeNeeded;
 }
 
-bool CTransactionUtils::CreateTransaction(std::map<std::string, CAmount>& receipts, const std::string& pubKey,
+bool CTransactionUtils::CreateTransaction(std::map<std::string, CAmount>& receipts, const bool bSubtractFeeFromReceipts, const std::string& pubKey,
         const std::string& prvKey, CFeeRate& userFee, CMutableTransaction& tx, CAmount& nFeeRet, std::string& strFailReason)
 {
     LogPrint("rpc", "%s entry\n", __func__);
@@ -368,7 +368,7 @@ bool CTransactionUtils::CreateTransaction(std::map<std::string, CAmount>& receip
             return false;
         }
         CScript scriptPubKey = GetScriptForDestination(CBitcoinAddress(i->first).Get());
-        CRecipient recipient = {scriptPubKey, i->second, false};
+        CRecipient recipient = {scriptPubKey, i->second, bSubtractFeeFromReceipts};
         vecSend.push_back(recipient);
         nTotal += i->second;
     }
@@ -430,6 +430,9 @@ bool CTransactionUtils::CreateTransaction(std::map<std::string, CAmount>& receip
 
     CAmount nValue = nTotal;
     unsigned int nSubtractFeeFromAmount = 0;
+    if (bSubtractFeeFromReceipts) {
+        nSubtractFeeFromAmount = receipts.size();
+    }
     nFeeRet = 0;
 
     // Start with no fee and loop until there is enough fee

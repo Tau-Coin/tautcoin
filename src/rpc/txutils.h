@@ -13,7 +13,7 @@ class CTransactionUtils
 {
     public:
         static bool SendTransaction(const CMutableTransaction& mutx, const CAmount fee, uint256& hashTx, std::string& failReason);
-        static bool CreateTransaction(std::map<std::string, CAmount>& receipts, const std::string& pubKey,
+        static bool CreateTransaction(std::map<std::string, CAmount>& receipts, const bool bSubtractFeeFromReceipts, const std::string& pubKey,
                 const std::string& prvKey, CFeeRate& userFee, CMutableTransaction& tx, CAmount& nFeeRet, std::string& strFailReason);
 
     private:
