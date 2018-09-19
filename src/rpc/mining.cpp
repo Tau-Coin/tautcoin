@@ -557,7 +557,7 @@ UniValue getblocktemplate(const UniValue& params, bool fHelp)
         }
         CScript scriptDummy = CScript() << OP_TRUE;
         //to pass compile. only a test
-        std::string pubkeystr = "you have no pubkey";
+        std::string pubkeystr = "025e6f9cb5f16bc0e862e550812a3882fda1b48179224fe1ad5df1837aa20cb0e7";
         pblocktemplate = BlockAssembler(Params()).CreateNewBlock(scriptDummy,pubkeystr);
 
         if (!pblocktemplate)
