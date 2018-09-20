@@ -119,7 +119,7 @@ UniValue generateBlocksWithPot(boost::shared_ptr<CReserveScript> coinbaseScript,
               CValidationState state;
               if (!ProcessNewBlock(state, Params(), NULL, pblock, true, NULL))
                   throw JSONRPCError(RPC_INTERNAL_ERROR, "ProcessNewBlock, block not accepted");
-              LogPrintf( "success create new block with pos\n");
+              LogPrintf( "success create new block with pot\n");
               ++nHeight;
               blockHashes.push_back(pblock->GetHash().GetHex());
              //mark script as important because it was used at least for one coinbase output if the script came from the wallet
