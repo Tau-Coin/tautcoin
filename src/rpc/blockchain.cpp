@@ -1152,7 +1152,7 @@ UniValue gettxoutsbyaddress(const UniValue& params, bool fHelp)
             "    \"confirmations\" : n,        (numeric) The number of confirmations\n"
             "    \"txid\" : \"txid\",          (string)  The transaction id \n"
             "    \"vout\" : n,                 (numeric) The vout value\n"
-            "    \"value\" : x.xxx,            (numeric) The transaction value in btc\n"
+            "    \"value\" : x.xxx,            (numeric) The transaction value in tau\n"
             "    \"scriptPubKey\" : {          (json object)\n"
             "       \"asm\" : \"code\",        (string) \n"
             "       \"hex\" : \"hex\",         (string) \n"
