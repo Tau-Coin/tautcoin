@@ -20,11 +20,6 @@ echo "updating all repos "
 sudo apt-get update;
 echo "installing dependancies..."
 sudo apt-get install build-essential libtool autotools-dev automake pkg-config libssl-dev libevent-dev bsdmainutils libboost-system-dev libboost-filesystem-dev libboost-chrono-dev libboost-program-options-dev libboost-test-dev libboost-thread-dev libqt4-dev libprotobuf-dev protobuf-compiler libdb4.8-dev libdb4.8++-dev -y;
-mkdir tau;
-cd tau ;
-echo "cloning tau repo from GitHub..."
-git clone https://github.com/Tau-Coin/taucoin.git;
-cd taucoin;
 echo "building Tau..."
 ./autogen.sh;
 ./configure;
