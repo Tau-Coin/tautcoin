@@ -647,7 +647,7 @@ bool CMemberInfoDB::ComputeMemberReward(const uint64_t& txCnt, const uint64_t& t
 bool CMemberInfoDB::InitRewardsDist(CAmount memberTotalRewards, const CScript& scriptPubKey, int nHeight, string& clubLeaderAddress,
                                     CAmount& distributedRewards, map<string, CAmount>& memberRewards)
 {
-    if (memberTotalRewards < 0)
+    if (memberTotalRewards < 0 && memberTotalRewards != -1)
         return false;
 
     memberRewards.clear();
@@ -667,7 +667,7 @@ bool CMemberInfoDB::InitRewardsDist(CAmount memberTotalRewards, const CScript& s
     totalmemberTXCnt = harvestPower - GetTXCnt(clubLeaderAddress, nHeight-1);
 
     distributedRewards = 0;
-    if (totalmemberTXCnt > 0)
+    if (totalmemberTXCnt > 0 && memberTotalRewards != -1)
     {
         for(std::map<string, uint64_t>::const_iterator it = addrToMp.begin(); it != addrToMp.end(); it++)
         {
@@ -752,7 +752,6 @@ bool CMemberInfoDB::UpdateRewardsByTX(const CTransaction& tx, CAmount blockRewar
     CAmount distributedRewards = 0;
     string clubLeaderAddress;
     map<string, CAmount> memberRewards;
-    if(blockReward != -1){
     CAmount memberTotalRewards = blockReward-tx.vout[0].nValue;
     if (!InitRewardsDist(memberTotalRewards, tx.vout[0].scriptPubKey, nHeight, clubLeaderAddress,
                          distributedRewards, memberRewards))
@@ -763,7 +762,6 @@ bool CMemberInfoDB::UpdateRewardsByTX(const CTransaction& tx, CAmount blockRewar
         ret &= RewardChangeUpdate(it->second, it->first, nHeight, isUndo);
     CAmount remainedReward = memberTotalRewards - distributedRewards;
     ret &= RewardChangeUpdate(remainedReward, clubLeaderAddress, nHeight, isUndo);
-    }
     // Update the reward rate dataset(if required)
     RewardRateUpdate(blockReward, distributedRewards, clubLeaderAddress, nHeight);
 
