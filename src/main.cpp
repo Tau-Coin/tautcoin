@@ -1988,8 +1988,20 @@ bool UpdateRewards(const CBlock& block, CAmount blockReward, int nHeight, bool i
         return false;
     if (blockReward > 0)
     {
-        if (!pmemberinfodb->UpdateRewardsByTX(coinbase, blockReward, nHeight, isUndo))
-            return false;
+        bool updateRewardRate = false;
+        if (mapArgs.count("-updaterewardrate") && mapMultiArgs["-updaterewardrate"].size() > 0)
+        {
+            string flag = mapMultiArgs["-updaterewardrate"][0];
+            if (flag.compare("true") == 0)
+                updateRewardRate = true;
+        }
+        if(updateRewardRate){
+            if (!pmemberinfodb->UpdateRewardsByTX(coinbase, -1, nHeight, isUndo))
+                return false;
+        }else{
+            if (!pmemberinfodb->UpdateRewardsByTX(coinbase, blockReward, nHeight, isUndo))
+                return false;
+        }
     }
 
     pmemberinfodb->Commit(nHeight);
