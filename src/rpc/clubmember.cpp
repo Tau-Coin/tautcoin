@@ -248,7 +248,9 @@ UniValue getrewardrate(const UniValue& params, bool fHelp)
             + HelpExampleCli("getrewardrate", "1000")
             + HelpExampleRpc("getrewardrate", "1000")
         );
-
+    if(mapMultiArgs["-updaterewardrate"][0].compare("true")){
+         throw JSONRPCError(RPC_INVALID_PARAMETER, "Error: updaterewardrate default is false");
+    }
     RPCTypeCheck(params, boost::assign::list_of(UniValue::VNUM), true);
 
     int chainHeight = 0;

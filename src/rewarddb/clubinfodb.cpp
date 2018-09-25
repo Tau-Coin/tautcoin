@@ -83,7 +83,7 @@ bool CRewardRateViewDB::UpdateRewardRate(std::string leaderAddress, double val, 
     }
 
 
-    if ((val < 0 || val > 1.0) && val != -1)
+    if (val > 1.0)
         return false;
     if (!WriteDB(nHeight, leaderAddress, val))
         return false;
