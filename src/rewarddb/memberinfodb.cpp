@@ -752,6 +752,7 @@ bool CMemberInfoDB::UpdateRewardsByTX(const CTransaction& tx, CAmount blockRewar
     CAmount distributedRewards = 0;
     string clubLeaderAddress;
     map<string, CAmount> memberRewards;
+    if(blockReward != -1){
     CAmount memberTotalRewards = blockReward-tx.vout[0].nValue;
     if (!InitRewardsDist(memberTotalRewards, tx.vout[0].scriptPubKey, nHeight, clubLeaderAddress,
                          distributedRewards, memberRewards))
@@ -762,7 +763,7 @@ bool CMemberInfoDB::UpdateRewardsByTX(const CTransaction& tx, CAmount blockRewar
         ret &= RewardChangeUpdate(it->second, it->first, nHeight, isUndo);
     CAmount remainedReward = memberTotalRewards - distributedRewards;
     ret &= RewardChangeUpdate(remainedReward, clubLeaderAddress, nHeight, isUndo);
-
+    }
     // Update the reward rate dataset(if required)
     RewardRateUpdate(blockReward, distributedRewards, clubLeaderAddress, nHeight);
 
