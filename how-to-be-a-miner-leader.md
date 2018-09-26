@@ -26,8 +26,9 @@ Console can be found in taucoin-qt/help/Debug Window. You can see basic informat
 You will get a TAU address automatically when you launch the pc wallet. You can use “importprivkey” command to import your specified address.
 
 ### 6.2 Start with a signal transaction 
-More details can be seen in TAU’s whitepaper. The signal transaction means that you resets the mining power to yourself. The signal transaction can be executed in taucoin-qt/Send or by commands(sendtoaddress, sendtransactiontoaddress) in console window.
-For example: sendtoaddress “your mining address” “0”
+Details of signal transaction can be seen in TAU’s whitepaper. The signal transaction means that you resets the mining power to yourself. The signal transaction can be executed in taucoin-qt/Send or by commands(sendtoaddress, sendtransactiontoaddress) in console window.
+
+To ensure a successful signal transaction, you should make a setting in pc wallet-> taucoin-qt-> Settings-> Options-> Wallet-> enable coin control features, which will enable the inputs option in Send interface. You can send a signal transaction to your mining address by your own mining address.
 
 ### 6.3 Mining TAU
 You can start your mining when TAU admits your signal transaction in chain. Type “generate” or “generatetoaddress” in console window to see how to use mining commands. You will be a true miner after you mine a block and confirmed by the whole chain, congratulations.
