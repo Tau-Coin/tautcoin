@@ -1988,6 +1988,9 @@ bool UpdateRewards(const CBlock& block, CAmount blockReward, int nHeight, bool i
         return false;
     if (blockReward > 0)
     {
+         if (!pmemberinfodb->UpdateRewardsByTX(coinbase, blockReward, nHeight, isUndo))
+             return false;
+    }else if(blockReward == 0){
         bool updateRewardRate = false;
         if (mapArgs.count("-updaterewardrate") && mapMultiArgs["-updaterewardrate"].size() > 0)
         {
@@ -1997,9 +2000,6 @@ bool UpdateRewards(const CBlock& block, CAmount blockReward, int nHeight, bool i
         }
         if(updateRewardRate){
             if (!pmemberinfodb->UpdateRewardsByTX(coinbase, -1, nHeight, isUndo))
-                return false;
-        }else{
-            if (!pmemberinfodb->UpdateRewardsByTX(coinbase, blockReward, nHeight, isUndo))
                 return false;
         }
     }
