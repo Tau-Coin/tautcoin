@@ -1990,7 +1990,7 @@ bool UpdateRewards(const CBlock& block, CAmount blockReward, int nHeight, bool i
     {
          if (!pmemberinfodb->UpdateRewardsByTX(coinbase, blockReward, nHeight, isUndo))
              return false;
-    }else if(blockReward == 0){
+    } else if (blockReward == 0){
         bool updateRewardRate = false;
         if (mapArgs.count("-updaterewardrate") && mapMultiArgs["-updaterewardrate"].size() > 0)
         {
@@ -1998,9 +1998,20 @@ bool UpdateRewards(const CBlock& block, CAmount blockReward, int nHeight, bool i
             if (flag.compare("true") == 0)
                 updateRewardRate = true;
         }
-        if(updateRewardRate){
-            if (!pmemberinfodb->UpdateRewardsByTX(coinbase, -1, nHeight, isUndo))
+        if (updateRewardRate) {
+            // Convert blockheader pubkey to address
+            std::string addrStr;
+            if (!ConvertPubkeyToAddress(block.pubKeyOfpackager, addrStr))
+            {
+                LogPrintf("%s  convert pubkey error", __func__);
                 return false;
+            }
+
+            if (!pmemberinfodb->RewardRateUpdate(0, 0, addrStr, nHeight))
+            {
+                LogPrintf("%s  update reward rate error", __func__);
+                return false;
+            }
         }
     }
 

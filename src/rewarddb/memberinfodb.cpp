@@ -763,9 +763,7 @@ bool CMemberInfoDB::UpdateRewardsByTX(const CTransaction& tx, CAmount blockRewar
     ret &= RewardChangeUpdate(remainedReward, clubLeaderAddress, nHeight, isUndo);
     // Update the reward rate dataset(if required)
     RewardRateUpdate(blockReward, distributedRewards, clubLeaderAddress, nHeight);
-    if(blockReward == -1){
-       RewardRateUpdate(-1, 0, clubLeaderAddress, nHeight);
-    }
+
     return ret;
 }
 
