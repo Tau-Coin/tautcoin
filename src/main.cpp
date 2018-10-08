@@ -1086,10 +1086,11 @@ bool CheckTxRewards(const CTransaction& tx, CValidationState &state)
             return state.DoS(100, false, REJECT_INVALID, "bad-txns-vreward-toolarge");
         }
 
-        if (rw.transTime < now - nOneMonth || rw.transTime > now + nOneMonth)
-        {
-            return state.DoS(100, false, REJECT_INVALID, "bad-txns-timestamp-old or future");
-        }
+        // TODO:improve checking bad txns' timestamp
+        //if (rw.transTime < now - nOneMonth || rw.transTime > now + nOneMonth)
+        //{
+            //return state.DoS(100, false, REJECT_INVALID, "bad-txns-timestamp-old or future");
+        //}
 
         nBalanceTotal += rw.rewardBalance;
         if (!MoneyRange(nBalanceTotal))
