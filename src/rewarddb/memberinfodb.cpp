@@ -729,42 +729,63 @@ bool CMemberInfoDB::UpdateRewardsByTX(const CTransaction& tx, CAmount blockRewar
         return true;
     }
 
-    if (isUndo)
+    if (nHeight < 45000)
     {
-        bool ret = true;
-        CBitcoinAddress addr;
-        string clubLeaderAddress;
-        if (!addr.ScriptPub2Addr(tx.vout[0].scriptPubKey, clubLeaderAddress))
+        if (isUndo)
+        {
+            bool ret = true;
+            CBitcoinAddress addr;
+            string clubLeaderAddress;
+            if (!addr.ScriptPub2Addr(tx.vout[0].scriptPubKey, clubLeaderAddress))
+                return false;
+            vector<string> members = _pclubinfodb->GetTotalMembersByAddress(clubLeaderAddress, nHeight);
+            for(size_t i = 0; i < members.size(); i++)
+                ret &= RewardChangeUpdate(0, members[i], nHeight, isUndo);
+            return ret;
+        }
+
+        // Init rewards distribution and check if valid
+        if (tx.vout.size() != 1)
+        {
+            LogPrintf("Error: The TX's vout size is 0\n");
             return false;
-        vector<string> members = _pclubinfodb->GetTotalMembersByAddress(clubLeaderAddress, nHeight);
-        for(size_t i = 0; i < members.size(); i++)
-            ret &= RewardChangeUpdate(0, members[i], nHeight, isUndo);
+        }
+        bool ret = true;
+        CAmount distributedRewards = 0;
+        string clubLeaderAddress;
+        map<string, CAmount> memberRewards;
+        CAmount memberTotalRewards = blockReward-tx.vout[0].nValue;
+        if (!InitRewardsDist(memberTotalRewards, tx.vout[0].scriptPubKey, nHeight, clubLeaderAddress,
+                             distributedRewards, memberRewards))
+            return false;
+        // Distribute rewards to member and return remained rewards back to club leader
+        for(std::map<string, CAmount>::const_iterator it = memberRewards.begin(); it != memberRewards.end(); it++)
+            ret &= RewardChangeUpdate(it->second, it->first, nHeight, isUndo);
+        CAmount remainedReward = memberTotalRewards - distributedRewards;
+        ret &= RewardChangeUpdate(remainedReward, clubLeaderAddress, nHeight, isUndo);
+        // Update the reward rate dataset(if required)
+        RewardRateUpdate(blockReward, distributedRewards, clubLeaderAddress, nHeight);
+
         return ret;
     }
-
-    // Init rewards distribution and check if valid
-    if (tx.vout.size() != 1)
+    else
     {
-        LogPrintf("Error: The TX's vout size is 0\n");
-        return false;
-    }
-    bool ret = true;
-    CAmount distributedRewards = 0;
-    string clubLeaderAddress;
-    map<string, CAmount> memberRewards;
-    CAmount memberTotalRewards = blockReward-tx.vout[0].nValue;
-    if (!InitRewardsDist(memberTotalRewards, tx.vout[0].scriptPubKey, nHeight, clubLeaderAddress,
-                         distributedRewards, memberRewards))
-        return false;
-    // Distribute rewards to member and return remained rewards back to club leader
-    for(std::map<string, CAmount>::const_iterator it = memberRewards.begin(); it != memberRewards.end(); it++)
-        ret &= RewardChangeUpdate(it->second, it->first, nHeight, isUndo);
-    CAmount remainedReward = memberTotalRewards - distributedRewards;
-    ret &= RewardChangeUpdate(remainedReward, clubLeaderAddress, nHeight, isUndo);
-    // Update the reward rate dataset(if required)
-    RewardRateUpdate(blockReward, distributedRewards, clubLeaderAddress, nHeight);
+        bool ret = true;
+        string clubLeaderAddress;
+        CBitcoinAddress addr;
+        if (!addr.ScriptPub2Addr(tx.vout[0].scriptPubKey, clubLeaderAddress))
+            return false;
+        if (isUndo)
+             return RewardChangeUpdate(0, clubLeaderAddress, nHeight, isUndo);
 
-    return ret;
+        CAmount remainedReward = blockReward-tx.vout[0].nValue;
+        ret &= RewardChangeUpdate(remainedReward, clubLeaderAddress, nHeight, isUndo);
+
+        // Update the reward rate dataset(if required)
+        RewardRateUpdate(blockReward, 0, clubLeaderAddress, nHeight);
+
+        return ret;
+    }
 }
 
 bool CMemberInfoDB::EntrustByAddress(string inputAddr, string voutAddress, int nHeight, bool isUndo)
