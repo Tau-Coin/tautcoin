@@ -31,7 +31,6 @@ leveldb_libleveldb_a_SOURCES += leveldb/port/port_example.h
 leveldb_libleveldb_a_SOURCES += leveldb/port/port_posix.h
 leveldb_libleveldb_a_SOURCES += leveldb/port/win/stdint.h
 leveldb_libleveldb_a_SOURCES += leveldb/port/port.h
-leveldb_libleveldb_a_SOURCES += leveldb/port/port_win.h
 leveldb_libleveldb_a_SOURCES += leveldb/port/thread_annotations.h
 leveldb_libleveldb_a_SOURCES += leveldb/include/leveldb/db.h
 leveldb_libleveldb_a_SOURCES += leveldb/include/leveldb/options.h
@@ -80,14 +79,16 @@ leveldb_libleveldb_a_SOURCES += leveldb/util/testutil.h
 leveldb_libleveldb_a_SOURCES += leveldb/util/mutexlock.h
 leveldb_libleveldb_a_SOURCES += leveldb/util/logging.h
 leveldb_libleveldb_a_SOURCES += leveldb/util/testharness.h
-
+leveldb_libleveldb_a_SOURCES += leveldb/util/env_posix_test_helper.h
 leveldb_libleveldb_a_SOURCES += leveldb/db/builder.cc
 leveldb_libleveldb_a_SOURCES += leveldb/db/c.cc
+leveldb_libleveldb_a_SOURCES += leveldb/db/db_bench.cc
 leveldb_libleveldb_a_SOURCES += leveldb/db/dbformat.cc
 leveldb_libleveldb_a_SOURCES += leveldb/db/db_impl.cc
 leveldb_libleveldb_a_SOURCES += leveldb/db/db_iter.cc
 leveldb_libleveldb_a_SOURCES += leveldb/db/dumpfile.cc
 leveldb_libleveldb_a_SOURCES += leveldb/db/filename.cc
+leveldb_libleveldb_a_SOURCES += leveldb/db/leveldbutil.cc
 leveldb_libleveldb_a_SOURCES += leveldb/db/log_reader.cc
 leveldb_libleveldb_a_SOURCES += leveldb/db/log_writer.cc
 leveldb_libleveldb_a_SOURCES += leveldb/db/memtable.cc
@@ -113,19 +114,19 @@ leveldb_libleveldb_a_SOURCES += leveldb/util/comparator.cc
 leveldb_libleveldb_a_SOURCES += leveldb/util/crc32c.cc
 leveldb_libleveldb_a_SOURCES += leveldb/util/env.cc
 leveldb_libleveldb_a_SOURCES += leveldb/util/env_posix.cc
-leveldb_libleveldb_a_SOURCES += leveldb/util/env_win.cc
 leveldb_libleveldb_a_SOURCES += leveldb/util/filter_policy.cc
 leveldb_libleveldb_a_SOURCES += leveldb/util/hash.cc
 leveldb_libleveldb_a_SOURCES += leveldb/util/histogram.cc
 leveldb_libleveldb_a_SOURCES += leveldb/util/logging.cc
 leveldb_libleveldb_a_SOURCES += leveldb/util/options.cc
 leveldb_libleveldb_a_SOURCES += leveldb/util/status.cc
+leveldb_libleveldb_a_SOURCES += leveldb/util/testharness.cc
+leveldb_libleveldb_a_SOURCES += leveldb/util/testutil.cc
 
 if TARGET_WINDOWS
-leveldb_libleveldb_a_SOURCES += leveldb/util/env_win.cc
-leveldb_libleveldb_a_SOURCES += leveldb/port/port_win.cc
 else
 leveldb_libleveldb_a_SOURCES += leveldb/port/port_posix.cc
+leveldb_libleveldb_a_SOURCES += leveldb/port/port_posix_sse.cc
 endif
 
 leveldb_libmemenv_a_CPPFLAGS = $(leveldb_libleveldb_a_CPPFLAGS)
