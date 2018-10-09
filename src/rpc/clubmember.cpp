@@ -77,7 +77,7 @@ UniValue getminingpowerbyaddress(const UniValue& params, bool fHelp)
     if (!address.IsValid())
         throw JSONRPCError(RPC_INVALID_ADDRESS_OR_KEY, "Error: Invalid address");
     
-    uint64_t miningpower = pmemberinfodb->GetHarvestPowerByAddress(addrStr, height);
+    uint64_t miningpower = paddrinfodb->GetHarvestPowerByAddress(addrStr, height);
 
     UniValue result(UniValue::VOBJ);
     result.push_back(Pair("address", addrStr));
@@ -149,11 +149,9 @@ UniValue dumpclubmembers(const UniValue& params, bool fHelp)
         it != leaders.end(); it++, i++)
     {
         std::string address = *it;
-        uint64_t ttc = 0;//pmemberinfodb->GetTotalTXCnt(address, height);
-        std::string dummyStr;
-        uint64_t dummyInt;
-        CAmount  dummyValue;
-        pmemberinfodb->GetFullRecord(address, height, dummyStr, dummyStr, dummyInt, ttc, dummyValue, true);
+        CTAUAddrInfo addrInfo = paddrinfodb->GetAddrInfo(address, height);
+        uint64_t ttc = addrInfo.totalMP;
+
         totalTTC += ttc;
         file << i + 1 << "\t\t" << address << "\t" << ttc << "\n";
     }
@@ -174,41 +172,40 @@ UniValue dumpclubmembers(const UniValue& params, bool fHelp)
         uint64_t  itTC = 0;
         uint64_t  itRewards = 0;
         std::string address = *it;
-        uint64_t ttcleader = 0;//pmemberinfodb->GetTotalTXCnt(address, height);
-        std::string dummyStr;
-        uint64_t dummyInt;
-        CAmount  dummyValue;
-        pmemberinfodb->GetFullRecord(address, height, dummyStr, dummyStr, dummyInt, ttcleader, dummyValue, true);
+        CTAUAddrInfo addrInfo = paddrinfodb->GetAddrInfo(address, height);
+        uint64_t ttcleader = addrInfo.totalMP;
         file << i << " club:" << address << ", ttc:" << ttcleader << "\n";
         file << "\t" << "index\t" << "address\t\t\t\t\t\t\t\t" << "packer\t" << "father\t"
              << "tc\t" << "reward" << "\n";
 
         // Firstly, output leader info
-        std::string packer;
-        std::string father;
-        uint64_t    tc = 0;
-        uint64_t    ttc = 0;
-        CAmount     value = 0;
+        addrInfo = paddrinfodb->GetAddrInfo(address, height);
+        uint64_t index = addrInfo.index;
+        std::string miner = addrInfo.miner;
+        std::string father = addrInfo.father;
+        uint64_t tc = pclubinfodb->GetCacheRecord(father)[index].MP;
+        CAmount value = pclubinfodb->GetCacheRecord(father)[index].rwd;
 
         int j = 1;
 
-        pmemberinfodb->GetFullRecord(address, height, packer, father, tc, ttc, value, true);
-        file << "\t" << j <<"\t\t" << address <<"\t" << packer <<"\t\t" << father << "\t\t"
+        file << "\t" << j <<"\t\t" << address <<"\t" << miner <<"\t\t" << father << "\t\t"
              << tc << "\t\t" << value << "\n";
         itTC += tc;
         itRewards += value;
         j++;
 
-        std::vector<std::string> members
-            = pclubinfodb->GetTotalMembersByAddress(address, height, true);
+        std::vector<std::string> members;
+        pclubinfodb->GetTotalMembersByAddress(address, members);
         for (std::vector<std::string>::iterator itr = members.begin();
             itr != members.end(); itr++, j++)
         {
-            pmemberinfodb->GetFullRecord(*itr, height, packer, father, tc, ttc, value, true);
-            file << "\t" << j <<"\t\t" << *itr <<"\t" << packer <<"\t\t" << father << "\t\t"
-                << tc << "\t\t" << value << "\n";
-            itTC += tc;
-            itRewards += value;
+            addrInfo = paddrinfodb->GetAddrInfo(*itr, height);
+            index = addrInfo.index;
+            file << "\t" << j <<"\t\t" << *itr <<"\t" << addrInfo.miner <<"\t\t" << addrInfo.father << "\t\t"
+                << pclubinfodb->GetCacheRecord(father)[index].MP << "\t\t"
+                << pclubinfodb->GetCacheRecord(father)[index].rwd << "\n";
+            itTC += pclubinfodb->GetCacheRecord(father)[index].MP;
+            itRewards += pclubinfodb->GetCacheRecord(father)[index].rwd;
         }
 
         file << "\n\n\ttotalTC:" << itTC
@@ -248,9 +245,7 @@ UniValue getrewardrate(const UniValue& params, bool fHelp)
             + HelpExampleCli("getrewardrate", "1000")
             + HelpExampleRpc("getrewardrate", "1000")
         );
-    if(mapMultiArgs["-updaterewardrate"].size() == 0){
-         throw JSONRPCError(RPC_INVALID_PARAMETER, "Error: updaterewardrate default is false");
-    }
+
     RPCTypeCheck(params, boost::assign::list_of(UniValue::VNUM), true);
 
     int chainHeight = 0;
@@ -350,12 +345,13 @@ UniValue getmemberinfo(const UniValue& params, bool fHelp)
     if (!address.IsValid())
         throw JSONRPCError(RPC_INVALID_ADDRESS_OR_KEY, "Error: Invalid address");
 
-    std::string leader;
-    std::string father;
-    uint64_t selfMP;
-    uint64_t clubMP;
-    CAmount rewards;
-    pmemberinfodb->GetFullRecord(addrStr, height, leader, father, selfMP, clubMP, rewards, true);
+    CTAUAddrInfo addrInfo = paddrinfodb->GetAddrInfo(addrStr, height);
+    uint64_t index = addrInfo.index;
+    std::string leader = addrInfo.miner;
+    std::string father = addrInfo.father;
+    uint64_t selfMP = pclubinfodb->GetCacheRecord(father)[index].MP;
+    uint64_t clubMP = addrInfo.totalMP;
+    CAmount rewards = pclubinfodb->GetCacheRecord(father)[index].rwd;
 
     // In this case, addrStr is a mining club leader
     if (leader.compare("0") == 0 && father.compare("0") == 0)
@@ -365,7 +361,7 @@ UniValue getmemberinfo(const UniValue& params, bool fHelp)
     }
     else
     {
-        clubMP = pmemberinfodb->GetHarvestPowerByAddress(leader, height);
+        clubMP = paddrinfodb->GetHarvestPowerByAddress(leader, height);
     }
 
     UniValue result(UniValue::VOBJ);

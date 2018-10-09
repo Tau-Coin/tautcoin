@@ -1,4 +1,3 @@
-#include "addrtrie.h"
 #include "clubinfodb.h"
 #include <time.h>
 
@@ -83,7 +82,7 @@ bool CRewardRateViewDB::UpdateRewardRate(std::string leaderAddress, double val, 
     }
 
 
-    if (val > 1.0)
+    if ((val < 0 || val > 1.0) && val != -1)
         return false;
     if (!WriteDB(nHeight, leaderAddress, val))
         return false;
@@ -91,104 +90,47 @@ bool CRewardRateViewDB::UpdateRewardRate(std::string leaderAddress, double val, 
     return true;
 }
 
-bool CClubInfoDB::WriteDB(std::string key, int nHeight, string strValue)
+CClubInfoDB::CClubInfoDB(size_t nCacheSize, bool fMemory, bool fWipe) :
+    CDBWrapper(GetDataDir() / CLUBINFODBPATH, nCacheSize, fMemory, fWipe),
+    currentHeight(-1)
 {
-    std::stringstream ssHeight;
-    std::string strHeight;
-    ssHeight << nHeight;
-    ssHeight >> strHeight;
-
-    leveldb::Status status = pdb->Put(leveldb::WriteOptions(), key+DBSEPECTATOR+strHeight, strValue);
-    if(!status.ok())
-    {
-        LogPrintf("LevelDB write failure in clubinfo module: %s\n", status.ToString());
-        dbwrapper_private::HandleError(status);
-        return false;
-    }
-
-    return true;
-}
-
-bool CClubInfoDB::ReadDB(std::string key, int nHeight, std::string& strValue)
-{
-    std::stringstream ssHeight;
-    std::string strHeight;
-    ssHeight << nHeight;
-    ssHeight >> strHeight;
-
-    leveldb::Status status = pdb->Get(leveldb::ReadOptions(), key+DBSEPECTATOR+strHeight, &strValue);
-    if(!status.ok())
-    {
-        if (status.IsNotFound())
-            strValue = " ";
-        else
-        {
-            strValue = "#";
-            LogPrintf("LevelDB read failure in clubinfo module: %s\n", status.ToString());
-            dbwrapper_private::HandleError(status);
-        }
-        return false;
-    }
-
-    return true;
-}
-
-bool CClubInfoDB::DeleteDB(std::string key, int nHeight)
-{
-    std::stringstream ssHeight;
-    std::string strHeight;
-    ssHeight << nHeight;
-    ssHeight >> strHeight;
-
-    leveldb::Status status = pdb->Delete(leveldb::WriteOptions(), key+DBSEPECTATOR+strHeight);
-    if(!status.ok() && !status.IsNotFound())
-    {
-        LogPrintf("LevelDB write failure in clubinfo module: %s\n", status.ToString());
-        dbwrapper_private::HandleError(status);
-        return false;
-    }
-
-    return true;
-}
-
-CClubInfoDB::CClubInfoDB() : currentHeight(-1)
-{
-    options.create_if_missing = true;
-
-    std::string db_path = GetDataDir(true).string() + std::string(CLUBINFOPATH);
-    LogPrintf("Opening LevelDB in %s\n", db_path);
-
-    leveldb::Status status = leveldb::DB::Open(options, db_path, &pdb);
-    dbwrapper_private::HandleError(status);
-    assert(status.ok());
-    LogPrintf("Opened LevelDB successfully\n");
-
+    batch = new CDBBatch(*this);
     pclubleaderdb = new CClubLeaderDB();
 }
 
-CClubInfoDB::CClubInfoDB(CRewardRateViewDB *prewardratedbview) : _prewardratedbview(prewardratedbview),  currentHeight(-1)
+CClubInfoDB::CClubInfoDB(size_t nCacheSize, CRewardRateViewDB *prewardratedbview,
+                         bool fMemory, bool fWipe) :
+    CDBWrapper(GetDataDir() / CLUBINFODBPATH, nCacheSize, fMemory, fWipe),
+    _prewardratedbview(prewardratedbview),
+    currentHeight(-1)
 {
-    options.create_if_missing = true;
-
-    std::string db_path = GetDataDir(true).string() + std::string(CLUBINFOPATH);
-    LogPrintf("Opening LevelDB in %s\n", db_path);
-
-    leveldb::Status status = leveldb::DB::Open(options, db_path, &pdb);
-    dbwrapper_private::HandleError(status);
-    assert(status.ok());
-    LogPrintf("Opened LevelDB successfully\n");
-
+    batch = new CDBBatch(*this);
     pclubleaderdb = new CClubLeaderDB();
 }
 
 CClubInfoDB::~CClubInfoDB()
 {
-    delete pdb;
-    pdb = NULL;
+    delete batch;
+    batch = NULL;
     _prewardratedbview = NULL;
 
     delete pclubleaderdb;
     pclubleaderdb = NULL;
+}
+
+bool CClubInfoDB::WriteDB(const std::string& address, const std::vector<CMemberInfo>& value)
+{
+    return Write(address, value);
+}
+
+bool CClubInfoDB::ReadDB(const std::string& address, vector<CMemberInfo>& value) const
+{
+    return Read(address, value);
+}
+
+bool CClubInfoDB::DeleteDB(const std::string& address)
+{
+    return Erase(address);
 }
 
 CRewardRateViewDB* CClubInfoDB::GetRewardRateDBPointer() const
@@ -204,43 +146,30 @@ bool CClubInfoDB::AddressIsValid(string address)
     return true;
 }
 
+bool CClubInfoDB::InitGenesisDB(const std::vector<std::string>& addresses)
+{
+    for(size_t i = 0; i < addresses.size(); i++)
+    {
+        vector<CMemberInfo> vmemberInfo;
+        CMemberInfo memberInfo(addresses[i], 1, 0);
+        vmemberInfo.push_back(memberInfo);
+        cacheRecord[addresses[i]] = vmemberInfo;
+        if (!WriteDB(addresses[i], cacheRecord[addresses[i]]))
+            return false;
+    }
+
+    return true;
+}
+
 void CClubInfoDB::ClearCache()
 {
     cacheRecord.clear();
 }
 
-void CClubInfoDB::ClearReadCache()
-{
-    cacheForRead.clear();
-}
-
-bool CClubInfoDB::Commit(int nHeight)
+bool CClubInfoDB::Commit()
 {
     pclubleaderdb->Commit();
-
-    if (cacheRecord.size() == 0)
-        return true;
-
-    for(std::map<string, string>::const_iterator it = cacheRecord.begin();
-        it != cacheRecord.end(); it++)
-    {
-        string address = it->first;
-        string strValue = it->second;
-        if (!WriteDB(address, nHeight, strValue))
-            return false;
-
-        // Add to cache for accelerating
-//        TAUAddrTrie::Trie trie;
-//        trie.BuildTreeFromStr(strValue, false);
-//        vector<string> members = trie.ListAll();
-//        cacheForRead[address] = members;
-
-        // =====Temporary program
-        vector<string> splitedStr;
-        boost::split(splitedStr, strValue, boost::is_any_of(DBSEPECTATOR));
-        if (splitedStr.size() > 0)
-            cacheForRead[address] = splitedStr;
-    }
+    CommitDB();
 
     return true;
 }
@@ -256,222 +185,269 @@ int CClubInfoDB::GetCurrentHeight() const
     return currentHeight;
 }
 
-bool CClubInfoDB::UpdateMembersByFatherAddress(std::string fatherAddress, bool add, std::string address,
-                                               int nHeight, bool isUndo)
+bool CClubInfoDB::LoadDBToMemory()
 {
-    if (!CClubInfoDB::AddressIsValid(fatherAddress))
+    boost::scoped_ptr<CDBIterator> pcursor(NewIterator());
+    pair<int, string> keyNewestH;
+    string key;
+    int nHeight = -1;
+    pcursor->Seek(make_pair(-1, string()));
+    if (pcursor->Valid() && pcursor->GetKey(keyNewestH))
     {
-        LogPrintf("%s, The input address is : %s, which is not valid\n", __func__, fatherAddress);
-        return false;
+        nHeight = atoi(keyNewestH.second);
+        Erase(keyNewestH, true);
     }
-    if (!CClubInfoDB::AddressIsValid(address))
+    pcursor->SeekToFirst();
+
+    LogPrintf("%s: loading newest records from clubInfodb...\n", __func__);
+    while (pcursor->Valid() && pcursor->GetKey(key))
     {
-        LogPrintf("%s, The input address is : %s, which is not valid\n", __func__, address);
-        return false;
+        boost::this_thread::interruption_point();
+        try
+        {
+            //LogPrintf("%s read %c type from coindb...\n", __func__, chType);
+            vector<CMemberInfo> vmemberInfo;
+            if (!pcursor->GetValue(vmemberInfo)) {
+                LogPrintf("%s: unable to read value\n", __func__);
+                break;
+            }
+            cacheRecord[key] = vmemberInfo;
+
+            pcursor->Next();
+        }
+        catch (const std::exception& e) {
+            return error("%s: Deserialize or I/O error - %s\n", __func__, e.what());
+        }
     }
 
-    if (isUndo)
+    LogPrintf("%s: loaded %d newest records from clubInfodb\n", __func__, cacheRecord.size());
+    SetCurrentHeight(nHeight);
+    return true;
+}
+
+bool CClubInfoDB::WriteDataToDisk(int newestHeight, bool fSync)
+{
+    LogPrintf("%s: writing newest records to clubInfodb...\n", __func__);
+    stringstream ss;
+    string heightStr;
+    ss << newestHeight;
+    ss >> heightStr;
+    WriteToBatch(make_pair(-1, heightStr), CMemberInfo());
+
+    for(map<string, vector<CMemberInfo> >::const_iterator it = cacheRecord.begin();
+        it != cacheRecord.end(); it++)
     {
-        if (!DeleteDB(fatherAddress, nHeight+1))
-            return false;
+        string address = it->first;
+        vector<CMemberInfo> value = it->second;
+        WriteToBatch(address, value);
+    }
+
+    if (CommitDB(fSync))
+    {
+        LogPrintf("%s: wrote %d newest records to clubInfodb\n", __func__, cacheRecord.size());
         return true;
     }
-
-//    TAUAddrTrie::Trie trie;
-//    trie.BuildTreeFromStr(GetTrieStrByFatherAddress(fatherAddress, nHeight-1), false);
-//    if (add)
-//    {
-//        trie.Insert(address);
-//        LogPrint("clubinfo", "%s, father: %s, add an address to trie: %s, h:%d\n", __func__, fatherAddress,
-//            address, nHeight);
-//    }
-//    else
-//    {
-//        trie.Remove(address);
-//        LogPrint("clubinfo", "%s, father: %s, delete an address from trie: %s, h:%d\n", __func__, fatherAddress,
-//            address, nHeight);
-//    }
-//    string strUncompressed = "";
-//    trie.OuputTree(strUncompressed);
-//    //string strCompressed = trie.CompressTrieOutput(strUncompressed);
-//    cacheRecord[fatherAddress] = strUncompressed;
-
-    // =====Temporary program
-    string strUncompressed = " ";
-    TRY_LOCK(cs_clubinfo, cachelock);
-    if (cachelock && (cacheRecord.find(fatherAddress) != cacheRecord.end()))
-        strUncompressed = cacheRecord[fatherAddress];
     else
-    {
-        for (int h = nHeight; h >= 0; h--)
-        {
-            if (ReadDB(fatherAddress, h, strUncompressed))
-                break;
-        }
-    }
+        return false;
+}
+
+bool CClubInfoDB::CacheRecordIsExist(const std::string& address)
+{
+    return cacheRecord.find(address) != cacheRecord.end();
+}
+
+vector<CMemberInfo> CClubInfoDB::GetCacheRecord(const string& address)
+{
+    return cacheRecord[address];
+}
+
+string CClubInfoDB::UpdateMembersByFatherAddress(const string& fatherAddress, const CMemberInfo& memberinfo,
+                                                 uint64_t& index, int nHeight, bool add)
+{
+    LOCK(cs_clubinfo);
     if (add)
     {
-        if (strUncompressed.compare(" ") == 0)
-            strUncompressed = address;
+        CMemberInfo memberinfoNew = memberinfo;
+        if (memberinfo.address.compare(fatherAddress) != 0)
+        {
+            if ((cacheRecord.find(fatherAddress) == cacheRecord.end()) ||
+                (cacheRecord[fatherAddress].size() == 0))
+                cacheRecord[fatherAddress].push_back(CMemberInfo(NOT_VALID_RECORD, 0, 0));
+            cacheRecord[fatherAddress].push_back(memberinfoNew);
+            index = cacheRecord[fatherAddress].size() - 1;
+        }
         else
-            strUncompressed = strUncompressed + DBSEPECTATOR + address;
+        {
+            if ((cacheRecord.find(fatherAddress) == cacheRecord.end()) ||
+                (cacheRecord[fatherAddress].size() == 0))
+                cacheRecord[fatherAddress].push_back(memberinfoNew);
+            else
+                cacheRecord[fatherAddress][0] = memberinfoNew;
+            index = 0;
+        }
+        LogPrint("clubinfo", "%s, father: %s, add an address: %s, h:%d\n", __func__, fatherAddress,
+                 memberinfo.address, nHeight);
+        return NO_MOVED_ADDRESS;
     }
     else
     {
-        if (strUncompressed.compare(" ") != 0)
+        size_t length = cacheRecord[fatherAddress].size();
+        string addressMoved = NO_MOVED_ADDRESS;
+        if (index > 0 && index < length-1)
         {
-            vector<string> splitedStr;
-            boost::split(splitedStr, strUncompressed, boost::is_any_of(DBSEPECTATOR));
-            strUncompressed = " ";
-            if (address.compare(splitedStr[0]) != 0)
-                strUncompressed = splitedStr[0];
-            for(size_t i = 1; i < splitedStr.size(); i++)
-            {
-                if (address.compare(splitedStr[i]) != 0)
-                {
-                    if (strUncompressed.compare(" ") == 0)
-                        strUncompressed = splitedStr[i];
-                    else
-                        strUncompressed = strUncompressed + DBSEPECTATOR + splitedStr[i];
-                }
-            }
+            cacheRecord[fatherAddress][index] = cacheRecord[fatherAddress][length-1];
+            addressMoved = cacheRecord[fatherAddress][index].address;
         }
+        cacheRecord[fatherAddress].pop_back();
+        LogPrint("clubinfo", "%s, father: %s, remove an address: %s, h:%d\n", __func__, fatherAddress,
+                 memberinfo.address, nHeight);
+        if ((cacheRecord[fatherAddress].size() == 0) ||
+            (cacheRecord[fatherAddress].size() == 1 &&
+             cacheRecord[fatherAddress][0].address.compare(NOT_VALID_RECORD) == 0))
+        {
+            cacheRecord.erase(fatherAddress);
+            return NO_MOVED_ADDRESS;
+        }
+        return addressMoved;
     }
-    cacheRecord[fatherAddress] = strUncompressed;
+}
+
+void CClubInfoDB::GetTotalMembers(const string& fatherAddress, vector<string>& vmembers)
+{
+    AssertLockHeld(cs_clubinfo);
+    const vector<CMemberInfo> &vmemberInfo = cacheRecord[fatherAddress];
+    for(size_t i = 1; i < vmemberInfo.size(); i++)
+    {
+        vmembers.push_back(vmemberInfo[i].address);
+        GetTotalMembers(vmemberInfo[i].address, vmembers);
+    }
+}
+
+void CClubInfoDB::GetTotalMembersByAddress(const string& fatherAddress, vector<string>& vmembers)
+{
+    LOCK(cs_clubinfo);
+    GetTotalMembers(fatherAddress, vmembers);
+}
+
+bool CClubInfoDB::ComputeMemberReward(const uint64_t& MP, const uint64_t& totalMP,
+                                      const CAmount& totalRewards, CAmount& memberReward)
+{
+    if ((totalMP < MP) || (totalMP == 0))
+    {
+        LogPrintf("%s, some of inputs are error, totalMP: %d, miming power: %d\n", __func__, totalMP, MP);
+        return false;
+    }
+    if ((totalRewards >= MAX_MONEY)  || (totalRewards < 0))
+    {
+        LogPrintf("%s, the rewards are overrange: %d\n", __func__, totalRewards);
+        return false;
+    }
+
+    arith_uint256 tmp = totalMP;
+    arith_uint256 mp = MP;
+    arith_uint256 tRwd_1 = totalRewards / (CENT*CENT);
+    arith_uint256 tRwd_2 = totalRewards % (CENT*CENT) / CENT;
+    arith_uint256 tRwd_3 = totalRewards % (CENT*CENT) % CENT;
+    double ratio = mp.getdouble() / tmp.getdouble();
+    CAmount memberReward_1 = ratio * tRwd_1.getdouble() * (CENT*CENT);
+    CAmount memberReward_2 = ratio * tRwd_2.getdouble() * CENT;
+    CAmount memberReward_3 = ratio * tRwd_3.getdouble();
+    memberReward = memberReward_1 + memberReward_2 + memberReward_3;
+    if (memberReward >= 0)
+    {
+        if (memberReward > totalRewards)
+            memberReward = totalRewards;
+        return true;
+    }
+    else
+    {
+        LogPrintf("%s, memberReward < 0, miming power: %d, totalMP: %d, totalRewards: %d, memberReward: %d\n",
+                  __func__, MP, totalMP, totalRewards, memberReward);
+        return false;
+    }
 
     return true;
 }
 
-string CClubInfoDB::GetTrieStrByFatherAddress(std::string fatherAddress, int nHeight)
+bool CClubInfoDB::UpdateRewards(const string& minerAddress, CAmount memberRewards,
+                                uint64_t memberTotalMP, CAmount distributedRewards, bool isUndo)
 {
-    TRY_LOCK(cs_clubinfo, cachelock);
-    if (cachelock && (cacheRecord.find(fatherAddress) != cacheRecord.end()))
-        return cacheRecord[fatherAddress];
-    else
+    AssertLockHeld(cs_clubinfo);
+    const vector<CMemberInfo> &vmemberInfo = cacheRecord[minerAddress];
+    for(size_t i = 1; i < vmemberInfo.size(); i++)
     {
-        for (int h = nHeight; h >= 0; h--)
+        CAmount reward = 0;
+        if (!ComputeMemberReward(vmemberInfo[i].MP, memberTotalMP, memberRewards, reward))
         {
-            string strCompressed = "";
-            if (ReadDB(fatherAddress, h, strCompressed))
-                return strCompressed;
+            LogPrintf("%s, ComputeMemberReward() error, fatherAddress: %s, totalRewards: %d, totalMP: %d\n",
+                      __func__, minerAddress, memberRewards, memberTotalMP);
+            return false;
         }
+        if (isUndo)
+            cacheRecord[minerAddress][i].rwd -= reward;
+        else
+            cacheRecord[minerAddress][i].rwd += reward;
+        distributedRewards += reward;
+        UpdateRewards(vmemberInfo[i].address, memberRewards, memberTotalMP, distributedRewards, isUndo);
     }
 
-    return "";
+    return true;
 }
 
-vector<string> CClubInfoDB::GetTotalMembersByAddress(std::string fatherAddress, int nHeight, bool dbOnly)
+bool CClubInfoDB::UpdateRewardsByMinerAddress(const string& minerAddress, CAmount memberRewards,
+                                              uint64_t memberTotalMP, CAmount& distributedRewards, bool isUndo)
 {
-    vector<string> members;
-    TAUAddrTrie::Trie trie;
-    if (!dbOnly)
+    LOCK(cs_clubinfo);
+    distributedRewards = 0;
+    if (!UpdateRewards(minerAddress, memberRewards, memberTotalMP, distributedRewards, isUndo))
+        return false;
+
+    CAmount remainedReward = memberRewards - distributedRewards;
+    if (remainedReward < 0)
     {
-        TRY_LOCK(cs_clubinfo, cachelock);
-        if (cachelock && (cacheRecord.find(fatherAddress) != cacheRecord.end()))
-        {
-//            trieCache.BuildTreeFromStr(cacheRecord[fatherAddress], false);
-//            members = trieCache.ListAll();
-            // =====Temporary program
-            vector<string> splitedStr;
-            boost::split(splitedStr, cacheRecord[fatherAddress], boost::is_any_of(DBSEPECTATOR));
-
-            for (vector<string>::iterator it = splitedStr.begin();
-                 it != splitedStr.end(); it++)
-            {
-                if (it->compare(" ") && !it->empty())
-                    members.push_back(*it);
-            }
-
-            for(size_t i = 0; i < members.size(); i++)
-            {
-                vector<string> childMembers = GetTotalMembersByAddress(members[i], nHeight, dbOnly);
-                for(size_t k = 0; k < childMembers.size(); k++)
-                {
-                    if (childMembers[k].compare(" ") && !childMembers[k].empty())
-                    {
-                        members.push_back(childMembers[k]);
-                        LogPrint("clubinfo", "%s, cache father: %s, get address added: %s, h:%d\n", __func__, members[i],
-                            childMembers[k], nHeight);
-                    }
-                }
-            }
-
-            return members;
-        }
-
-        if (nHeight == currentHeight && cacheForRead.find(fatherAddress) != cacheForRead.end())
-        {
-            vector<string> tempVec = cacheForRead[fatherAddress];
-            for (vector<string>::iterator it = tempVec.begin();
-                 it != tempVec.end(); it++)
-            {
-                if (it->compare(" ") && !it->empty())
-                    members.push_back(*it);
-            }
-
-            for(size_t i = 0; i < members.size(); i++)
-            {
-                vector<string> childMembers = GetTotalMembersByAddress(members[i], nHeight, dbOnly);
-                for(size_t k = 0; k < childMembers.size(); k++)
-                {
-                    if (childMembers[k].compare(" ") && !childMembers[k].empty())
-                    {
-                        members.push_back(childMembers[k]);
-                        LogPrint("clubinfo", "%s, cacheRead father: %s, get address added: %s, h:%d\n", __func__, members[i],
-                            childMembers[k], nHeight);
-                    }
-                }
-            }
-
-            return members;
-        }
+        LogPrintf("%s, memberRewards < distributedRewards, memberRewards: %d, distributedRewards: %d\n",
+                  __func__, memberRewards, distributedRewards);
+        return false;
     }
 
-    for (int h = nHeight; h >= 0; h--)
+    if (isUndo)
+        cacheRecord[minerAddress][0].rwd -= remainedReward;
+    else
+        cacheRecord[minerAddress][0].rwd += remainedReward;
+
+    return true;
+}
+
+bool CClubInfoDB::UpdateMpByChange(string fatherAddr, uint64_t index, bool isUndo,
+                                   uint64_t amount, bool add)
+{
+    if (cacheRecord.find(fatherAddr) == cacheRecord.end())
     {
-        string strCompressed;
-        if (ReadDB(fatherAddress, h, strCompressed))
-        {
-//            trie.BuildTreeFromStr(strCompressed, false);
-//            members = trie.ListAll();
-            // =====Temporary program
-            vector<string> splitedStr;
-            boost::split(splitedStr, strCompressed, boost::is_any_of(DBSEPECTATOR));
-
-            for (vector<string>::iterator it = splitedStr.begin();
-                 it != splitedStr.end(); it++)
-            {
-                if (it->compare(" ") && !it->empty())
-                    members.push_back(*it);
-            }
-
-            for(size_t i = 0; i < members.size(); i++)
-            {
-                vector<string> childMembers = GetTotalMembersByAddress(members[i], nHeight, dbOnly);
-                for(size_t k = 0; k < childMembers.size(); k++)
-                {
-                    if (childMembers[k].compare(" ") && !childMembers[k].empty())
-                    {
-                        members.push_back(childMembers[k]);
-                        LogPrint("clubinfo", "%s, db father: %s, get address added: %s, h:%d\n", __func__, members[i],
-                            childMembers[k], nHeight);
-                    }
-                }
-            }
-
-            return members;
-        }
-        else if(strCompressed.compare("#") == 0)
-        {
-            LogPrintf("%s recursion exception on %d %s have no child or read db fail\n", __func__, nHeight, fatherAddress);
-            //assert(strCompressed == "");
-        }
+        LogPrintf("%s, The input father address is : %s, which is not exist\n", __func__, fatherAddr);
+        return false;
+    }
+    if (index >= cacheRecord[fatherAddr].size())
+    {
+        LogPrintf("%s, The input index is : %d, which is overrange, the max size is: %d\n",
+                  __func__, index, cacheRecord[fatherAddr].size());
+        return false;
     }
 
-    if (nHeight == currentHeight && !dbOnly)
-        cacheForRead[fatherAddress] = members;// Add to cache for accelerating
+    if (isUndo)
+        add = !add;
+    if (add)
+        cacheRecord[fatherAddr][index].MP += amount;
+    else
+        cacheRecord[fatherAddr][index].MP -= amount;
 
-    return members;
+    return true;
+}
+
+void CClubInfoDB::UpdateRewardByChange(std::string fatherAddr, uint64_t index, CAmount rewardChange, bool isUndo)
+{
+    if (isUndo)
+        rewardChange = 0 - rewardChange;
+    cacheRecord[fatherAddr][index].rwd += rewardChange;
 }
 
 bool CClubInfoDB::AddClubLeader(std::string address, int height)
@@ -481,7 +457,6 @@ bool CClubInfoDB::AddClubLeader(std::string address, int height)
         LogPrintf("%s, The input address is : %s, which is not valid\n", __func__, address);
         return false;
     }
-
 
     return pclubleaderdb->AddClubLeader(address, height);
 }
@@ -493,7 +468,6 @@ bool CClubInfoDB::RemoveClubLeader(std::string address, int height)
         LogPrintf("%s, The input address is : %s, which is not valid\n", __func__, address);
         return false;
     }
-
 
     return pclubleaderdb->RemoveClubLeader(address, height);
 }

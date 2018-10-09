@@ -21,7 +21,7 @@
 #include "sync.h"
 #include "versionbits.h"
 #include "txdb.h"
-#include "rewarddb/memberinfodb.h"
+#include "rewarddb/addrinfodb.h"
 #include "rewarddb/clubinfodb.h"
 
 #include <algorithm>
@@ -192,7 +192,7 @@ extern CBlockIndex *pindexBestHeader;
 static const uint64_t nMinDiskSpace = 52428800;
 
 extern CRewardRateViewDB *prewardratedbview;
-extern CMemberInfoDB *pmemberinfodb;
+extern CAddrInfoDB *paddrinfodb;
 extern CClubInfoDB *pclubinfodb;
 
 /** Pruning-related variables and constants */

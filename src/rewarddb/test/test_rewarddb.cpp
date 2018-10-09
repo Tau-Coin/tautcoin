@@ -19,14 +19,20 @@
 //#include "rpc/register.h"
 
 #include "test/testutil.h"
+#include "rewarddb/addrtrie.h"
 
 #include <boost/filesystem.hpp>
 #include <boost/test/unit_test.hpp>
 #include <boost/thread.hpp>
+#include <list>
+#include <map>
+#include <set>
+#include <stdlib.h>
+#include <time.h>
+#include <algorithm>
 
 //extern bool fPrintToConsole;
 extern void noui_connect();
-
 
 using namespace std;
 namespace TAURewardDB
@@ -53,16 +59,16 @@ TestingSetup::TestingSetup(const std::string& chainName) : BasicTestingSetup(cha
     // Ideally we'd move all the RPC tests to the functional testing framework
     // instead of unit tests, but for now we need these here.
     //RegisterAllCoreRPCCommands(tableRPC);
-    //ClearDatadirCache();
+    ClearDatadirCache();
     pathTemp = GetTempPath() / strprintf("test_bitcoin_%lu_%i", (unsigned long)GetTime(), (int)(GetRand(100000)));
     boost::filesystem::create_directories(pathTemp);
     mapArgs["-datadir"] = pathTemp.string();
-    pclubinfodb = new CClubInfoDB();
-    pmemberinfodb = new CMemberInfoDB(pclubinfodb);
+    pclubinfodb = new CClubInfoDB(0);
+    paddrinfodb = new CAddrInfoDB(0, pclubinfodb);
     //mempool.setSanityCheck(1.0);
     pblocktree = new CBlockTreeDB(1 << 20, true);
     pcoinsdbview = new CCoinsViewDB(1 << 23, true);
-    //pcoinsTip = new CCoinsViewCache(pcoinsdbview);
+    pcoinsTip = new CCoinsViewCache(pcoinsdbview);
     InitBlockIndex(chainparams);
     nScriptCheckThreads = 3;
     for (int i=0; i < nScriptCheckThreads-1; i++)
@@ -79,8 +85,8 @@ TestingSetup::~TestingSetup()
         delete pcoinsTip;
         delete pcoinsdbview;
         delete pblocktree;
-        delete pmemberinfodb;
-        pmemberinfodb = NULL;
+        delete paddrinfodb;
+        paddrinfodb = NULL;
         delete pclubinfodb;
         pclubinfodb = NULL;
         boost::filesystem::remove_all(pathTemp);
@@ -113,290 +119,257 @@ static const unsigned int NUM_SIMULATION_ADDRESSS = 1000000;
 
 BOOST_AUTO_TEST_CASE(coins_cache_simulation_test)
 {
+    int num = 7211;
+    int numRandomly = num / 2;
+    string test;
+    //input
+    vector<string> addresses;
+    vector<string> addressesRandom;
+    for(int i = 0, j = 0; i < num; i++)
+    {
+        srand((unsigned)std::time(0));
+        bool random = rand()%2;
+        string addr = GetRandomAddress();
+        addresses.push_back(addr);
+        if (random && j < numRandomly)
+        {
+            addressesRandom.push_back(addr);
+            j++;
+        }
+    }
+
+    // test 1, traversal: set map list vector
+    int test1Num = num;
+    cout<<"traversal test"<<endl;
+    for(int t = 0; t < 1; t++, test1Num*=10)
+    {
+        std::clock_t start, finish;
+        double totaltime = 0;
+//        //set
+//        set<string> s;
+//        for(int i = 0; i < test1Num; i++)
+//            s.insert(addresses[i]);
+
+//        start = clock();
+//        for(set<string>::iterator ite = s.begin(); ite != s.end(); ite++)
+//            test = *ite;
+//        finish = clock();
+//        totaltime = (double)(finish - start) / CLOCKS_PER_SEC;
+//        cout<<"set_"<<test1Num<<" 的traversal时间为"<<totaltime<<"秒！"<<endl;
+
+        //map
+        map<string, string> m;
+        for(int i = 0; i < test1Num; i++)
+            m.insert(pair<string, string>(addresses[i], addresses[i]));
+
+        start = clock();
+        for(map<string, string>::iterator ite = m.begin(); ite != m.end(); ite++)
+            test = ite->second;
+        finish = clock();
+        totaltime = (double)(finish - start) / CLOCKS_PER_SEC;
+        cout<<"map_"<<test1Num<<" 的traversal时间为"<<totaltime<<"秒！"<<endl;
+
+//        //list
+//        list<string> l;
+//        for(int i = 0; i < test1Num; i++)
+//            l.push_back(addresses[i]);
+
+//        start = clock();
+//        for(list<string>::iterator ite = l.begin(); ite != l.end(); ite++)
+//            test = *ite;
+//        finish = clock();
+//        totaltime = (double)(finish - start) / CLOCKS_PER_SEC;
+//        cout<<"list_"<<test1Num<<" 的traversal时间为"<<totaltime<<"秒！"<<endl;
+
+        //vector
+        vector<string> v;
+        v.reserve(test1Num*10);
+        for(int i = 0; i < test1Num; i++)
+            v.push_back(addresses[i]);
+
+        start = clock();
+        for(size_t k = 0; k < v.size(); k++)
+            test = v[k];
+        finish = clock();
+        totaltime = (double)(finish - start) / CLOCKS_PER_SEC;
+        cout<<"vector_"<<test1Num<<" 的traversal时间为"<<totaltime<<"秒！"<<endl;
+
+        start = clock();
+        for(size_t k = 0; k < v.size(); k++)
+            v[k] = test;//test = v[k];
+        finish = clock();
+        totaltime = (double)(finish - start) / CLOCKS_PER_SEC;
+        cout<<"vector_"<<test1Num<<" 的traversal2时间为"<<totaltime<<"秒！"<<endl;
+    }
+
+    // test 2, read randomly: set map list vector TAUAddrTrie
+    int test2Num = num;
+    cout<<"read_randomly test"<<endl;
+    for(int t = 0; t < 1; t++, test2Num*=10)
+    {
+        //set
+        set<string> s;
+        for(int i = 0; i < test2Num; i++)
+            s.insert(addresses[i]);
+
+        std::clock_t start, finish;
+        start = clock();
+        set<string>::iterator ite;
+        for(size_t i = 0; i < addressesRandom.size(); i++)
+        {
+            ite = s.find(addressesRandom[i]);
+            test = *ite;
+        }
+        finish = clock();
+        double totaltime = (double)(finish - start) / CLOCKS_PER_SEC;
+        cout<<"set_"<<addressesRandom.size()<<" 的read_randomly时间为"<<totaltime<<"秒！"<<endl;
+
+        //map
+        map<string, string> m;
+        for(int i = 0; i < test2Num; i++)
+            m.insert(pair<string, string>(addresses[i], addresses[i]));
+
+        start = clock();
+        for(size_t i = 0; i < addressesRandom.size(); i++)
+            test = m[addressesRandom[i]];
+        finish = clock();
+        totaltime = (double)(finish - start) / CLOCKS_PER_SEC;
+        cout<<"map_"<<addressesRandom.size()<<" 的read_randomly时间为"<<totaltime<<"秒！"<<endl;
+
+        //list
+        list<string> l;
+        for(int i = 0; i < test2Num; i++)
+            l.push_back(addresses[i]);
+
+        start = clock();
+        for(size_t i = 0; i < addressesRandom.size(); i++)
+        {
+            list<string>::iterator ite = find(l.begin(), l.end(), addressesRandom[i]);
+            test = *ite;
+        }
+        finish = clock();
+        totaltime = (double)(finish - start) / CLOCKS_PER_SEC;
+        cout<<"list_"<<addressesRandom.size()<<" 的read_randomly时间为"<<totaltime<<"秒！"<<endl;
+
+        //vector
+        vector<string> v;
+        for(int i = 0; i < test2Num; i++)
+            v.push_back(addresses[i]);
+
+        start = clock();
+        for(size_t i = 0; i < addressesRandom.size(); i++)
+        {
+            vector<string>::iterator ite = find(v.begin(), v.end(), addressesRandom[i]);
+            test = *ite;
+        }
+        finish = clock();
+        totaltime = (double)(finish - start) / CLOCKS_PER_SEC;
+        cout<<"vector_"<<addressesRandom.size()<<" 的read_randomly时间为"<<totaltime<<"秒！"<<endl;
+
+        //TAUAddrTrie
+        TAUAddrTrie::Trie trie;
+        for(int i = 0; i < test2Num; i++)
+            trie.Insert(addresses[i]);
+
+        start = clock();
+        for(size_t i = 0; i < addressesRandom.size(); i++)
+        {
+            if (trie.Search(addressesRandom[i]))
+                trie.Remove(addressesRandom[i]);
+        }
+        finish = clock();
+        totaltime = (double)(finish - start) / CLOCKS_PER_SEC;
+        cout<<"trie_"<<addressesRandom.size()<<" 的read_randomly时间为"<<totaltime<<"秒！"<<endl;
+    }
+
+//    // test 3, modify randomly: set map list vector TAUAddrTrie
+//    int test3Num = num;
+//    cout<<"modify_randomly test"<<endl;
+//    vector<string> addressesInsert;
+//    for(size_t i = 0; i < addressesRandom.size(); i++)
+//        addressesInsert.push_back(GetRandomAddress());
+//    for(int t = 0; t < 1; t++, test3Num*=10)
+//    {
+//        //set
+//        set<string> s;
+//        for(int i = 0; i < test3Num; i++)
+//            s.insert(addresses[i]);
+
+//        std::clock_t start, finish;
+//        start = clock();
+//        set<string>::iterator ite;
+//        for(size_t i = 0; i < addressesRandom.size(); i++)
+//        {
+//            s.erase(addressesRandom[i]);
+//            s.insert(addressesInsert[i]);
+//        }
+//        finish = clock();
+//        double totaltime = (double)(finish - start) / CLOCKS_PER_SEC;
+//        cout<<"set_"<<addressesRandom.size()<<" 的modify_randomly时间为"<<totaltime<<"秒！"<<endl;
+
+//        //map
+//        map<string, string> m;
+//        for(int i = 0; i < test3Num; i++)
+//            m.insert(pair<string, string>(addresses[i], addresses[i]));
+
+//        start = clock();
+//        for(size_t i = 0; i < addressesRandom.size(); i++)
+//            m[addressesRandom[i]] = addressesInsert[i];
+//        finish = clock();
+//        totaltime = (double)(finish - start) / CLOCKS_PER_SEC;
+//        cout<<"map_"<<addressesRandom.size()<<" 的modify_randomly时间为"<<totaltime<<"秒！"<<endl;
+
+//        //list
+//        list<string> l;
+//        for(int i = 0; i < test3Num; i++)
+//            l.push_back(addresses[i]);
+
+//        start = clock();
+//        for(size_t i = 0; i < addressesRandom.size(); i++)
+//        {
+//            list<string>::iterator ite = find(l.begin(), l.end(), addressesRandom[i]);
+//            l.erase(ite);
+//            l.push_back(addressesInsert[i]);
+//        }
+//        finish = clock();
+//        totaltime = (double)(finish - start) / CLOCKS_PER_SEC;
+//        cout<<"list_"<<addressesRandom.size()<<" 的modify_randomly时间为"<<totaltime<<"秒！"<<endl;
+
+//        //vector
+//        vector<string> v;
+//        for(int i = 0; i < test3Num; i++)
+//            v.push_back(addresses[i]);
+
+//        start = clock();
+//        for(size_t i = 0; i < addressesRandom.size(); i++)
+//        {
+//            vector<string>::iterator ite = find(v.begin(), v.end(), addressesRandom[i]);
+//            v.erase(ite);
+//            v.push_back(addressesInsert[i]);
+//        }
+//        finish = clock();
+//        totaltime = (double)(finish - start) / CLOCKS_PER_SEC;
+//        cout<<"vector_"<<addressesRandom.size()<<" 的modify_randomly时间为"<<totaltime<<"秒！"<<endl;
+
+//        //TAUAddrTrie
+//        TAUAddrTrie::Trie trie;
+//        for(int i = 0; i < test3Num; i++)
+//            trie.Insert(addresses[i]);
+
+//        start = clock();
+//        for(size_t i = 0; i < addressesRandom.size(); i++)
+//        {
+//            if (trie.Search(addressesRandom[i]))
+//            {
+//                trie.Remove(addressesRandom[i]);
+//                trie.Insert(addressesInsert[i]);
+//            }
+//        }
+//        finish = clock();
+//        totaltime = (double)(finish - start) / CLOCKS_PER_SEC;
+//        cout<<"trie_"<<addressesRandom.size()<<" 的modify_randomly时间为"<<totaltime<<"秒！"<<endl;
+//    }
 
 }
 
 BOOST_AUTO_TEST_SUITE_END()
-
-//TestChain100Setup::TestChain100Setup() : TestingSetup(CBaseChainParams::REGTEST)
-//{
-//    // Generate a 100-block chain:
-//    coinbaseKey.MakeNewKey(true);
-//    CScript scriptPubKey = CScript() <<  ToByteVector(coinbaseKey.GetPubKey()) << OP_CHECKSIG;
-//    for (int i = 0; i < COINBASE_MATURITY; i++)
-//    {
-//        std::vector<CMutableTransaction> noTxns;
-//        CBlock b = CreateAndProcessBlock(noTxns, scriptPubKey);
-//        coinbaseTxns.push_back(b.vtx[0]);
-//    }
-//}
-
-////
-//// Create a new block with just given transactions, coinbase paying to
-//// scriptPubKey, and try to add it to the current chain.
-////
-//CBlock
-//TestChain100Setup::CreateAndProcessBlock(const std::vector<CMutableTransaction>& txns, const CScript& scriptPubKey)
-//{
-//    const CChainParams& chainparams = Params();
-//    std::string pubkeyString = "this is a test network";
-//    CBlockTemplate *pblocktemplate = BlockAssembler(chainparams).CreateNewBlock(scriptPubKey,pubkeyString);
-//    CBlock& block = pblocktemplate->block;
-
-//    // Replace mempool-selected txns with just coinbase plus passed-in txns:
-//    block.vtx.resize(1);
-//    BOOST_FOREACH(const CMutableTransaction& tx, txns)
-//        block.vtx.push_back(tx);
-//    // IncrementExtraNonce creates a valid coinbase and merkleRoot
-//    unsigned int extraNonce = 0;
-//    IncrementExtraNonce(&block, chainActive.Tip(), extraNonce);
-
-//    //while (!CheckProofOfWork(block.GetHash(), block.nBits, chainparams.GetConsensus())) ++block.nNonce;
-
-//    CValidationState state;
-//    ProcessNewBlock(state, chainparams, NULL, &block, true, NULL);
-
-//    CBlock result = block;
-//    delete pblocktemplate;
-//    return result;
-//}
-
-//TestChain100Setup::~TestChain100Setup()
-//{
-//}
-
-
-//CTxMemPoolEntry TestMemPoolEntryHelper::FromTx(CMutableTransaction &tx, CTxMemPool *pool) {
-//    CTransaction txn(tx);
-//    return FromTx(txn, pool);
-//}
-
-//CTxMemPoolEntry TestMemPoolEntryHelper::FromTx(CTransaction &txn, CTxMemPool *pool) {
-//    bool hasNoDependencies = pool ? pool->HasNoInputsOf(txn) : hadNoDependencies;
-//    // Hack to assume either its completely dependent on other mempool txs or not at all
-//    CAmount inChainValue = hasNoDependencies ? txn.GetValueOut() : 0;
-
-//    return CTxMemPoolEntry(txn, nFee, nTime, dPriority, nHeight,
-//                           hasNoDependencies, inChainValue, spendsCoinbase, sigOpCost, lp);
-//}
-
-//void Shutdown(void* parg)
-//{
-//  exit(0);
-//}
-
-//void StartShutdown()
-//{
-//  exit(0);
-//}
-
-//bool ShutdownRequested()
-//{
-//  return false;
-//}
-
-
-
-
-
-
-
-
-
-//typedef unsigned int uint;
-//using namespace std;
-//namespace
-//{
-//class CCoinsViewTest : public CCoinsView
-//{
-//    uint256 hashBestBlock_;
-//    std::map<uint256, CCoins> map_;
-
-//public:
-//    bool GetCoins(const uint256& txid, CCoins& coins) const
-//    {
-//        std::map<uint256, CCoins>::const_iterator it = map_.find(txid);
-//        if (it == map_.end()) {
-//            return false;
-//        }
-//        coins = it->second;
-//        if (coins.IsPruned() && insecure_rand() % 2 == 0) {
-//            // Randomly return false in case of an empty entry.
-//            return false;
-//        }
-//        return true;
-//    }
-
-//    bool HaveCoins(const uint256& txid) const
-//    {
-//        CCoins coins;
-//        return GetCoins(txid, coins);
-//    }
-
-//    uint256 GetBestBlock() const { return hashBestBlock_; }
-
-//    bool BatchWrite(CCoinsMap& mapCoins, const uint256& hashBlock)
-//    {
-//        for (CCoinsMap::iterator it = mapCoins.begin(); it != mapCoins.end(); ) {
-//            if (it->second.flags & CCoinsCacheEntry::DIRTY) {
-//                // Same optimization used in CCoinsViewDB is to only write dirty entries.
-//                map_[it->first] = it->second.coins;
-//                if (it->second.coins.IsPruned() && insecure_rand() % 3 == 0) {
-//                    // Randomly delete empty entries on write.
-//                    map_.erase(it->first);
-//                }
-//            }
-//            mapCoins.erase(it++);
-//        }
-//        if (!hashBlock.IsNull())
-//            hashBestBlock_ = hashBlock;
-//        return true;
-//    }
-//};
-
-//class CCoinsViewCacheTest : public CCoinsViewCache
-//{
-//public:
-//    CCoinsViewCacheTest(CCoinsView* base) : CCoinsViewCache(base) {}
-
-//    void SelfTest() const
-//    {
-//        // Manually recompute the dynamic usage of the whole data, and compare it.
-//        size_t ret = memusage::DynamicUsage(cacheCoins);
-//        for (CCoinsMap::iterator it = cacheCoins.begin(); it != cacheCoins.end(); it++) {
-//            ret += it->second.coins.DynamicMemoryUsage();
-//        }
-//        BOOST_CHECK_EQUAL(DynamicMemoryUsage(), ret);
-//    }
-
-//};
-
-//}
-
-//BOOST_FIXTURE_TEST_SUITE(coins_tests, BasicTestingSetup)
-
-//static const unsigned int NUM_SIMULATION_ITERATIONS = 40000;
-//static const unsigned int NUM_SIMULATION_ADDRESSS = 1000000;
-
-//// This is a large randomized insert/remove simulation test on a variable-size
-//// stack of caches on top of CCoinsViewTest.
-////
-//// It will randomly create/update/delete CCoins entries to a tip of caches, with
-//// txids picked from a limited list of random 256-bit hashes. Occasionally, a
-//// new tip is added to the stack of caches, or the tip is flushed and removed.
-////
-//// During the process, booleans are kept to make sure that the randomized
-//// operation hits all branches.
-//BOOST_AUTO_TEST_CASE(coins_cache_simulation_test)
-//{
-//    // Various coverage trackers.
-//    bool removed_all_caches = false;
-//    bool reached_4_caches = false;
-//    bool added_an_entry = false;
-//    bool removed_an_entry = false;
-//    bool updated_an_entry = false;
-//    bool found_an_entry = false;
-//    bool missed_an_entry = false;
-
-//    // A simple map to track what we expect the cache stack to represent.
-//    std::map<uint256, CCoins> result;
-
-//    // The cache stack.
-//    CCoinsViewTest base; // A CCoinsViewTest at the bottom.
-//    std::vector<CCoinsViewCacheTest*> stack; // A stack of CCoinsViewCaches on top.
-//    stack.push_back(new CCoinsViewCacheTest(&base)); // Start with one cache.
-
-//    // Use a limited set of random transaction ids, so we do test overwriting entries.
-//    std::vector<uint256> txids;
-//    txids.resize(NUM_SIMULATION_ITERATIONS / 8);
-//    for (unsigned int i = 0; i < txids.size(); i++) {
-//        txids[i] = GetRandHash();
-//    }
-
-//    for (unsigned int i = 0; i < NUM_SIMULATION_ITERATIONS; i++) {
-//        // Do a random modification.
-//        {
-//            uint256 txid = txids[insecure_rand() % txids.size()]; // txid we're going to modify in this iteration.
-//            CCoins& coins = result[txid];
-//            CCoinsModifier entry = stack.back()->ModifyCoins(txid);
-//            BOOST_CHECK(coins == *entry);
-//            if (insecure_rand() % 5 == 0 || coins.IsPruned()) {
-//                if (coins.IsPruned()) {
-//                    added_an_entry = true;
-//                } else {
-//                    updated_an_entry = true;
-//                }
-//                coins.nVersion = insecure_rand();
-//                coins.vout.resize(1);
-//                coins.vout[0].nValue = insecure_rand();
-//                *entry = coins;
-//            } else {
-//                coins.Clear();
-//                entry->Clear();
-//                removed_an_entry = true;
-//            }
-//        }
-
-//        // Once every 1000 iterations and at the end, verify the full cache.
-//        if (insecure_rand() % 1000 == 1 || i == NUM_SIMULATION_ITERATIONS - 1) {
-//            for (std::map<uint256, CCoins>::iterator it = result.begin(); it != result.end(); it++) {
-//                const CCoins* coins = stack.back()->AccessCoins(it->first);
-//                if (coins) {
-//                    BOOST_CHECK(*coins == it->second);
-//                    found_an_entry = true;
-//                } else {
-//                    BOOST_CHECK(it->second.IsPruned());
-//                    missed_an_entry = true;
-//                }
-//            }
-//            BOOST_FOREACH(const CCoinsViewCacheTest *test, stack) {
-//                test->SelfTest();
-//            }
-//        }
-
-//        if (insecure_rand() % 100 == 0) {
-//            // Every 100 iterations, flush an intermediate cache
-//            if (stack.size() > 1 && insecure_rand() % 2 == 0) {
-//                unsigned int flushIndex = insecure_rand() % (stack.size() - 1);
-//                stack[flushIndex]->Flush();
-//            }
-//        }
-//        if (insecure_rand() % 100 == 0) {
-//            // Every 100 iterations, change the cache stack.
-//            if (stack.size() > 0 && insecure_rand() % 2 == 0) {
-//                //Remove the top cache
-//                stack.back()->Flush();
-//                delete stack.back();
-//                stack.pop_back();
-//            }
-//            if (stack.size() == 0 || (stack.size() < 4 && insecure_rand() % 2)) {
-//                //Add a new cache
-//                CCoinsView* tip = &base;
-//                if (stack.size() > 0) {
-//                    tip = stack.back();
-//                } else {
-//                    removed_all_caches = true;
-//                }
-//                stack.push_back(new CCoinsViewCacheTest(tip));
-//                if (stack.size() == 4) {
-//                    reached_4_caches = true;
-//                }
-//            }
-//        }
-//    }
-
-//    // Clean up the stack.
-//    while (stack.size() > 0) {
-//        delete stack.back();
-//        stack.pop_back();
-//    }
-
-//    // Verify coverage.
-//    BOOST_CHECK(removed_all_caches);
-//    BOOST_CHECK(reached_4_caches);
-//    BOOST_CHECK(added_an_entry);
-//    BOOST_CHECK(removed_an_entry);
-//    BOOST_CHECK(updated_an_entry);
-//    BOOST_CHECK(found_an_entry);
-//    BOOST_CHECK(missed_an_entry);
-//}

@@ -7,16 +7,21 @@
 #include "chain.h"
 #include "base58.h"
 #include "leveldb/db.h"
+#include "clubleaderdb.h"
 #include <map>
 #include <string>
 #include <vector>
 
-#include "clubleaderdb.h"
+
+#define CLUBINFODBPATH "clubinfodb"
+#define RWDBALDBRATEPATH "/rewardrate"
+#define NOT_VALID_RECORD "NOT_VALID"
+#define NO_MOVED_ADDRESS "NO_MOVED_ADDRESS"
 
 extern CCriticalSection cs_clubinfo;
 
 /** View on the reward rate dataset. */
-#define RWDBALDBRATEPATH "/rewardrate"
+
 class CRewardRateViewDB
 {
 private:
@@ -44,17 +49,36 @@ public:
     bool UpdateRewardRate(std::string leaderAddress, double val, int nHeight);
 };
 
+typedef struct _CMemberInfo {
+    std::string address; // The address of this info
+
+    uint64_t MP; // The total mining power of the address, when the address is a miner
+
+    CAmount rwd; // The reward balance of the address
+
+    _CMemberInfo() : address(" "), MP(0), rwd(0) { }
+
+    _CMemberInfo(std::string _address, uint64_t _MP, CAmount _rwd) :
+        address(_address), MP(_MP), rwd(_rwd) { }
+
+    ADD_SERIALIZE_METHODS;
+
+    template <typename Stream, typename Operation>
+    inline void SerializationOp(Stream& s, Operation ser_action, int nType, int nVersion)
+    {
+        READWRITE(address);
+        READWRITE(MP);
+        READWRITE(rwd);
+    }
+
+}CMemberInfo;
+
 /** View on the club info dataset. */
-#define DBSEPECTATOR "_"
-#define CLUBINFOPATH "/clubinfo"
-class CClubInfoDB
+class CClubInfoDB : public CDBWrapper
 {
 private:
-    //! the database itself
-    leveldb::DB* pdb;
-
-    //! database options used
-    leveldb::Options options;
+    //! the level DB's WriteBatch
+    CDBBatch* batch;
 
     //! clubinfo database used
     CRewardRateViewDB* _prewardratedbview;
@@ -62,25 +86,35 @@ private:
     //!club leader database
     CClubLeaderDB* pclubleaderdb;
 
-    //! cache for multi-transaction balance updating
-    std::map<std::string, std::string> cacheRecord;
-
     //! cache for accelerating
-    std::map<std::string, std::vector<std::string> > cacheForRead;
+    std::map<std::string, std::vector<CMemberInfo> > cacheRecord;
 
     //! Current updated height
     int currentHeight;
 
-    bool WriteDB(std::string key, int nHeight, std::string strValue);
+    bool WriteDB(const std::string& address, const std::vector<CMemberInfo>& value);
+    template <typename K, typename V>
+    void WriteToBatch(const K& key, const V& value) { batch->Write(key, value); }
 
-    bool ReadDB(std::string key, int nHeight, std::string& strValue);
+    bool ReadDB(const std::string& address, std::vector<CMemberInfo>& value) const;
 
-    bool DeleteDB(std::string key, int nHeight);
+    bool DeleteDB(const std::string& address);
+    void DeleteToBatch(const std::string& address) { batch->Erase(address); }
+
+    bool CommitDB(bool fSync = false) { return WriteBatch(*batch, fSync); }
+
+    void GetTotalMembers(const std::string& fatherAddress, std::vector<std::string>& vmembers);
+
+    bool ComputeMemberReward(const uint64_t& MP, const uint64_t& totalMP,
+                             const CAmount& totalRewards, CAmount& memberReward);
+
+    bool UpdateRewards(const std::string& minerAddress, CAmount memberRewards,
+                       uint64_t memberTotalMP, CAmount distributedRewards, bool isUndo);
 
 public:
     //! Constructor
-    CClubInfoDB();
-    CClubInfoDB(CRewardRateViewDB* prewardratedbview);
+    CClubInfoDB(size_t nCacheSize, bool fMemory=false, bool fWipe=false);
+    CClubInfoDB(size_t nCacheSize, CRewardRateViewDB* prewardratedbview, bool fMemory=false, bool fWipe=false);
 
     //! Destructor
     ~CClubInfoDB();
@@ -91,14 +125,14 @@ public:
     //! Check if input address is valid
     static bool AddressIsValid(std::string address);
 
-    //! Clear the clubinfo cache
-    void ClearCache();
+    //! Init the father and mp of the address from genesis block
+    bool InitGenesisDB(const std::vector<std::string>& addresses);
 
     //! Clear the clubinfo accelerating cache
-    void ClearReadCache();
+    void ClearCache();
 
     //! Commit the database transaction
-    bool Commit(int nHeight);
+    bool Commit();
 
     //! Set current updated height
     void SetCurrentHeight(int nHeight);
@@ -106,15 +140,36 @@ public:
     //! Get current updated height
     int GetCurrentHeight() const;
 
-    //! Update the leader's members
-    bool UpdateMembersByFatherAddress(std::string fatherAddress, bool add, std::string address,
-                                      int nHeight, bool isUndo);
+    //! Read data from disk to memory
+    bool LoadDBToMemory();
 
-    //! Retrieve the merbers' addresses in type of trie
-    std::string GetTrieStrByFatherAddress(std::string fatherAddress, int nHeight);
+    //! Write data from memory to disk
+    bool WriteDataToDisk(int newestHeight, bool fSync);
+
+    //! Retrieve the existence of the address's item
+    bool CacheRecordIsExist(const std::string& address);
+
+    //! Get cache record by address
+    std::vector<CMemberInfo> GetCacheRecord(const std::string& address);
+
+    //! Update the leader's members
+    std::string UpdateMembersByFatherAddress(const std::string& fatherAddress, const CMemberInfo& memberinfo,
+                                             uint64_t& index, int nHeight, bool add);
 
     //! Retrieve the merbers' addresses
-    std::vector<std::string> GetTotalMembersByAddress(std::string fatherAddress, int nHeight, bool dbOnly=false);
+    void GetTotalMembersByAddress(const std::string& fatherAddress, std::vector<std::string>& vmembers);
+
+    //! Update rewards of all members in the club
+    bool UpdateRewardsByMinerAddress(const std::string& minerAddress, CAmount memberRewards,
+                                     uint64_t memberTotalMP, CAmount& distributedRewards, bool isUndo);
+
+    //! Update mining power of the address
+    bool UpdateMpByChange(std::string fatherAddr, uint64_t index, bool isUndo=false,
+                          uint64_t amount=1, bool add=true);
+
+    //! Update reward of the address
+    void UpdateRewardByChange(std::string fatherAddr, uint64_t index, CAmount rewardChange, bool isUndo=false);
+
 
     //! Add club leader
     bool AddClubLeader(std::string address, int height);

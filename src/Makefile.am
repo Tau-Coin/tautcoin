@@ -139,8 +139,8 @@ BITCOIN_CORE_H = \
   torcontrol.h \
   txdb.h \
   rewarddb/addrtrie.h \
+  rewarddb/addrinfodb.h \
   rewarddb/clubinfodb.h \
-  rewarddb/memberinfodb.h \
   rewarddb/clubleaderdb.h \
   txmempool.h \
   ui_interface.h \
@@ -203,8 +203,8 @@ libbitcoin_server_a_SOURCES = \
   torcontrol.cpp \
   txdb.cpp \
   rewarddb/addrtrie.cpp \
+  rewarddb/addrinfodb.cpp \
   rewarddb/clubinfodb.cpp \
-  rewarddb/memberinfodb.cpp \
   rewarddb/clubleaderdb.cpp \
   txmempool.cpp \
   ui_interface.cpp \

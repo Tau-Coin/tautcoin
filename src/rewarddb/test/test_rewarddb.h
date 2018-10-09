@@ -9,7 +9,7 @@
 #include "key.h"
 #include "pubkey.h"
 #include "rewarddb/clubinfodb.h"
-#include "rewarddb/memberinfodb.h"
+#include "rewarddb/addrinfodb.h"
 //#include "txdb.h"
 //#include "txmempool.h"
 

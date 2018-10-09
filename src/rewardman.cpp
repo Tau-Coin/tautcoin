@@ -8,7 +8,7 @@
 #include "util.h"
 #include "sync.h"
 
-extern CMemberInfoDB *pmemberinfodb;
+extern CAddrInfoDB *paddrinfodb;
 
 extern bool ConvertPubkeyToAddress(const std::string& pubKey, std::string& addrStr); 
 
@@ -35,7 +35,7 @@ CAmount RewardManager::GetRewardsByAddress(std::string& address, int height)
         LOCK(cs_main);
         height = chainActive.Height();
     }
-    return pmemberinfodb->GetRwdBalance(address, height);
+    return paddrinfodb->GetRwdBalance(address, height);
 }
 
 CAmount RewardManager::GetRewardsByPubkey(const std::string &pubkey, int height)

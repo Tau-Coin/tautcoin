@@ -89,7 +89,7 @@ int64_t nMaxTipAge = DEFAULT_MAX_TIP_AGE;
 bool fEnableReplacement = DEFAULT_ENABLE_REPLACEMENT;
 CRewardRateViewDB *prewardratedbview = NULL;
 CClubInfoDB *pclubinfodb = NULL;
-CMemberInfoDB *pmemberinfodb = NULL;
+CAddrInfoDB *paddrinfodb = NULL;
 
 CFeeRate minRelayTxFee = CFeeRate(DEFAULT_MIN_RELAY_TX_FEE);
 CAmount maxTxFee = DEFAULT_TRANSACTION_MAXFEE;
@@ -1062,8 +1062,8 @@ bool CheckTxRewards(const CTransaction& tx, CValidationState &state)
     if (tx.vreward.empty())
         return true;
 
-    static const int nOneMonth = 30 * 24 * 60 * 60;
-    int64_t now = GetTime();
+//    static const int nOneMonth = 30 * 24 * 60 * 60;
+//    int64_t now = GetTime();
 
     set<CTxReward> vInRewards;
     vInRewards.clear();
@@ -1071,7 +1071,7 @@ bool CheckTxRewards(const CTransaction& tx, CValidationState &state)
 
     BOOST_FOREACH(const CTxReward& rw, tx.vreward)
     {
-        LogPrintf("%s, pubkey:%s, reward:%d, transTime:%d\n", __func__, rw.senderPubkey, rw.rewardBalance, rw.transTime);
+        LogPrint("rewarddb", "pubkey:%s, reward:%d, transTime:%d\n", rw.senderPubkey, rw.rewardBalance, rw.transTime);
         if (vInRewards.count(rw))
             return state.DoS(100, false, REJECT_INVALID, "bad-txns-vreward-duplicate");
         vInRewards.insert(rw);
@@ -1970,57 +1970,18 @@ void UpdateCoins(const CTransaction& tx, CCoinsViewCache& inputs, int nHeight)
 
 bool UpdateRewards(const CBlock& block, CAmount blockReward, int nHeight, bool isUndo)
 {
-    //pmemberinfodb->ClearCache();
-    if (pmemberinfodb->GetCurrentHeight() == nHeight)
-        return true;
-
-    for (unsigned int j = 0; j < block.vtx.size(); j++)
+    if (block.vtx.size() > 1)
     {
-        const CTransaction &tx = block.vtx[j];
-        if (!tx.IsCoinBase())
+        for (unsigned int j = 1; j < block.vtx.size(); j++)
         {
-            if (!pmemberinfodb->UpdateRewardsByTX(tx, blockReward, nHeight, isUndo))
+            const CTransaction &tx = block.vtx[j];
+            if (!paddrinfodb->UpdateRewardsByTX(tx, blockReward, nHeight, isUndo))
                 return false;
         }
     }
 
-    const CTransaction coinbase = block.vtx[0];
-    if (!coinbase.IsCoinBase())
+    if (!paddrinfodb->UpdateRewardsByTX(block.vtx[0], blockReward, nHeight, isUndo))
         return false;
-    if (blockReward > 0)
-    {
-         if (!pmemberinfodb->UpdateRewardsByTX(coinbase, blockReward, nHeight, isUndo))
-             return false;
-    } else if (blockReward == 0){
-        bool updateRewardRate = false;
-        if (mapArgs.count("-updaterewardrate") && mapMultiArgs["-updaterewardrate"].size() > 0)
-        {
-            string flag = mapMultiArgs["-updaterewardrate"][0];
-            if (flag.compare("true") == 0)
-                updateRewardRate = true;
-        }
-        if (updateRewardRate) {
-            // Convert blockheader pubkey to address
-            std::string addrStr;
-            if (!ConvertPubkeyToAddress(block.pubKeyOfpackager, addrStr))
-            {
-                LogPrintf("%s  convert pubkey error", __func__);
-                return false;
-            }
-
-            if (!pmemberinfodb->RewardRateUpdate(0, 0, addrStr, nHeight))
-            {
-                LogPrintf("%s  update reward rate error", __func__);
-                return false;
-            }
-        }
-    }
-
-    pmemberinfodb->Commit(nHeight);
-    pmemberinfodb->ClearCache();
-    if (nHeight % (30 * 1440) == 0)
-        pmemberinfodb->ClearReadCache();
-    pmemberinfodb->SetCurrentHeight(nHeight);
 
     return true;
 }
@@ -2379,6 +2340,7 @@ bool DisconnectBlock(CBlock& block, CValidationState& state, CBlockIndex* pindex
     // undo transactions in reverse order
     vector<map<string, CAmount> > vfather_amount;
     vfather_amount.resize(block.vtx.size());
+    CAmount nFees = 0;
     for (int i = block.vtx.size() - 1; i >= 0; i--) {
         const CTransaction &tx = block.vtx[i];
         uint256 hash = tx.GetHash();
@@ -2419,8 +2381,13 @@ bool DisconnectBlock(CBlock& block, CValidationState& state, CBlockIndex* pindex
                 if (!addr.ScriptPub2Addr(undo.txout.scriptPubKey, address))
                     return false;
                 father_amount[address] = undo.txout.nValue;
+                nFees += undo.txout.nValue;
             }
             vfather_amount[i] = father_amount;
+            for (unsigned int k = tx.vreward.size(); k-- > 0;)
+                nFees += tx.vreward[k].rewardBalance;
+            for (unsigned int o = tx.vout.size(); o-- > 0;)
+                nFees -= tx.vout[o].nValue;
         }
     }
 
@@ -2428,34 +2395,27 @@ bool DisconnectBlock(CBlock& block, CValidationState& state, CBlockIndex* pindex
     {
         // restore rewards and relationship
         bool isUndo = true;
-        pmemberinfodb->ClearReadCache();
-        pmemberinfodb->ClearCache();
-        pclubinfodb->ClearCache();
-        pclubinfodb->ClearReadCache();
-        CAmount nFees = DEFAULT_TRANSACTION_MAXFEE * block.vtx.size();
-        if (pmemberinfodb->GetCurrentHeight() == -1)
+        paddrinfodb->ClearCache();
+        if (paddrinfodb->GetCurrentHeight() == pindex->nHeight)
         {
-            pmemberinfodb->SetCurrentHeight(pindex->nHeight);
-            pclubinfodb->SetCurrentHeight(pindex->nHeight);
-        }
-        if (pmemberinfodb->GetCurrentHeight() > pindex->nHeight-1)
-        {
-            if (!UpdateRewards(block, nFees, pindex->nHeight-1, isUndo))
+            if (!UpdateRewards(block, nFees, pindex->nHeight, isUndo))
                 return error("DisconnectBlock(): UpdateRewards failed");
-            for (size_t k = 0; k < block.vtx.size(); k++)
+            for (size_t k = block.vtx.size(); k-- > 0;)
             {
                 const CTransaction &tx = block.vtx[k];
-                if (!pmemberinfodb->UpdateFatherAndMpByTX(tx, view, pindex->nHeight-1, vfather_amount[k], true))
-                    return error("DisconnectBlock(): UpdateFatherAndMpByTX failed");
+                if (!paddrinfodb->UndoMiningPowerByTX(tx, view, pindex->nHeight, vfather_amount[k]))
+                    return error("DisconnectBlock(): UndoMiningPowerByTX failed");
             }
+            if (!paddrinfodb->UndoClubMembers(pindex->nHeight))
+                return error("DisconnectBlock(): UndoClubMembers failed");
+            paddrinfodb->UndoCacheRecords(pindex->nHeight);
+
+            paddrinfodb->Commit(pindex->nHeight-1);
+            paddrinfodb->SetCurrentHeight(pindex->nHeight-1);
+            pclubinfodb->SetCurrentHeight(pindex->nHeight-1);
+            paddrinfodb->ClearUndoCache();
+            paddrinfodb->ClearCache();
         }
-        pmemberinfodb->SetCurrentHeight(pindex->nHeight-1);
-        pclubinfodb->SetCurrentHeight(pindex->nHeight-1);
-        // Clear all cache
-        pmemberinfodb->ClearReadCache();
-        pmemberinfodb->ClearCache();
-        pclubinfodb->ClearCache();
-        pclubinfodb->ClearReadCache();
 
         // move best block pointer to prevout block
         view.SetBestBlock(pindex->pprev->GetBlockHash());
@@ -2574,10 +2534,10 @@ bool ConnectBlock(const CBlock& block, CValidationState& state, CBlockIndex* pin
                 addresses.push_back(CBitcoinAddress(address).ToString());
             }
 
-            if (!pmemberinfodb->InitGenesisDB(addresses))
-                return error("%s: pmemberinfodb::InitGenesisDB error", __func__);
+            if (!paddrinfodb->InitGenesisDB(addresses))
+                return error("%s: paddrinfodb::InitGenesisDB error", __func__);
             pclubinfodb->SetCurrentHeight(0);
-            pmemberinfodb->SetCurrentHeight(0);
+            paddrinfodb->SetCurrentHeight(0);
         }
 
         UpdateCoins(block.vtx[0], view, 0);
@@ -2693,7 +2653,7 @@ bool ConnectBlock(const CBlock& block, CValidationState& state, CBlockIndex* pin
     vPos.reserve(block.vtx.size());
     blockundo.vtxundo.reserve(block.vtx.size() - 1);
 
-    LOCK2(cs_memberinfo, cs_clubinfo);
+    LOCK(cs_addrinfo);
     for (unsigned int i = 0; i < block.vtx.size(); i++)
     {
         const CTransaction &tx = block.vtx[i];
@@ -2706,12 +2666,9 @@ bool ConnectBlock(const CBlock& block, CValidationState& state, CBlockIndex* pin
         {
             if (pclubinfodb->GetCurrentHeight() < pindex->nHeight)
             {
-                if (!pmemberinfodb->UpdateFatherAndMpByTX(tx, view, pindex->nHeight))
+                if (!paddrinfodb->UpdateFatherAndMpByTX(tx, view, pindex->nHeight))
                 {
-                    pmemberinfodb->ClearReadCache();
-                    pmemberinfodb->ClearCache();
-                    pclubinfodb->ClearCache();
-                    pclubinfodb->ClearReadCache();
+                    paddrinfodb->ClearCache();
                     return error("ConnectBlock(): UpdateFatherAndMp failed");
                 }
             }
@@ -2784,22 +2741,18 @@ bool ConnectBlock(const CBlock& block, CValidationState& state, CBlockIndex* pin
         pos.nTxOffset += ::GetSerializeSize(tx, SER_DISK, CLIENT_VERSION);
     }
 
-    if (!fJustCheck)
+    // Commit relationship
+    pclubinfodb->Commit();
+    pclubinfodb->SetCurrentHeight(pindex->nHeight);
+
+    if (!fJustCheck && paddrinfodb->GetCurrentHeight() < pindex->nHeight)
     {
         // Update rewards
         if (!UpdateRewards(block, nFees, pindex->nHeight))
         {
-            pmemberinfodb->ClearReadCache();
-            pmemberinfodb->ClearCache();
-            pclubinfodb->ClearCache();
-            pclubinfodb->ClearReadCache();
+            paddrinfodb->ClearCache();
             return error("ConnectBlock(): UpdateRewards failed");
         }
-
-        // Commit relationship to database
-        pclubinfodb->Commit(pindex->nHeight);
-        pclubinfodb->ClearCache();
-        pclubinfodb->SetCurrentHeight(pindex->nHeight);
     }
 
     int64_t nTime3 = GetTimeMicros(); nTimeConnect += nTime3 - nTime2;
@@ -3823,7 +3776,7 @@ bool CheckBlockHarvestPower(const CBlock& block, CValidationState& state, int he
         LOCK(cs_main);
         height = chainActive.Height();
     }
-    uint64_t harvestPower = pmemberinfodb->GetHarvestPowerByAddress(addrStr, height);
+    uint64_t harvestPower = paddrinfodb->GetHarvestPowerByAddress(addrStr, height);
     if (harvestPower == 0)
         return state.DoS(100, false, REJECT_INVALID, "not allowed to forge", false, "bad forger");
     if (block.harvestPower != harvestPower)

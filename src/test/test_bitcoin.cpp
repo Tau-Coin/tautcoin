@@ -56,8 +56,8 @@ TestingSetup::TestingSetup(const std::string& chainName) : BasicTestingSetup(cha
     boost::filesystem::create_directories(pathTemp);
     mapArgs["-datadir"] = pathTemp.string();
     std::cout<<pathTemp.string()<<std::endl;
-    pclubinfodb = new CClubInfoDB();
-    pmemberinfodb = new CMemberInfoDB(pclubinfodb);
+    pclubinfodb = new CClubInfoDB(0);
+    paddrinfodb = new CAddrInfoDB(0, pclubinfodb);
     mempool.setSanityCheck(1.0);
     pblocktree = new CBlockTreeDB(1 << 20, true);
     pcoinsdbview = new CCoinsViewDB(1 << 23, true);
@@ -78,8 +78,8 @@ TestingSetup::~TestingSetup()
         delete pcoinsTip;
         delete pcoinsdbview;
         delete pblocktree;
-        delete pmemberinfodb;
-        pmemberinfodb = NULL;
+        delete paddrinfodb;
+        paddrinfodb = NULL;
         delete pclubinfodb;
         pclubinfodb = NULL;
         boost::filesystem::remove_all(pathTemp);

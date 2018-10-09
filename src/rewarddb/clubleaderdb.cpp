@@ -15,7 +15,7 @@
 using namespace std;
 using boost::lexical_cast;
 
-const std::string CClubLeaderDB::DB_PATH   = "/clubinfo/leader";
+const std::string CClubLeaderDB::DB_PATH   = "/clubinfodb/leader";
 const std::string CClubLeaderDB::ADD_OP    = "A";
 const std::string CClubLeaderDB::REMOVE_OP = "R";
 const std::string CClubLeaderDB::DB_LEADER = "L";
