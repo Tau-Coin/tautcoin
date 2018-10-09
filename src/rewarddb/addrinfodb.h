@@ -71,6 +71,9 @@ private:
     //! cache used for undo
     std::map<std::string, CTAUAddrInfo> cacheForUndo;
 
+    //! cache used for undo acceleration
+    std::map<std::string, CTAUAddrInfo> cacheForUndoRead;
+
     //! clubinfo database used
     CClubInfoDB* _pclubinfodb;
 

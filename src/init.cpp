@@ -36,7 +36,6 @@
 #include "util.h"
 #include "utilmoneystr.h"
 #include "validationinterface.h"
-#include "rewarddb/addrinfodb.h"
 #ifdef ENABLE_WALLET
 #include "wallet/wallet.h"
 #endif

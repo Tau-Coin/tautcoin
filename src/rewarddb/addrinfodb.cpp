@@ -67,6 +67,7 @@ void CAddrInfoDB::ClearUndoCache()
     cacheForClubRm.clear();
     cacheForClubAdd.clear();
     cacheForErs.clear();
+    cacheForUndoRead.clear();
 }
 
 void CAddrInfoDB::ClearReadCache()
@@ -298,10 +299,15 @@ CTAUAddrInfo CAddrInfoDB::GetAddrInfo(string address, int nHeight)
     CTAUAddrInfo addrInfo(" ", " ", 0, 0);
     if (nHeight < currentHeight)
     {
+        if (cacheForUndoRead.find(address) != cacheForUndoRead.end())
+            return cacheForUndoRead[address];
         for (int h = nHeight; h >= 0; h--)
         {
             if (ReadDB(address, h, addrInfo))
+            {
+                cacheForUndoRead[address] = addrInfo;
                 return addrInfo;
+            }
         }
 
         return addrInfo;
@@ -818,7 +824,8 @@ bool CAddrInfoDB::UndoMiningPowerByTX(const CTransaction& tx, const CCoinsViewCa
             if ((_pclubinfodb->GetCacheRecord(curActualVoutFather))[curVoutInfo.index].MP == 0)
             {
                 cacheForErs.insert(voutAddress);
-                cacheForClubRm[voutAddress] = curActualVoutFather;
+                if (cacheForClubRm.find(voutAddress) == cacheForClubRm.end())
+                    cacheForClubRm[voutAddress] = curActualVoutFather;
             }
 
             // Undo totalMP of the miner
@@ -834,12 +841,17 @@ bool CAddrInfoDB::UndoMiningPowerByTX(const CTransaction& tx, const CCoinsViewCa
                 if (pastInputInfo.father.compare(curInputInfo.father) != 0)
                 {
                     // Undo clubInfo
-                    if (curInputInfo.father.compare("0") != 0)
-                        cacheForClubRm[bestFather] = curActualInputFather;
-                    cacheForClubAdd[bestFather] = pastActualInputFather;
+                    if (cacheForClubRm.find(bestFather) == cacheForClubRm.end())
+                    {
+                        if (curInputInfo.father.compare("0") != 0)
+                            cacheForClubRm[bestFather] = curActualInputFather;
+                    }
+                    if (cacheForClubAdd.find(bestFather) == cacheForClubAdd.end())
+                        cacheForClubAdd[bestFather] = pastActualInputFather;
 
                     // Undo the miner, the father and the totalMP
-                    cacheForUndo[bestFather] = GetAddrInfo(bestFather, nHeight-1);
+                    if (cacheForUndo.find(bestFather) == cacheForUndo.end())
+                        cacheForUndo[bestFather] = GetAddrInfo(bestFather, nHeight-1);
                 }
             }
         }
@@ -863,7 +875,7 @@ bool CAddrInfoDB::UndoClubMembers(int nHeight)
         {
             if (memberInfo.MP <= 0)
                 continue;
-            LogPrintf("%s: unable to read record in clubInfo db, father: %s, index: %d\n",
+            LogPrintf("%s: unable to read record in clubInfo db to be removed, father: %s, index: %d\n",
                       __func__, father, idx);
             return false;
         }
@@ -889,7 +901,7 @@ bool CAddrInfoDB::UndoClubMembers(int nHeight)
         CMemberInfo memberInfo = _pclubinfodb->GetCacheRecord(actualFather)[idx];
         if (memberInfo.address.empty() || (memberInfo.address.compare(address) != 0))
         {
-            LogPrintf("%s: unable to read record in clubInfo db, father: %s, index: %d\n",
+            LogPrintf("%s: unable to read record in clubInfo db to be added, father: %s, index: %d\n",
                       __func__, actualFather, idx);
             return false;
         }
