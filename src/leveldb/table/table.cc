@@ -82,7 +82,7 @@ Status Table::Open(const Options& options,
     *table = new Table(rep);
     (*table)->ReadMeta(footer);
   } else {
-    delete index_block;
+    if (index_block) delete index_block;
   }
 
   return s;
