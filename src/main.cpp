@@ -1983,6 +1983,10 @@ bool UpdateRewards(const CBlock& block, CAmount blockReward, int nHeight, bool i
     if (!paddrinfodb->UpdateRewardsByTX(block.vtx[0], blockReward, nHeight, isUndo))
         return false;
 
+    paddrinfodb->Commit(nHeight);
+    paddrinfodb->ClearCache();
+    paddrinfodb->SetCurrentHeight(nHeight);
+
     return true;
 }
 

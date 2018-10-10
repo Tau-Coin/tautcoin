@@ -560,13 +560,6 @@ bool CAddrInfoDB::EntrustByAddress(string inputAddr, string voutAddress, int nHe
 
 bool CAddrInfoDB::UpdateCacheTotalMPByChange(std::string address, int nHeight, uint64_t amount, bool isAdd)
 {
-//    if (isUndo)
-//    {
-//        DeleteToBatch(address, nHeight);
-//        isAdd = !isAdd;
-//    }
-
-//    int nHeightQuery = isUndo ? nHeight : nHeight - 1;
     int nHeightQuery = nHeight - 1;
     CTAUAddrInfo addrInfo = GetAddrInfo(address, nHeightQuery);
     if (isAdd)
@@ -747,10 +740,6 @@ bool CAddrInfoDB::UpdateFatherAndMpByTX(const CTransaction& tx, const CCoinsView
             if (addrVout.IsScript())
                 continue;
 
-//            if (nHeight > 18190 && voutAddress.compare("TMVdL357ZRyBw4K76hvPdaQMHtXeht5J9X") &&
-//                bestFather.compare("TLQaBZnr6s3dz2nrsQie8yEWA7BKWdaBiv"))
-//                cout<<"haha"<<endl;
-
             if (tx.vout[i].nValue == 0)
             {
                 if (!EntrustByAddress(bestFather, voutAddress, nHeight))
@@ -820,7 +809,7 @@ bool CAddrInfoDB::UndoMiningPowerByTX(const CTransaction& tx, const CCoinsViewCa
             if (!_pclubinfodb->UpdateMpByChange(curActualVoutFather, curVoutInfo.index, true))
                 return false;
 
-            // If the address is a new one in past on the chain
+            // If the address is a new one on the chain
             if ((_pclubinfodb->GetCacheRecord(curActualVoutFather))[curVoutInfo.index].MP == 0)
             {
                 cacheForErs.insert(voutAddress);
@@ -846,7 +835,8 @@ bool CAddrInfoDB::UndoMiningPowerByTX(const CTransaction& tx, const CCoinsViewCa
                         if (curInputInfo.father.compare("0") != 0)
                             cacheForClubRm[bestFather] = curActualInputFather;
                     }
-                    if (cacheForClubAdd.find(bestFather) == cacheForClubAdd.end())
+                    if ((cacheForClubAdd.find(bestFather) == cacheForClubAdd.end()) &&
+                        (pastActualInputFather.compare(" ") != 0))
                         cacheForClubAdd[bestFather] = pastActualInputFather;
 
                     // Undo the miner, the father and the totalMP
@@ -922,11 +912,11 @@ bool CAddrInfoDB::UndoClubMembers(int nHeight)
     }
 
     // Undo the miner of the vin's members
-    for(set<string>::const_iterator itAdded = cacheForErs.begin();
-        itAdded != cacheForErs.end(); itAdded++)
+    for(map<string, string>::const_iterator itAdded = cacheForClubAdd.begin();
+        itAdded != cacheForClubAdd.end(); itAdded++)
     {
         vector<string> totalMembers;
-        _pclubinfodb->GetTotalMembersByAddress(*itAdded, totalMembers);
+        _pclubinfodb->GetTotalMembersByAddress(itAdded->first, totalMembers);
         for(size_t i = 0; i < totalMembers.size(); i++)
         {
             if (cacheForErs.find(totalMembers[i]) == cacheForErs.end())
