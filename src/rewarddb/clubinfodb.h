@@ -7,7 +7,6 @@
 #include "chain.h"
 #include "base58.h"
 #include "leveldb/db.h"
-#include "clubleaderdb.h"
 #include <map>
 #include <string>
 #include <vector>
@@ -83,9 +82,6 @@ private:
     //! clubinfo database used
     CRewardRateViewDB* _prewardratedbview;
 
-    //!club leader database
-    CClubLeaderDB* pclubleaderdb;
-
     //! cache for accelerating
     std::map<std::string, std::vector<CMemberInfo> > cacheRecord;
 
@@ -109,7 +105,7 @@ private:
                              const CAmount& totalRewards, CAmount& memberReward);
 
     bool UpdateRewards(const std::string& minerAddress, CAmount memberRewards,
-                       uint64_t memberTotalMP, CAmount distributedRewards, bool isUndo);
+                       uint64_t memberTotalMP, CAmount& distributedRewards, bool isUndo);
 
 public:
     //! Constructor
@@ -170,18 +166,8 @@ public:
     //! Update reward of the address
     void UpdateRewardByChange(std::string fatherAddr, uint64_t index, CAmount rewardChange, bool isUndo=false);
 
-
-    //! Add club leader
-    bool AddClubLeader(std::string address, int height);
-
-    //! Remove club leader
-    bool RemoveClubLeader(std::string address, int height);
-
-    //! Delete club leader from db
-    bool DeleteClubLeader(std::string address, int height);
-
-    //! Retrieve all the club leaders
-    bool GetAllClubLeaders(std::vector<std::string>& leaders, int height);
+    //! Get all the fathers
+    std::vector<std::string> GetAllFathers();
 };
 
 #endif // TAUCOIN_CLUBINFODB_H

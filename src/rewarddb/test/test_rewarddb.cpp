@@ -19,7 +19,6 @@
 //#include "rpc/register.h"
 
 #include "test/testutil.h"
-#include "rewarddb/addrtrie.h"
 
 #include <boost/filesystem.hpp>
 #include <boost/test/unit_test.hpp>
@@ -265,21 +264,6 @@ BOOST_AUTO_TEST_CASE(coins_cache_simulation_test)
         finish = clock();
         totaltime = (double)(finish - start) / CLOCKS_PER_SEC;
         cout<<"vector_"<<addressesRandom.size()<<" 的read_randomly时间为"<<totaltime<<"秒！"<<endl;
-
-        //TAUAddrTrie
-        TAUAddrTrie::Trie trie;
-        for(int i = 0; i < test2Num; i++)
-            trie.Insert(addresses[i]);
-
-        start = clock();
-        for(size_t i = 0; i < addressesRandom.size(); i++)
-        {
-            if (trie.Search(addressesRandom[i]))
-                trie.Remove(addressesRandom[i]);
-        }
-        finish = clock();
-        totaltime = (double)(finish - start) / CLOCKS_PER_SEC;
-        cout<<"trie_"<<addressesRandom.size()<<" 的read_randomly时间为"<<totaltime<<"秒！"<<endl;
     }
 
 //    // test 3, modify randomly: set map list vector TAUAddrTrie
@@ -350,24 +334,6 @@ BOOST_AUTO_TEST_CASE(coins_cache_simulation_test)
 //        finish = clock();
 //        totaltime = (double)(finish - start) / CLOCKS_PER_SEC;
 //        cout<<"vector_"<<addressesRandom.size()<<" 的modify_randomly时间为"<<totaltime<<"秒！"<<endl;
-
-//        //TAUAddrTrie
-//        TAUAddrTrie::Trie trie;
-//        for(int i = 0; i < test3Num; i++)
-//            trie.Insert(addresses[i]);
-
-//        start = clock();
-//        for(size_t i = 0; i < addressesRandom.size(); i++)
-//        {
-//            if (trie.Search(addressesRandom[i]))
-//            {
-//                trie.Remove(addressesRandom[i]);
-//                trie.Insert(addressesInsert[i]);
-//            }
-//        }
-//        finish = clock();
-//        totaltime = (double)(finish - start) / CLOCKS_PER_SEC;
-//        cout<<"trie_"<<addressesRandom.size()<<" 的modify_randomly时间为"<<totaltime<<"秒！"<<endl;
 //    }
 
 }

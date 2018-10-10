@@ -95,7 +95,6 @@ CClubInfoDB::CClubInfoDB(size_t nCacheSize, bool fMemory, bool fWipe) :
     currentHeight(-1)
 {
     batch = new CDBBatch(*this);
-    pclubleaderdb = new CClubLeaderDB();
 }
 
 CClubInfoDB::CClubInfoDB(size_t nCacheSize, CRewardRateViewDB *prewardratedbview,
@@ -105,7 +104,6 @@ CClubInfoDB::CClubInfoDB(size_t nCacheSize, CRewardRateViewDB *prewardratedbview
     currentHeight(-1)
 {
     batch = new CDBBatch(*this);
-    pclubleaderdb = new CClubLeaderDB();
 }
 
 CClubInfoDB::~CClubInfoDB()
@@ -113,9 +111,6 @@ CClubInfoDB::~CClubInfoDB()
     delete batch;
     batch = NULL;
     _prewardratedbview = NULL;
-
-    delete pclubleaderdb;
-    pclubleaderdb = NULL;
 }
 
 bool CClubInfoDB::WriteDB(const std::string& address, const std::vector<CMemberInfo>& value)
@@ -168,9 +163,7 @@ void CClubInfoDB::ClearCache()
 
 bool CClubInfoDB::Commit()
 {
-    pclubleaderdb->Commit();
     CommitDB();
-
     return true;
 }
 
@@ -370,7 +363,7 @@ bool CClubInfoDB::ComputeMemberReward(const uint64_t& MP, const uint64_t& totalM
 }
 
 bool CClubInfoDB::UpdateRewards(const string& minerAddress, CAmount memberRewards,
-                                uint64_t memberTotalMP, CAmount distributedRewards, bool isUndo)
+                                uint64_t memberTotalMP, CAmount& distributedRewards, bool isUndo)
 {
     AssertLockHeld(cs_clubinfo);
     const vector<CMemberInfo> &vmemberInfo = cacheRecord[minerAddress];
@@ -450,40 +443,13 @@ void CClubInfoDB::UpdateRewardByChange(std::string fatherAddr, uint64_t index, C
     cacheRecord[fatherAddr][index].rwd += rewardChange;
 }
 
-bool CClubInfoDB::AddClubLeader(std::string address, int height)
+vector<string> CClubInfoDB::GetAllFathers()
 {
-    if (!CClubInfoDB::AddressIsValid(address))
-    {
-        LogPrintf("%s, The input address is : %s, which is not valid\n", __func__, address);
-        return false;
-    }
+    vector<string> fathers;
+    LOCK(cs_clubinfo);
+    for(map<string, vector<CMemberInfo> >::const_iterator it = cacheRecord.begin();
+        it != cacheRecord.end(); it++)
+        fathers.push_back(it->first);
 
-    return pclubleaderdb->AddClubLeader(address, height);
-}
-
-bool CClubInfoDB::RemoveClubLeader(std::string address, int height)
-{
-    if (!CClubInfoDB::AddressIsValid(address))
-    {
-        LogPrintf("%s, The input address is : %s, which is not valid\n", __func__, address);
-        return false;
-    }
-
-    return pclubleaderdb->RemoveClubLeader(address, height);
-}
-
-bool CClubInfoDB::DeleteClubLeader(std::string address, int height)
-{
-    if (!CClubInfoDB::AddressIsValid(address))
-    {
-        LogPrintf("%s, The input address is : %s, which is not valid\n", __func__, address);
-        return false;
-    }
-
-    return pclubleaderdb->DeleteClubLeader(address, height);
-}
-
-bool CClubInfoDB::GetAllClubLeaders(std::vector<std::string>& leaders, int height)
-{
-    return pclubleaderdb->GetAllClubLeaders(leaders, height);
+    return fathers;
 }

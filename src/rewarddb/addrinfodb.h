@@ -205,8 +205,11 @@ public:
     //! Undo cache records
     void UndoCacheRecords(int nHeight);
 
-    //! Update the club leader's distribution rate
+    //! Update the club miner's distribution rate
     bool RewardRateUpdate(CAmount blockReward, CAmount distributedRewards, std::string clubLeaderAddress, int nHeight);
+
+    //! Get all the club miners
+    std::vector<std::string> GetAllClubMiners();
 };
 
 #endif // TAUCOIN_ADDRINFODB_H

@@ -55,14 +55,10 @@ bool CAddrInfoDB::DeleteDB(const std::string& address, int nHeight)
 void CAddrInfoDB::ClearCache()
 {
     cacheRecord.clear();
-    //cacheForRead.clear();
 }
 
 void CAddrInfoDB::ClearUndoCache()
 {
-//    if (!CommitDB())
-//        return false;
-
     cacheForUndo.clear();
     cacheForClubRm.clear();
     cacheForClubAdd.clear();
@@ -229,9 +225,6 @@ bool CAddrInfoDB::InitGenesisDB(const std::vector<string>& addresses)
         if (!WriteDB(addresses[i], 0, addrInfo))
             return false;
         cacheForRead[addresses[i]] = addrInfo;// Add to cache for accelerating
-
-        if (!_pclubinfodb->AddClubLeader(addresses[i], 0))
-            return false;
     }
 
     if (!_pclubinfodb->InitGenesisDB(addresses))
@@ -383,7 +376,7 @@ bool CAddrInfoDB::UpdateRewardsByTX(const CTransaction& tx, CAmount blockReward,
     string clubMinerAddress;
     if (!addr.ScriptPub2Addr(tx.vout[0].scriptPubKey, clubMinerAddress))
         return false;
-    CAmount memberTotalRewards = blockReward - tx.vout[0].nValue;
+    CAmount memberTotalRewards = (nHeight < 45000) ? blockReward - tx.vout[0].nValue : 0;
     if (blockReward > 0)
     {
         int nHeightQuery = isUndo ? nHeight : nHeight - 1;
@@ -472,19 +465,6 @@ bool CAddrInfoDB::EntrustByAddress(string inputAddr, string voutAddress, int nHe
 
         newMinerAddr = voutAddress;
         changeRelationship = true;
-
-//        // Remove this address from minier db
-//        if ((fatherOfVin.compare("0") == 0) && (minerOfVin.compare("0") == 0))
-//        {
-//            if (!isUndo)
-//                _pclubinfodb->RemoveClubLeader(inputAddr, nHeight);
-//            else
-//            {
-//                _pclubinfodb->AddClubLeader(inputAddr, nHeight);
-//                _pclubinfodb->DeleteClubLeader(inputAddr, nHeight + 1);
-//            }
-//        }
-
     }
     // When the vin address is not a miner and the vin entrust himself
     else if((voutAddress.compare(inputAddr) == 0) &&
@@ -497,12 +477,6 @@ bool CAddrInfoDB::EntrustByAddress(string inputAddr, string voutAddress, int nHe
         if (!UpdateCacheTotalMPByChange(voutAddress, nHeight, 0, false))
             return false;
         changeRelationship = true;
-
-//        if (!isUndo)
-//            _pclubinfodb->AddClubLeader(inputAddr, nHeight);
-//        else
-//            _pclubinfodb->RemoveClubLeader(inputAddr, nHeight+1);
-
     }
 
     if (changeRelationship)
@@ -521,12 +495,6 @@ bool CAddrInfoDB::EntrustByAddress(string inputAddr, string voutAddress, int nHe
         for(size_t i = 0; i < totalMembers.size(); i++)
         {
             CTAUAddrInfo memberAddrInfo = GetAddrInfo(totalMembers[i], nHeightQuery);
-//            if (isUndo)
-//            {
-//                if (!DeleteDB(totalMembers[i], nHeight+1))
-//                    return false;
-//            }
-//            else
             memberAddrInfo.miner = voutAddress;
             cacheRecord[totalMembers[i]] = memberAddrInfo;
 
@@ -974,4 +942,20 @@ bool CAddrInfoDB::RewardRateUpdate(CAmount blockReward, CAmount distributedRewar
     }
 
     return true;
+}
+
+vector<string> CAddrInfoDB::GetAllClubMiners()
+{
+    vector<string> miners;
+    const vector<string> &allFathers = _pclubinfodb->GetAllFathers();
+    CTAUAddrInfo addrInfo;
+    for(size_t i = 0; i < allFathers.size(); i++)
+    {
+        addrInfo = GetAddrInfo(allFathers[i], currentHeight);
+        if ((addrInfo.father.compare("0") == 0) &&
+            (addrInfo.miner.compare("0") == 0))
+            miners.push_back(allFathers[i]);
+    }
+
+    return miners;
 }
