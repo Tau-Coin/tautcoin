@@ -161,9 +161,10 @@ void CClubInfoDB::ClearCache()
     cacheRecord.clear();
 }
 
-bool CClubInfoDB::Commit()
+bool CClubInfoDB::Commit(int nHeight)
 {
     CommitDB();
+    SetCurrentHeight(nHeight);
     return true;
 }
 

@@ -1985,7 +1985,6 @@ bool UpdateRewards(const CBlock& block, CAmount blockReward, int nHeight, bool i
 
     paddrinfodb->Commit(nHeight);
     paddrinfodb->ClearCache();
-    paddrinfodb->SetCurrentHeight(nHeight);
 
     return true;
 }
@@ -2399,6 +2398,7 @@ bool DisconnectBlock(CBlock& block, CValidationState& state, CBlockIndex* pindex
     {
         // restore rewards and relationship
         bool isUndo = true;
+        paddrinfodb->ClearUndoCache();
         paddrinfodb->ClearCache();
         if (paddrinfodb->GetCurrentHeight() == pindex->nHeight)
         {
@@ -2414,9 +2414,7 @@ bool DisconnectBlock(CBlock& block, CValidationState& state, CBlockIndex* pindex
                 return error("DisconnectBlock(): UndoClubMembers failed");
             paddrinfodb->UndoCacheRecords(pindex->nHeight);
 
-            paddrinfodb->Commit(pindex->nHeight-1);
-            paddrinfodb->SetCurrentHeight(pindex->nHeight-1);
-            pclubinfodb->SetCurrentHeight(pindex->nHeight-1);
+            paddrinfodb->Commit(pindex->nHeight-1, isUndo);
             paddrinfodb->ClearUndoCache();
             paddrinfodb->ClearCache();
         }
@@ -2745,12 +2743,11 @@ bool ConnectBlock(const CBlock& block, CValidationState& state, CBlockIndex* pin
         pos.nTxOffset += ::GetSerializeSize(tx, SER_DISK, CLIENT_VERSION);
     }
 
-    // Commit relationship
-    pclubinfodb->Commit();
-    pclubinfodb->SetCurrentHeight(pindex->nHeight);
-
     if (!fJustCheck && paddrinfodb->GetCurrentHeight() < pindex->nHeight)
     {
+        // Commit relationship
+        pclubinfodb->Commit(pindex->nHeight);
+
         // Update rewards
         if (!UpdateRewards(block, nFees, pindex->nHeight))
         {

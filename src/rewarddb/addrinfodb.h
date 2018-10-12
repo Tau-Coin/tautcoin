@@ -28,10 +28,24 @@ typedef struct _CTAUAddrInfo {
 
     uint64_t totalMP; // The total mining power of the address, when the address is a miner
 
-    _CTAUAddrInfo() : miner(" "), father(" "), index(0), totalMP(0) { }
+    int lastHeight; // The height when last record update
 
-    _CTAUAddrInfo(std::string _miner, std::string _father, uint64_t _index, uint64_t _totalMP) :
-        miner(_miner), father(_father), index(_index), totalMP(_totalMP) { }
+    _CTAUAddrInfo() : miner(" "), father(" "), index(0), totalMP(0), lastHeight(-1) { }
+
+    _CTAUAddrInfo(std::string _miner, std::string _father, uint64_t _index, uint64_t _totalMP,
+                  int _lastHeight=-1) :
+        miner(_miner), father(_father), index(_index), totalMP(_totalMP),
+        lastHeight(_lastHeight) { }
+
+    _CTAUAddrInfo& operator=(const _CTAUAddrInfo& b)
+    {
+        miner = b.miner;
+        father = b.father;
+        index = b.index;
+        totalMP = b.totalMP;
+        lastHeight = b.lastHeight;
+        return *this;
+    }
 
     ADD_SERIALIZE_METHODS;
 
@@ -42,6 +56,7 @@ typedef struct _CTAUAddrInfo {
         READWRITE(father);
         READWRITE(index);
         READWRITE(totalMP);
+        READWRITE(lastHeight);
     }
 
 }CTAUAddrInfo;
@@ -73,6 +88,9 @@ private:
 
     //! cache used for undo acceleration
     std::map<std::string, CTAUAddrInfo> cacheForUndoRead;
+
+    //! cache used for height of undo in db
+    std::map<std::string, int> cacheForUndoHeight;
 
     //! clubinfo database used
     CClubInfoDB* _pclubinfodb;
@@ -134,7 +152,7 @@ public:
     void ClearReadCache();
 
     //! Commit the database transaction
-    bool Commit(int nHeight);
+    bool Commit(int nHeight, bool isUndo=false);
 
     //! Set current updated height
     void SetCurrentHeight(int nHeight);
@@ -193,7 +211,7 @@ public:
 
     //! Update the mining power and the father
     bool UpdateFatherAndMpByTX(const CTransaction& tx, const CCoinsViewCache &view, int nHeight,
-                               std::map<std::string, CAmount> vin_val=std::map<std::string, CAmount>(), bool isUndo=false);
+                               std::map<std::string, CAmount> vin_val=std::map<std::string, CAmount>());
 
     //! Undo the mining power and init relationship undo
     bool UndoMiningPowerByTX(const CTransaction& tx, const CCoinsViewCache& view, int nHeight,

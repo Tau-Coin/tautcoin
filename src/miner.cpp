@@ -202,7 +202,7 @@ CBlockTemplate* BlockAssembler::CreateNewBlock(const CScript& scriptPubKeyIn,std
     pblock->baseTarget     = getNextPotRequired(pindexPrev); //temporary formula
     std::string addrStr;
     assert(ConvertPubkeyToAddress(pubkeyString,addrStr));
-    pblock->harvestPower   = ClubManager::GetInstance()->GetHarvestPowerByAddress(addrStr, -1);
+    pblock->harvestPower = paddrinfodb->GetHarvestPowerByAddress(addrStr, chainActive.Height());
     pblock->generationSignature = raiseGenerationSignature(pubkeyString);
     pblock->pubKeyOfpackager = pubkeyString;
     pblock->cumulativeDifficulty = GetNextCumulativeDifficulty(pindexPrev, pblock->baseTarget, chainparams.GetConsensus());

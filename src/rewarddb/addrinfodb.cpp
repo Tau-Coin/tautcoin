@@ -64,6 +64,7 @@ void CAddrInfoDB::ClearUndoCache()
     cacheForClubAdd.clear();
     cacheForErs.clear();
     cacheForUndoRead.clear();
+    cacheForUndoHeight.clear();
 }
 
 void CAddrInfoDB::ClearReadCache()
@@ -105,9 +106,9 @@ bool CAddrInfoDB::UpdateCacheMpAddOne(string address, int nHeight, bool isUndo)
     return true;
 }
 
-bool CAddrInfoDB::Commit(int nHeight)
+bool CAddrInfoDB::Commit(int nHeight, bool isUndo)
 {
-    _pclubinfodb->Commit();
+    _pclubinfodb->Commit(nHeight);
 
     if (cacheRecord.size() == 0)
         return true;
@@ -118,9 +119,15 @@ bool CAddrInfoDB::Commit(int nHeight)
         string address = it->first;
         CTAUAddrInfo value = it->second;
         cacheForRead[address] = value;
-        if (!WriteDB(address, nHeight, value))
-            return false;
+        if (!isUndo)
+        {
+            cacheForRead[address].lastHeight = nHeight;
+            if (!WriteDB(address, nHeight, value))
+                return false;
+        }
     }
+
+    SetCurrentHeight(nHeight);
 
     return true;
 }
@@ -294,16 +301,30 @@ CTAUAddrInfo CAddrInfoDB::GetAddrInfo(string address, int nHeight)
     {
         if (cacheForUndoRead.find(address) != cacheForUndoRead.end())
             return cacheForUndoRead[address];
-        for (int h = nHeight; h >= 0; h--)
+        int h = -1;
+        if (cacheForRead.find(address) != cacheForRead.end())
+            h = cacheForRead[address].lastHeight;
+        while (h >= 0)
         {
-            if (ReadDB(address, h, addrInfo))
+            if (h <= nHeight)
             {
-                cacheForUndoRead[address] = addrInfo;
-                return addrInfo;
+                if (ReadDB(address, h, addrInfo))
+                {
+                    cacheForUndoHeight[address] = h;
+                    cacheForUndoRead[address] = addrInfo;
+                    return addrInfo;
+                }
+            }
+            else
+            {
+                if (ReadDB(address, h, addrInfo))
+                    h = addrInfo.lastHeight;
+                else
+                    break;
             }
         }
 
-        return addrInfo;
+        return CTAUAddrInfo(" ", " ", 0, 0);
     }
 
     {
@@ -673,22 +694,13 @@ bool CAddrInfoDB::GetBestFather(const CTransaction& tx, const CCoinsViewCache& v
 }
 
 bool CAddrInfoDB::UpdateFatherAndMpByTX(const CTransaction& tx, const CCoinsViewCache& view, int nHeight,
-                                          map<string, CAmount> vin_val, bool isUndo)
+                                          map<string, CAmount> vin_val)
 {
-    if (isUndo && tx.IsCoinBase())
-    {
-        string miner;
-        CBitcoinAddress addr;
-        if (!addr.ScriptPub2Addr(tx.vout[0].scriptPubKey, miner))
-            return false;
-        DeleteDB(miner, nHeight+1);
-    }
-
     if (!tx.IsCoinBase())
     {
         // Get best father
         string bestFather = " ";
-        if (!GetBestFather(tx, view, bestFather, vin_val, isUndo))
+        if (!GetBestFather(tx, view, bestFather, vin_val))
         {
             LogPrintf("%s, GetBestFather() failed\n", __func__);
             return false;
@@ -752,25 +764,27 @@ bool CAddrInfoDB::UndoMiningPowerByTX(const CTransaction& tx, const CCoinsViewCa
                 continue;
 
             CTAUAddrInfo pastVoutInfo = GetAddrInfo(voutAddress, nHeight-1);
-            string pastActualVoutFather =
-                    (pastVoutInfo.father.compare("0") == 0) ? voutAddress : pastVoutInfo.father;
+            CTAUAddrInfo pastInputInfo = GetAddrInfo(bestFather, nHeight-1);
+            CTAUAddrInfo curVoutInfo = GetAddrInfo(voutAddress, nHeight);
+            CTAUAddrInfo curInputInfo = GetAddrInfo(bestFather, nHeight);
             string pastActualVoutMiner =
                     (pastVoutInfo.miner.compare("0") == 0) ? voutAddress : pastVoutInfo.miner;
-            CTAUAddrInfo curVoutInfo = GetAddrInfo(voutAddress, nHeight);
             string curActualVoutFather =
                     (curVoutInfo.father.compare("0") == 0) ? voutAddress : curVoutInfo.father;
+            string curActualInputMiner =
+                    (curInputInfo.miner.compare("0") == 0) ? bestFather : curInputInfo.miner;
             string curActualVoutMiner =
                     (curVoutInfo.miner.compare("0") == 0) ? voutAddress : curVoutInfo.miner;
-            CTAUAddrInfo pastInputInfo = GetAddrInfo(bestFather, nHeight-1);
             string pastActualInputFather =
                     (pastInputInfo.father.compare("0") == 0) ? bestFather : pastInputInfo.father;
-            CTAUAddrInfo curInputInfo = GetAddrInfo(bestFather, nHeight);
             string curActualInputFather =
                     (curInputInfo.father.compare("0") == 0) ? bestFather : curInputInfo.father;
+            string pastActualInputMiner =
+                    (pastInputInfo.miner.compare("0") == 0) ? bestFather : pastInputInfo.miner;
 
-            // In the entrust TX, the address is a new one in past on the chain and do not undo anything
+            // In the entrust TX, the address is a new one on the chain and do anything
             if ((tx.vout[i].nValue == 0) &&
-                (pastActualVoutFather.compare(" ") == 0) && (pastActualVoutMiner.compare(" ") == 0))
+                (curActualVoutFather.compare(" ") == 0) && (curActualVoutMiner.compare(" ") == 0))
                 return true;
 
             // Undo mining power
@@ -783,14 +797,25 @@ bool CAddrInfoDB::UndoMiningPowerByTX(const CTransaction& tx, const CCoinsViewCa
                 cacheForErs.insert(voutAddress);
                 if (cacheForClubRm.find(voutAddress) == cacheForClubRm.end())
                     cacheForClubRm[voutAddress] = curActualVoutFather;
+
+                // Undo totalMP of the miner of the new address on chain
+                if (pastActualInputMiner.compare(" ") != 0)
+                {
+                    if (cacheForUndo.find(pastActualInputMiner) == cacheForUndo.end())
+                        cacheForUndo[pastActualInputMiner] = GetAddrInfo(pastActualInputMiner, nHeight-1);
+                }
+                if (cacheForUndo.find(curActualInputMiner) == cacheForUndo.end())
+                    cacheForUndo[curActualInputMiner] = GetAddrInfo(curActualInputMiner, nHeight-1);
             }
 
             // Undo totalMP of the miner
             if (cacheForUndo.find(curActualVoutMiner) == cacheForUndo.end())
                 cacheForUndo[curActualVoutMiner] = GetAddrInfo(curActualVoutMiner, nHeight-1);
-            if (cacheForUndo.find(pastActualVoutMiner) == cacheForUndo.end())
-                cacheForUndo[pastActualVoutMiner] = GetAddrInfo(pastActualVoutMiner, nHeight-1);
-
+            if (pastActualVoutMiner.compare(" ") != 0)
+            {
+                if (cacheForUndo.find(pastActualVoutMiner) == cacheForUndo.end())
+                    cacheForUndo[pastActualVoutMiner] = GetAddrInfo(pastActualVoutMiner, nHeight-1);
+            }
 
             // Undo entrust TX if it is
             if (tx.vout[i].nValue == 0)
@@ -877,6 +902,7 @@ bool CAddrInfoDB::UndoClubMembers(int nHeight)
         it = cacheForRead.find(*itErs);
         if (it != cacheForRead.end())
             cacheForRead.erase(it);
+        DeleteDB(*itErs, nHeight);
     }
 
     // Undo the miner of the vin's members
@@ -905,6 +931,7 @@ void CAddrInfoDB::UndoCacheRecords(int nHeight)
         cacheRecord[it->first].father = cacheForUndo[it->first].father;
         cacheRecord[it->first].miner = cacheForUndo[it->first].miner;
         cacheRecord[it->first].totalMP = cacheForUndo[it->first].totalMP;
+        cacheRecord[it->first].lastHeight = cacheForUndoHeight[it->first];
 
         DeleteDB(it->first, nHeight);
         //DeleteToBatch(it->first, nHeight);

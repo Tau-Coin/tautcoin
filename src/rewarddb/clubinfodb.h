@@ -128,7 +128,7 @@ public:
     void ClearCache();
 
     //! Commit the database transaction
-    bool Commit();
+    bool Commit(int nHeight);
 
     //! Set current updated height
     void SetCurrentHeight(int nHeight);

@@ -26,39 +26,39 @@ ClubManager* ClubManager::GetInstance()
     return pSingleton;
 }
 
-uint64_t ClubManager::GetHarvestPowerByAddress(std::string& address, int nHeight)
-{
-    if (nHeight <= -1)
-    {
-        LOCK(cs_main);
-        nHeight = chainActive.Height();
-    }
-    return paddrinfodb->GetHarvestPowerByAddress(address, nHeight);
-}
+//uint64_t ClubManager::GetHarvestPowerByAddress(std::string& address, int nHeight)
+//{
+//    if (nHeight <= -1)
+//    {
+//        LOCK(cs_main);
+//        nHeight = chainActive.Height();
+//    }
+//    return paddrinfodb->GetHarvestPowerByAddress(address, nHeight);
+//}
 
 ClubManager::ClubManager() {}
 
-bool ClubManager::IsAllowForge(const std::string& pubKey, int nHeight, uint64_t &harvestPower)
-{
-    if (pubKey.empty() || nHeight < 0)
-    {
-        return false;
-    }
+//bool ClubManager::IsAllowForge(const std::string& pubKey, int nHeight, uint64_t &harvestPower)
+//{
+//    if (pubKey.empty() || nHeight < 0)
+//    {
+//        return false;
+//    }
 
-    std::string addrStr;
-    if (!ConvertPubkeyToAddress(pubKey, addrStr))
-    {
-        return false;
-    }
+//    std::string addrStr;
+//    if (!ConvertPubkeyToAddress(pubKey, addrStr))
+//    {
+//        return false;
+//    }
 
-    harvestPower = GetHarvestPowerByAddress(addrStr, nHeight);
-    if (harvestPower > DEFAULT_HARVEST_POWER)
-    {
-        return true;
-    }
+//    harvestPower = GetHarvestPowerByAddress(addrStr, nHeight);
+//    if (harvestPower > DEFAULT_HARVEST_POWER)
+//    {
+//        return true;
+//    }
 
-    return false;
-}
+//    return false;
+//}
 
 bool ClubManager::IsForgeScript(const CScript& script, CBitcoinAddress& addr, uint64_t& memCount, int nHeight) {
     if (nHeight <= -1)
@@ -73,7 +73,7 @@ bool ClubManager::IsForgeScript(const CScript& script, CBitcoinAddress& addr, ui
         return false;
     }
 
-    uint64_t power = GetHarvestPowerByAddress(strAddr, nHeight);
+    uint64_t power = paddrinfodb->GetHarvestPowerByAddress(strAddr, nHeight);
     memCount = power;
     addr.SetString(strAddr);
 
