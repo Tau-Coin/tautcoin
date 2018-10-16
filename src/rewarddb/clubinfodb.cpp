@@ -153,6 +153,12 @@ bool CClubInfoDB::DeleteDB(std::string key, int nHeight)
 
 CClubInfoDB::CClubInfoDB() : currentHeight(-1)
 {
+    options.max_open_files = 256;
+    if (leveldb::kMajorVersion > 1 || (leveldb::kMajorVersion == 1 && leveldb::kMinorVersion >= 16)) {
+        // LevelDB versions before 1.16 consider short writes to be corruption. Only trigger error
+        // on corruption in later versions.
+        options.paranoid_checks = true;
+    }
     options.create_if_missing = true;
 
     std::string db_path = GetDataDir(true).string() + std::string(CLUBINFOPATH);
@@ -168,6 +174,12 @@ CClubInfoDB::CClubInfoDB() : currentHeight(-1)
 
 CClubInfoDB::CClubInfoDB(CRewardRateViewDB *prewardratedbview) : _prewardratedbview(prewardratedbview),  currentHeight(-1)
 {
+    options.max_open_files = 256;
+    if (leveldb::kMajorVersion > 1 || (leveldb::kMajorVersion == 1 && leveldb::kMinorVersion >= 16)) {
+        // LevelDB versions before 1.16 consider short writes to be corruption. Only trigger error
+        // on corruption in later versions.
+        options.paranoid_checks = true;
+    }
     options.create_if_missing = true;
 
     std::string db_path = GetDataDir(true).string() + std::string(CLUBINFOPATH);
