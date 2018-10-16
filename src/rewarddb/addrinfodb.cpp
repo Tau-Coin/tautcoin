@@ -426,9 +426,7 @@ void CAddrInfoDB::UpdateMembersByFatherAddress(const string& fatherAddress, cons
     CTAUAddrInfo addrInfo = GetAddrInfo(memberinfo.address, nHeightQuery);
     addrInfo.index = addrIndex;
     cacheRecord[memberinfo.address] = addrInfo;
-    if (add)
-        cacheRecord[memberinfo.address] = addrInfo;
-    else
+    if (!add)
     {
         if (addressMove.compare(NO_MOVED_ADDRESS) != 0)
         {

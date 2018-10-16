@@ -2402,6 +2402,7 @@ bool DisconnectBlock(CBlock& block, CValidationState& state, CBlockIndex* pindex
         paddrinfodb->ClearCache();
         if (paddrinfodb->GetCurrentHeight() == pindex->nHeight)
         {
+            LOCK2(cs_addrinfo, cs_clubinfo);
             if (!UpdateRewards(block, nFees, pindex->nHeight, isUndo))
                 return error("DisconnectBlock(): UpdateRewards failed");
             for (size_t k = block.vtx.size(); k-- > 0;)
@@ -2655,7 +2656,7 @@ bool ConnectBlock(const CBlock& block, CValidationState& state, CBlockIndex* pin
     vPos.reserve(block.vtx.size());
     blockundo.vtxundo.reserve(block.vtx.size() - 1);
 
-    LOCK(cs_addrinfo);
+    LOCK2(cs_addrinfo, cs_clubinfo);
     for (unsigned int i = 0; i < block.vtx.size(); i++)
     {
         const CTransaction &tx = block.vtx[i];

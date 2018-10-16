@@ -247,18 +247,20 @@ bool CClubInfoDB::WriteDataToDisk(int newestHeight, bool fSync)
 
 bool CClubInfoDB::CacheRecordIsExist(const std::string& address)
 {
+    LOCK(cs_clubinfo);
     return cacheRecord.find(address) != cacheRecord.end();
 }
 
 vector<CMemberInfo> CClubInfoDB::GetCacheRecord(const string& address)
 {
+    LOCK(cs_clubinfo);
     return cacheRecord[address];
 }
 
 string CClubInfoDB::UpdateMembersByFatherAddress(const string& fatherAddress, const CMemberInfo& memberinfo,
                                                  uint64_t& index, int nHeight, bool add)
 {
-    LOCK(cs_clubinfo);
+    AssertLockHeld(cs_clubinfo);
     if (add)
     {
         CMemberInfo memberinfoNew = memberinfo;
@@ -391,7 +393,7 @@ bool CClubInfoDB::UpdateRewards(const string& minerAddress, CAmount memberReward
 bool CClubInfoDB::UpdateRewardsByMinerAddress(const string& minerAddress, CAmount memberRewards,
                                               uint64_t memberTotalMP, CAmount& distributedRewards, bool isUndo)
 {
-    LOCK(cs_clubinfo);
+    AssertLockHeld(cs_clubinfo);
     distributedRewards = 0;
     if (!UpdateRewards(minerAddress, memberRewards, memberTotalMP, distributedRewards, isUndo))
         return false;
@@ -415,6 +417,7 @@ bool CClubInfoDB::UpdateRewardsByMinerAddress(const string& minerAddress, CAmoun
 bool CClubInfoDB::UpdateMpByChange(string fatherAddr, uint64_t index, bool isUndo,
                                    uint64_t amount, bool add)
 {
+    AssertLockHeld(cs_clubinfo);
     if (cacheRecord.find(fatherAddr) == cacheRecord.end())
     {
         LogPrintf("%s, The input father address is : %s, which is not exist\n", __func__, fatherAddr);
@@ -439,6 +442,7 @@ bool CClubInfoDB::UpdateMpByChange(string fatherAddr, uint64_t index, bool isUnd
 
 void CClubInfoDB::UpdateRewardByChange(std::string fatherAddr, uint64_t index, CAmount rewardChange, bool isUndo)
 {
+    AssertLockHeld(cs_clubinfo);
     if (isUndo)
         rewardChange = 0 - rewardChange;
     cacheRecord[fatherAddr][index].rwd += rewardChange;

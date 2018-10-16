@@ -119,10 +119,6 @@ private:
     void UpdateMembersByFatherAddress(const std::string& fatherAddress, const CMemberInfo& memberinfo,
                                       uint64_t& addrIndex, int nHeight, bool add, bool isUndo=false);
 
-    bool EntrustByAddress(std::string inputAddr, std::string voutAddress, int nHeight);
-
-    bool UpdateMpAndTotalMPByAddress(std::string address, int nHeight, std::string fatherInput);
-
     bool GetBestFather(const CTransaction& tx, const CCoinsViewCache &view, std::string& bestFather,
                        std::map<std::string, CAmount> vin_val=std::map<std::string, CAmount>(), bool isUndo=false);
 
@@ -205,6 +201,12 @@ public:
 
     //! Retrieve the harvest power for a given address if it's a miner
     uint64_t GetHarvestPowerByAddress(std::string address, int nHeight);
+
+    //! Someone entrust another
+    bool EntrustByAddress(std::string inputAddr, std::string voutAddress, int nHeight);
+
+    //! A common TX that update the mining power and totalMP
+    bool UpdateMpAndTotalMPByAddress(std::string address, int nHeight, std::string fatherInput);
 
     //! Update the Balance dataset
     bool UpdateRewardsByTX(const CTransaction& tx, CAmount blockReward, int nHeight, bool isUndo=false);
