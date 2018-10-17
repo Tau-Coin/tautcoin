@@ -110,9 +110,6 @@ bool CAddrInfoDB::Commit(int nHeight, bool isUndo)
 {
     _pclubinfodb->Commit(nHeight);
 
-    if (cacheRecord.size() == 0)
-        return true;
-
     for(std::map<string, CTAUAddrInfo>::const_iterator it = cacheRecord.begin();
         it != cacheRecord.end(); it++)
     {
@@ -128,6 +125,7 @@ bool CAddrInfoDB::Commit(int nHeight, bool isUndo)
     }
 
     SetCurrentHeight(nHeight);
+    _pclubinfodb->SetCurrentHeight(nHeight);
 
     return true;
 }
@@ -231,6 +229,7 @@ bool CAddrInfoDB::InitGenesisDB(const std::vector<string>& addresses)
         CTAUAddrInfo addrInfo("0", "0", 0, 1);
         if (!WriteDB(addresses[i], 0, addrInfo))
             return false;
+        addrInfo.lastHeight = 0;
         cacheForRead[addresses[i]] = addrInfo;// Add to cache for accelerating
     }
 

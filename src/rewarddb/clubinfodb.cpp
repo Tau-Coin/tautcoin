@@ -285,7 +285,7 @@ string CClubInfoDB::UpdateMembersByFatherAddress(const string& fatherAddress, co
                  memberinfo.address, nHeight);
         return NO_MOVED_ADDRESS;
     }
-    else
+    else if(cacheRecord.find(fatherAddress) != cacheRecord.end())
     {
         size_t length = cacheRecord[fatherAddress].size();
         string addressMoved = NO_MOVED_ADDRESS;
@@ -306,6 +306,8 @@ string CClubInfoDB::UpdateMembersByFatherAddress(const string& fatherAddress, co
         }
         return addressMoved;
     }
+    else
+        return NO_MOVED_ADDRESS;
 }
 
 void CClubInfoDB::GetTotalMembers(const string& fatherAddress, vector<string>& vmembers)

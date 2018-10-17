@@ -158,7 +158,7 @@ UniValue dumpclubmembers(const UniValue& params, bool fHelp)
              << "MP\t\t   " << "reward" << "\n";
 
         // Firstly, output miners info
-        addrInfo = paddrinfodb->GetAddrInfo(address, height);
+        //addrInfo = paddrinfodb->GetAddrInfo(address, height);
         uint64_t index = addrInfo.index;
         std::string miner = (addrInfo.miner.compare("0") == 0) ? address : addrInfo.miner;
         std::string father = (addrInfo.father.compare("0") == 0) ? address : addrInfo.father;
