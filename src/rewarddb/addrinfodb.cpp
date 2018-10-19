@@ -923,11 +923,6 @@ void CAddrInfoDB::UndoCacheRecords(int nHeight)
         cacheRecord[it->first].totalMP = cacheForUndo[it->first].totalMP;
         if (cacheForUndoHeight.find(it->first) != cacheForUndoHeight.end())
             cacheRecord[it->first].lastHeight = cacheForUndoHeight[it->first];
-        else///////////////////////////////////////////////
-        {
-            //if (cacheForErs.find(it->first) == cacheForErs.end())
-                cout<<"haha: "<<it->first<<endl;
-        }
 
         DeleteDB(it->first, nHeight);
         //DeleteToBatch(it->first, nHeight);

@@ -111,231 +111,240 @@ static string GetRandomAddress()
     return address;
 }
 
-BOOST_FIXTURE_TEST_SUITE(rewarddb_tests, TAURewardDB::TestingSetup)
+BOOST_FIXTURE_TEST_SUITE(crewarddb_tests, TAURewardDB::TestingSetup)
 
-static const unsigned int NUM_SIMULATION_ITERATIONS = 40000;
-static const unsigned int NUM_SIMULATION_ADDRESSS = 1000000;
+//static const unsigned int NUM_SIMULATION_ITERATIONS = 40000;
+//static const unsigned int NUM_SIMULATION_ADDRESSS = 1000000;
 
-BOOST_AUTO_TEST_CASE(coins_cache_simulation_test)
+//BOOST_AUTO_TEST_CASE(rewarddb_performance_simulation_test)
+//{
+//    int num = 100000;
+//    vector<string> addresses;
+//    vector<string> addressesRandom;
+//    int numRandomly = 0;
+//    for(int i = 0; i < num; i++)
+//    {
+//        srand((unsigned)std::time(0));
+//        bool random = ((rand()%5) == 0);
+//        string addr = GetRandomAddress();
+//        addresses.push_back(addr);
+//        if (i != 0)
+//        {
+//            for(int h = 0; h < 10; h++)
+//                paddrinfodb->Write(make_pair(addr, h), CTAUAddrInfo());
+//        }
+//        if (random && numRandomly < num/5)
+//        {
+//            addressesRandom.push_back(addr);
+//            numRandomly++;
+//        }
+//    }
+//    paddrinfodb->InitGenesisDB(addresses);
+//    paddrinfodb->Commit(9);
+
+//    int test1Num = num;
+//    std::clock_t start, finish;
+//    start = clock();
+//    double totaltime = 0;
+//    for(size_t t = 0; t < addressesRandom.size(); t++, test1Num*=10)
+//    {
+//        paddrinfodb->UpdateMpAndTotalMPByAddress(addressesRandom[t], 10, addresses[0]);
+//    }
+//    vector<string> members;
+//    pclubinfodb->GetTotalMembersByAddress(addresses[0], members);
+//    paddrinfodb->Commit(10);
+
+//    finish = clock();
+//    totaltime = (double)(finish - start) / CLOCKS_PER_SEC;
+//    cout<<"When updating "<<addressesRandom.size()<<" items, time comsume is "<<totaltime<<"s！"<<endl;
+//}
+
+BOOST_AUTO_TEST_CASE(clubInfodb_UpdateMembersByFatherAddress_test)
 {
-    int num = 7211;
-    int numRandomly = num / 2;
-    string test;
-    //input
+    // Init
     vector<string> addresses;
-    vector<string> addressesRandom;
-    for(int i = 0, j = 0; i < num; i++)
+    int num = 5;
+    LOCK(cs_clubinfo);
+    for(int i = 0; i < num; i++)
     {
         srand((unsigned)std::time(0));
-        bool random = rand()%2;
         string addr = GetRandomAddress();
         addresses.push_back(addr);
-        if (random && j < numRandomly)
-        {
-            addressesRandom.push_back(addr);
-            j++;
-        }
     }
 
-    // test 1, traversal: set map list vector
-    int test1Num = num;
-    cout<<"traversal test"<<endl;
-    for(int t = 0; t < 1; t++, test1Num*=10)
+    // Create inputs
+    const int addSize = 2;
+    const int fatherAddressSize = 2;
+    const int memberinfoSize = 2;
+    const int indexInSize = 4;
+    const int cacheRecordSize = 4;
+    const bool add[addSize] = {true, false};
+    const string fatherAddress[fatherAddressSize] = {"TP6t7swv4SDcDuN5pQxdk4MGGEcVpsExHG",
+                                                     "TNELcnfUUak1J1Cw1bUdF3UBXunfR71Hmb"};
+    CMemberInfo memberinfo[memberinfoSize];
+    memberinfo[0] = CMemberInfo("TNELcnfUUak1J1Cw1bUdF3UBXunfR71Hmb", 1, 1);
+    memberinfo[1] = CMemberInfo("THghrLpjMqNztfwEkT2ayWeopDo5vmnbLU", 1, 1);
+    const uint64_t indexIn[indexInSize] = {0, 1, 2, 3};
+
+    // Create true outputs
+    uint64_t indexRet[fatherAddressSize][memberinfoSize][cacheRecordSize] = {0};
+    for(int j = 0; j < fatherAddressSize; j++)
     {
-        std::clock_t start, finish;
-        double totaltime = 0;
-//        //set
-//        set<string> s;
-//        for(int i = 0; i < test1Num; i++)
-//            s.insert(addresses[i]);
-
-//        start = clock();
-//        for(set<string>::iterator ite = s.begin(); ite != s.end(); ite++)
-//            test = *ite;
-//        finish = clock();
-//        totaltime = (double)(finish - start) / CLOCKS_PER_SEC;
-//        cout<<"set_"<<test1Num<<" 的traversal时间为"<<totaltime<<"秒！"<<endl;
-
-        //map
-        map<string, string> m;
-        for(int i = 0; i < test1Num; i++)
-            m.insert(pair<string, string>(addresses[i], addresses[i]));
-
-        start = clock();
-        for(map<string, string>::iterator ite = m.begin(); ite != m.end(); ite++)
-            test = ite->second;
-        finish = clock();
-        totaltime = (double)(finish - start) / CLOCKS_PER_SEC;
-        cout<<"map_"<<test1Num<<" 的traversal时间为"<<totaltime<<"秒！"<<endl;
-
-//        //list
-//        list<string> l;
-//        for(int i = 0; i < test1Num; i++)
-//            l.push_back(addresses[i]);
-
-//        start = clock();
-//        for(list<string>::iterator ite = l.begin(); ite != l.end(); ite++)
-//            test = *ite;
-//        finish = clock();
-//        totaltime = (double)(finish - start) / CLOCKS_PER_SEC;
-//        cout<<"list_"<<test1Num<<" 的traversal时间为"<<totaltime<<"秒！"<<endl;
-
-        //vector
-        vector<string> v;
-        v.reserve(test1Num*10);
-        for(int i = 0; i < test1Num; i++)
-            v.push_back(addresses[i]);
-
-        start = clock();
-        for(size_t k = 0; k < v.size(); k++)
-            test = v[k];
-        finish = clock();
-        totaltime = (double)(finish - start) / CLOCKS_PER_SEC;
-        cout<<"vector_"<<test1Num<<" 的traversal时间为"<<totaltime<<"秒！"<<endl;
-
-        start = clock();
-        for(size_t k = 0; k < v.size(); k++)
-            v[k] = test;//test = v[k];
-        finish = clock();
-        totaltime = (double)(finish - start) / CLOCKS_PER_SEC;
-        cout<<"vector_"<<test1Num<<" 的traversal2时间为"<<totaltime<<"秒！"<<endl;
+        for(int k = 0; k < memberinfoSize; k++)
+        {
+            for(int m = 0; m < cacheRecordSize; m++)
+            {
+                if (j == 0)
+                    indexRet[j][k][m] = 1;
+                else if (j == 1 && k == 1)
+                    indexRet[j][k][m] = 1 + m;
+                else
+                    indexRet[j][k][m] = 0;
+            }
+        }
     }
-
-    // test 2, read randomly: set map list vector TAUAddrTrie
-    int test2Num = num;
-    cout<<"read_randomly test"<<endl;
-    for(int t = 0; t < 1; t++, test2Num*=10)
+    bool recordErased[fatherAddressSize][memberinfoSize][indexInSize][cacheRecordSize] = {false};
+    string addressMovedRet[fatherAddressSize][memberinfoSize][indexInSize][cacheRecordSize];
+    for(int m = 0; m < cacheRecordSize; m++)
     {
-        //set
-        set<string> s;
-        for(int i = 0; i < test2Num; i++)
-            s.insert(addresses[i]);
-
-        std::clock_t start, finish;
-        start = clock();
-        set<string>::iterator ite;
-        for(size_t i = 0; i < addressesRandom.size(); i++)
+        for(int j = 0; j < fatherAddressSize; j++)
         {
-            ite = s.find(addressesRandom[i]);
-            test = *ite;
+            for(int k = 0; k < memberinfoSize; k++)
+            {
+                for(int l = 0; l < indexInSize; l++)
+                {
+                    if ((j == 0) || (j == 1 && m >= 1 && l >= m) || (j == 1 && l == 0))
+                        addressMovedRet[j][k][l][m] = NO_MOVED_ADDRESS;
+                    else if(m == 0)
+                    {
+                        recordErased[j][k][l][m] = true;
+                        addressMovedRet[j][k][l][m] = NO_MOVED_ADDRESS;
+                    }
+                    else if(l < m)
+                        addressMovedRet[j][k][l][m] = addresses[m-1];
+                }
+            }
         }
-        finish = clock();
-        double totaltime = (double)(finish - start) / CLOCKS_PER_SEC;
-        cout<<"set_"<<addressesRandom.size()<<" 的read_randomly时间为"<<totaltime<<"秒！"<<endl;
-
-        //map
-        map<string, string> m;
-        for(int i = 0; i < test2Num; i++)
-            m.insert(pair<string, string>(addresses[i], addresses[i]));
-
-        start = clock();
-        for(size_t i = 0; i < addressesRandom.size(); i++)
-            test = m[addressesRandom[i]];
-        finish = clock();
-        totaltime = (double)(finish - start) / CLOCKS_PER_SEC;
-        cout<<"map_"<<addressesRandom.size()<<" 的read_randomly时间为"<<totaltime<<"秒！"<<endl;
-
-        //list
-        list<string> l;
-        for(int i = 0; i < test2Num; i++)
-            l.push_back(addresses[i]);
-
-        start = clock();
-        for(size_t i = 0; i < addressesRandom.size(); i++)
-        {
-            list<string>::iterator ite = find(l.begin(), l.end(), addressesRandom[i]);
-            test = *ite;
-        }
-        finish = clock();
-        totaltime = (double)(finish - start) / CLOCKS_PER_SEC;
-        cout<<"list_"<<addressesRandom.size()<<" 的read_randomly时间为"<<totaltime<<"秒！"<<endl;
-
-        //vector
-        vector<string> v;
-        for(int i = 0; i < test2Num; i++)
-            v.push_back(addresses[i]);
-
-        start = clock();
-        for(size_t i = 0; i < addressesRandom.size(); i++)
-        {
-            vector<string>::iterator ite = find(v.begin(), v.end(), addressesRandom[i]);
-            test = *ite;
-        }
-        finish = clock();
-        totaltime = (double)(finish - start) / CLOCKS_PER_SEC;
-        cout<<"vector_"<<addressesRandom.size()<<" 的read_randomly时间为"<<totaltime<<"秒！"<<endl;
     }
 
-//    // test 3, modify randomly: set map list vector TAUAddrTrie
-//    int test3Num = num;
-//    cout<<"modify_randomly test"<<endl;
-//    vector<string> addressesInsert;
-//    for(size_t i = 0; i < addressesRandom.size(); i++)
-//        addressesInsert.push_back(GetRandomAddress());
-//    for(int t = 0; t < 1; t++, test3Num*=10)
-//    {
-//        //set
-//        set<string> s;
-//        for(int i = 0; i < test3Num; i++)
-//            s.insert(addresses[i]);
+    // Execute tests
+    uint64_t indexOut[fatherAddressSize][memberinfoSize][indexInSize][cacheRecordSize] = {0};
+    CMemberInfo memberinfoOut[addSize][fatherAddressSize][memberinfoSize][indexInSize][cacheRecordSize]
+            = {CMemberInfo()};
+    string addressMovedOut[fatherAddressSize][memberinfoSize][indexInSize][cacheRecordSize];
+    for(int m = 0; m < cacheRecordSize; m++)
+    {
+        for(int i = 0; i < addSize; i++)
+        {
+            for(int j = 0; j < fatherAddressSize; j++)
+            {
+                for(int k = 0; k < memberinfoSize; k++)
+                {
+                    for(int l = 0; l < indexInSize; l++)
+                    {
+                        // Init
+                        paddrinfodb->ClearReadCache();
+                        pclubinfodb->ClearCache();
+                        string father = "TNELcnfUUak1J1Cw1bUdF3UBXunfR71Hmb";
+                        vector<string> inits;
+                        inits.push_back(father);
+                        paddrinfodb->InitGenesisDB(inits);
+                        uint64_t index = 0;
+                        for(int n = 0; n < m; n++)
+                            paddrinfodb->UpdateMpAndTotalMPByAddress(addresses[n], 1, father);
+                        paddrinfodb->Commit(1);
+                        assert(pclubinfodb->GetCacheRecord(father).size() == size_t(m+1));
 
-//        std::clock_t start, finish;
-//        start = clock();
-//        set<string>::iterator ite;
-//        for(size_t i = 0; i < addressesRandom.size(); i++)
-//        {
-//            s.erase(addressesRandom[i]);
-//            s.insert(addressesInsert[i]);
-//        }
-//        finish = clock();
-//        double totaltime = (double)(finish - start) / CLOCKS_PER_SEC;
-//        cout<<"set_"<<addressesRandom.size()<<" 的modify_randomly时间为"<<totaltime<<"秒！"<<endl;
+                        if (i == 0)
+                        {
+                            index = indexIn[l];
+                            pclubinfodb->UpdateMembersByFatherAddress(fatherAddress[j],
+                                                                      memberinfo[k],
+                                                                      index, 2, true);
 
-//        //map
-//        map<string, string> m;
-//        for(int i = 0; i < test3Num; i++)
-//            m.insert(pair<string, string>(addresses[i], addresses[i]));
+                            indexOut[j][k][l][m] = index;
+                            memberinfoOut[i][j][k][l][m] =
+                                    (pclubinfodb->GetCacheRecord(fatherAddress[j]))[indexOut[j][k][l][m]];
+                        }
+                        else
+                        {
+                            index = indexIn[l];
+                            addressMovedOut[j][k][l][m] =
+                                    pclubinfodb->UpdateMembersByFatherAddress(fatherAddress[j],
+                                                                              CMemberInfo(" ", 0, 0),
+                                                                              index, 2, add[i]);
 
-//        start = clock();
-//        for(size_t i = 0; i < addressesRandom.size(); i++)
-//            m[addressesRandom[i]] = addressesInsert[i];
-//        finish = clock();
-//        totaltime = (double)(finish - start) / CLOCKS_PER_SEC;
-//        cout<<"map_"<<addressesRandom.size()<<" 的modify_randomly时间为"<<totaltime<<"秒！"<<endl;
+                            if (j == 1 && recordErased[j][k][l][m] == false)
+                            {
+                                if (pclubinfodb->GetCacheRecord(fatherAddress[j]).size() > indexIn[l])
+                                    memberinfoOut[i][j][k][l][m] =
+                                        (pclubinfodb->GetCacheRecord(fatherAddress[j]))[indexIn[l]];
+                            }
+                        }
 
-//        //list
-//        list<string> l;
-//        for(int i = 0; i < test3Num; i++)
-//            l.push_back(addresses[i]);
+                        paddrinfodb->ClearReadCache();
+                        pclubinfodb->ClearCache();
+                    }
+                }
+            }
+        }
+    }
 
-//        start = clock();
-//        for(size_t i = 0; i < addressesRandom.size(); i++)
-//        {
-//            list<string>::iterator ite = find(l.begin(), l.end(), addressesRandom[i]);
-//            l.erase(ite);
-//            l.push_back(addressesInsert[i]);
-//        }
-//        finish = clock();
-//        totaltime = (double)(finish - start) / CLOCKS_PER_SEC;
-//        cout<<"list_"<<addressesRandom.size()<<" 的modify_randomly时间为"<<totaltime<<"秒！"<<endl;
+    // Verify
+    for(int m = 0; m < cacheRecordSize; m++)
+    {
+        for(int i = 0; i < addSize; i++)
+        {
+            for(int j = 0; j < fatherAddressSize; j++)
+            {
+                for(int k = 0; k < memberinfoSize; k++)
+                {
+                    for(int l = 0; l < indexInSize; l++)
+                    {
+                        if (i == 0)
+                        {
+                            BOOST_CHECK_MESSAGE(indexOut[j][k][l][m] == indexRet[j][k][m], "index case: "<<j<<k<<m);
+                            BOOST_CHECK_MESSAGE(memberinfoOut[i][j][k][l][m].address.compare(memberinfo[k].address) == 0,
+                                                "i = 0, member case: "<<j<<k<<l<<m);
+                        }
+                        else
+                        {
+                            BOOST_CHECK_MESSAGE(addressMovedOut[j][k][l][m] == addressMovedRet[j][k][l][m], "i = 1, member case: "<<j<<k<<l<<m);
+                            if (addressMovedOut[j][k][l][m].compare("NO_MOVED_ADDRESS") != 0)
+                                BOOST_CHECK_MESSAGE(addressMovedOut[j][k][l][m].compare(memberinfoOut[i][j][k][l][m].address) == 0,
+                                                    "address moved case: "<<j<<k<<l<<m);
+                        }
 
-//        //vector
-//        vector<string> v;
-//        for(int i = 0; i < test3Num; i++)
-//            v.push_back(addresses[i]);
+                    }
+                }
+            }
+        }
+    }
 
-//        start = clock();
-//        for(size_t i = 0; i < addressesRandom.size(); i++)
-//        {
-//            vector<string>::iterator ite = find(v.begin(), v.end(), addressesRandom[i]);
-//            v.erase(ite);
-//            v.push_back(addressesInsert[i]);
-//        }
-//        finish = clock();
-//        totaltime = (double)(finish - start) / CLOCKS_PER_SEC;
-//        cout<<"vector_"<<addressesRandom.size()<<" 的modify_randomly时间为"<<totaltime<<"秒！"<<endl;
-//    }
+}
 
+BOOST_AUTO_TEST_CASE(addrInfodb_EntrustByAddress_test)
+{
+    vector<string> addresses;
+    int num = 1;
+    for(int i = 0; i < num; i++)
+    {
+        srand((unsigned)std::time(0));
+        //bool random = ((rand()%5) == 0);
+        string addr = GetRandomAddress();
+        addresses.push_back(addr);
+    }
+
+    LOCK(cs_clubinfo);
+    string testFather = "TNELcnfUUak1J1Cw1bUdF3UBXunfR71Hmb";
+    paddrinfodb->UpdateMpAndTotalMPByAddress(addresses[0], 1, testFather);
+    cout<<addresses[0]<<endl;
+    paddrinfodb->Commit(1);
+
+    vector<string> members;
+    pclubinfodb->GetTotalMembersByAddress(testFather, members);
+    for(size_t i = 0; i < members.size(); i++)
+        cout<<members[i]<<endl;
 }
 
 BOOST_AUTO_TEST_SUITE_END()
