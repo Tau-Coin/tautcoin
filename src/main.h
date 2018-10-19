@@ -368,8 +368,11 @@ bool CheckRewards(const CTransaction& tx, CValidationState &state, bool fScriptC
 /** Apply the effects of this transaction on the UTXO set represented by view */
 void UpdateCoins(const CTransaction& tx, CCoinsViewCache& inputs, int nHeight);
 
-/** Apply the rewards of this transaction on the reward database set */
-bool UpdateRewards(const CBlock& block, CAmount blockReward, int nHeight, bool isUndo=false);
+/** Update the rewards of this transaction on the reward database set */
+bool UpdateRewards(const CBlock& block, CAmount blockReward, int nHeight);
+
+/** Undo the rewards of this transaction on the reward database set */
+bool UndoRewards(const CBlock& block, CAmount blockReward, int nHeight);
 
 /** Context-independent validity checks */
 bool CheckTransaction(const CTransaction& tx, CValidationState& state);

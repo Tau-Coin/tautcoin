@@ -24,32 +24,32 @@ CAddrInfoDB::~CAddrInfoDB()
 
 void CAddrInfoDB::WriteToBatch(const std::string& address, int nHeight, const CTAUAddrInfo& value)
 {
-    WriteToBatch(make_pair(address, nHeight), value);
+    WriteToBatch(make_pair(nHeight, address), value);
 }
 
 void CAddrInfoDB::WriteNewestToBatch(const std::string& address, const CTAUAddrInfo& value)
 {
-    WriteToBatch(make_pair(currentHeight, address), value);
+    WriteToBatch(make_pair(NEWESTHEIGHFLAG, address), value);
 }
 
 bool CAddrInfoDB::WriteDB(const std::string& address, int nHeight, const CTAUAddrInfo& value)
 {
-    return Write(make_pair(address, nHeight), value);
+    return Write(make_pair(nHeight, address), value);
 }
 
 bool CAddrInfoDB::ReadDB(const std::string& address, int nHeight, CTAUAddrInfo& value) const
 {
-    return Read(make_pair(address, nHeight), value);
+    return Read(make_pair(nHeight, address), value);
 }
 
 void CAddrInfoDB::DeleteToBatch(const std::string& address, int nHeight)
 {
-    DeleteToBatch(make_pair(address, nHeight));
+    DeleteToBatch(make_pair(nHeight, address));
 }
 
 bool CAddrInfoDB::DeleteDB(const std::string& address, int nHeight)
 {
-    return Erase(make_pair(address, nHeight));
+    return Erase(make_pair(nHeight, address));
 }
 
 void CAddrInfoDB::ClearCache()
@@ -115,7 +115,12 @@ bool CAddrInfoDB::Commit(int nHeight, bool isUndo)
     {
         string address = it->first;
         CTAUAddrInfo value = it->second;
+        CTAUAddrInfo valueOrig = cacheForRead[address];
         cacheForRead[address] = value;
+        if ((valueOrig.father.compare(value.father) == 0) &&
+            (valueOrig.miner.compare(value.miner) == 0) &&
+            (valueOrig.totalMP == value.totalMP))
+            continue;
         if (!isUndo)
         {
             cacheForRead[address].lastHeight = nHeight;
@@ -150,9 +155,11 @@ bool CAddrInfoDB::LoadNewestDBToMemory()
     if (pcursor->Valid() && pcursor->GetKey(key))
     {
         nHeight = atoi(key.second);
+        if (nHeight != _pclubinfodb->GetCurrentHeight())
+            return false;
         Erase(key, true);
     }
-    pcursor->Seek(make_pair(nHeight, string()));
+    pcursor->Seek(make_pair(NEWESTHEIGHFLAG, string()));
 
     int keyHeight = 0;
     LogPrintf("%s: loading newest records from addrInfodb...\n", __func__);
@@ -162,9 +169,7 @@ bool CAddrInfoDB::LoadNewestDBToMemory()
         try
         {
             keyHeight = key.first;
-            //LogPrintf("%s read %c type from coindb...\n", __func__, chType);
-
-            if (keyHeight == nHeight)
+            if (keyHeight == NEWESTHEIGHFLAG)
             {
                 CTAUAddrInfo addrInfo;
                 if (!pcursor->GetValue(addrInfo)) {
@@ -174,12 +179,12 @@ bool CAddrInfoDB::LoadNewestDBToMemory()
                 cacheForRead[key.second] = addrInfo;
                 DeleteToBatch(key);
             }
-            else if(keyHeight > nHeight && nHeight >= 0)
-            {
-                LogPrintf("%s: load value in height: %d, which is wrong, the newest height is: %d\n",
-                          __func__, keyHeight, nHeight);
-                return false;
-            }
+//            else if(keyHeight > nHeight && nHeight >= 0)
+//            {
+//                LogPrintf("%s: load value in height: %d, which is wrong, the newest height is: %d\n",
+//                          __func__, keyHeight, nHeight);
+//                return false;
+//            }
             else
                 break;
 
@@ -313,6 +318,8 @@ CTAUAddrInfo CAddrInfoDB::GetAddrInfo(string address, int nHeight)
                     cacheForUndoRead[address] = addrInfo;
                     return addrInfo;
                 }
+                else
+                    break;
             }
             else
             {
@@ -760,29 +767,22 @@ bool CAddrInfoDB::UndoMiningPowerByTX(const CTransaction& tx, const CCoinsViewCa
             if (addrVout.IsScript())
                 continue;
 
-            CTAUAddrInfo pastVoutInfo = GetAddrInfo(voutAddress, nHeight-1);
             CTAUAddrInfo pastInputInfo = GetAddrInfo(bestFather, nHeight-1);
             CTAUAddrInfo curVoutInfo = GetAddrInfo(voutAddress, nHeight);
             CTAUAddrInfo curInputInfo = GetAddrInfo(bestFather, nHeight);
-            string pastActualVoutMiner =
-                    (pastVoutInfo.miner.compare("0") == 0) ? voutAddress : pastVoutInfo.miner;
             string curActualVoutFather =
                     (curVoutInfo.father.compare("0") == 0) ? voutAddress : curVoutInfo.father;
-            string curActualInputMiner =
-                    (curInputInfo.miner.compare("0") == 0) ? bestFather : curInputInfo.miner;
             string curActualVoutMiner =
                     (curVoutInfo.miner.compare("0") == 0) ? voutAddress : curVoutInfo.miner;
             string pastActualInputFather =
                     (pastInputInfo.father.compare("0") == 0) ? bestFather : pastInputInfo.father;
             string curActualInputFather =
                     (curInputInfo.father.compare("0") == 0) ? bestFather : curInputInfo.father;
-            string pastActualInputMiner =
-                    (pastInputInfo.miner.compare("0") == 0) ? bestFather : pastInputInfo.miner;
 
             // In the entrust TX, the address is a new one on the chain and do anything
             if ((tx.vout[i].nValue == 0) &&
                 (curActualVoutFather.compare(" ") == 0) && (curActualVoutMiner.compare(" ") == 0))
-                return true;
+                continue;
 
             // Undo mining power
             if (!_pclubinfodb->UpdateMpByChange(curActualVoutFather, curVoutInfo.index, true))
@@ -794,24 +794,6 @@ bool CAddrInfoDB::UndoMiningPowerByTX(const CTransaction& tx, const CCoinsViewCa
                 cacheForErs.insert(voutAddress);
                 if (cacheForClubRm.find(voutAddress) == cacheForClubRm.end())
                     cacheForClubRm[voutAddress] = curActualVoutFather;
-
-                // Undo totalMP of the miner of the new address on chain
-                if (pastActualInputMiner.compare(" ") != 0)
-                {
-                    if (cacheForUndo.find(pastActualInputMiner) == cacheForUndo.end())
-                        cacheForUndo[pastActualInputMiner] = GetAddrInfo(pastActualInputMiner, nHeight-1);
-                }
-                if (cacheForUndo.find(curActualInputMiner) == cacheForUndo.end())
-                    cacheForUndo[curActualInputMiner] = GetAddrInfo(curActualInputMiner, nHeight-1);
-            }
-
-            // Undo totalMP of the miner
-            if (cacheForUndo.find(curActualVoutMiner) == cacheForUndo.end())
-                cacheForUndo[curActualVoutMiner] = GetAddrInfo(curActualVoutMiner, nHeight-1);
-            if (pastActualVoutMiner.compare(" ") != 0)
-            {
-                if (cacheForUndo.find(pastActualVoutMiner) == cacheForUndo.end())
-                    cacheForUndo[pastActualVoutMiner] = GetAddrInfo(pastActualVoutMiner, nHeight-1);
             }
 
             // Undo entrust TX if it is
@@ -828,10 +810,6 @@ bool CAddrInfoDB::UndoMiningPowerByTX(const CTransaction& tx, const CCoinsViewCa
                     if ((cacheForClubAdd.find(bestFather) == cacheForClubAdd.end()) &&
                         (pastActualInputFather.compare(" ") != 0))
                         cacheForClubAdd[bestFather] = pastActualInputFather;
-
-                    // Undo the miner, the father and the totalMP
-                    if (cacheForUndo.find(bestFather) == cacheForUndo.end())
-                        cacheForUndo[bestFather] = GetAddrInfo(bestFather, nHeight-1);
                 }
             }
         }
@@ -889,46 +867,67 @@ bool CAddrInfoDB::UndoClubMembers(int nHeight)
         alreadyAddedAddr.insert(address);
     }
 
-    // Erase cacheRecord which is not exist before
-    for(set<string>::const_iterator itErs = cacheForErs.begin();
-        itErs != cacheForErs.end(); itErs++)
-    {
-        map<string, CTAUAddrInfo>::iterator it = cacheRecord.find(*itErs);
-        if (it != cacheRecord.end())
-            cacheRecord.erase(it);
-        it = cacheForRead.find(*itErs);
-        if (it != cacheForRead.end())
-            cacheForRead.erase(it);
-        DeleteDB(*itErs, nHeight);
-    }
-
-    // Undo the miner of the vin's members
-    for(map<string, string>::const_iterator itAdded = cacheForClubAdd.begin();
-        itAdded != cacheForClubAdd.end(); itAdded++)
-    {
-        vector<string> totalMembers;
-        _pclubinfodb->GetTotalMembersByAddress(itAdded->first, totalMembers);
-        for(size_t i = 0; i < totalMembers.size(); i++)
-        {
-            if (cacheForErs.find(totalMembers[i]) == cacheForErs.end())
-                cacheForUndo[totalMembers[i]] = GetAddrInfo(totalMembers[i], nHeight-1);
-        }
-    }
-
     return true;
 }
 
 
 void CAddrInfoDB::UndoCacheRecords(int nHeight)
 {
+    boost::scoped_ptr<CDBIterator> pcursor(NewIterator());
+    pair<int, string> key;
+    CTAUAddrInfo addrInfo;
+    pcursor->Seek(make_pair(nHeight, string()));
+    while (pcursor->Valid() && pcursor->GetKey(key))
+    {
+        boost::this_thread::interruption_point();
+        if (key.first == nHeight)
+        {
+            if (!pcursor->GetValue(addrInfo)) {
+                LogPrintf("%s: unable to read value in height %d\n", __func__, key.first);
+                break;
+            }
+            cacheForUndo[key.second] = GetAddrInfo(key.second, nHeight-1);
+            DeleteDB(key.second, key.first);
+        }
+        else
+            break;
+
+        pcursor->Next();
+    }
+
+    // Erase cacheRecord which is not exist before
+    for(set<string>::const_iterator itErs = cacheForErs.begin();
+        itErs != cacheForErs.end(); itErs++)
+    {
+        const string &addrErs = *itErs;
+        map<string, CTAUAddrInfo>::iterator it = cacheRecord.find(addrErs);
+        if (it != cacheRecord.end())
+            cacheRecord.erase(it);
+        it = cacheForRead.find(addrErs);
+        if (it != cacheForRead.end())
+            cacheForRead.erase(it);
+        it = cacheForUndo.find(addrErs);
+        if (it != cacheForUndo.end())
+            cacheForUndo.erase(it);
+        DeleteDB(addrErs, nHeight);
+    }
+
     // Update undo cache records to cacheRecord(except the index)
     for(map<string, CTAUAddrInfo>::const_iterator it = cacheForUndo.begin();
         it != cacheForUndo.end(); it++)
     {
+        if (cacheRecord.find(it->first) == cacheRecord.end())
+            cacheRecord[it->first].index = cacheForRead[it->first].index;
         cacheRecord[it->first].father = cacheForUndo[it->first].father;
         cacheRecord[it->first].miner = cacheForUndo[it->first].miner;
         cacheRecord[it->first].totalMP = cacheForUndo[it->first].totalMP;
-        cacheRecord[it->first].lastHeight = cacheForUndoHeight[it->first];
+        if (cacheForUndoHeight.find(it->first) != cacheForUndoHeight.end())
+            cacheRecord[it->first].lastHeight = cacheForUndoHeight[it->first];
+        else///////////////////////////////////////////////
+        {
+            //if (cacheForErs.find(it->first) == cacheForErs.end())
+                cout<<"haha: "<<it->first<<endl;
+        }
 
         DeleteDB(it->first, nHeight);
         //DeleteToBatch(it->first, nHeight);

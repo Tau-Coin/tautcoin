@@ -293,8 +293,10 @@ string CClubInfoDB::UpdateMembersByFatherAddress(const string& fatherAddress, co
         {
             cacheRecord[fatherAddress][index] = cacheRecord[fatherAddress][length-1];
             addressMoved = cacheRecord[fatherAddress][index].address;
+            cacheRecord[fatherAddress].pop_back();
         }
-        cacheRecord[fatherAddress].pop_back();
+        else if(index >= length-1)
+            cacheRecord[fatherAddress].pop_back();
         LogPrint("clubinfo", "%s, father: %s, remove an address: %s, h:%d\n", __func__, fatherAddress,
                  memberinfo.address, nHeight);
         if ((cacheRecord[fatherAddress].size() == 0) ||

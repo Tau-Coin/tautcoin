@@ -16,6 +16,7 @@
 #include <vector>
 
 #define ADDRINFODBPATH "addrinfodb"
+#define NEWESTHEIGHFLAG (-10)
 
 extern CCriticalSection cs_addrinfo;
 

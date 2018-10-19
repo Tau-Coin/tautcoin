@@ -1968,23 +1968,35 @@ void UpdateCoins(const CTransaction& tx, CCoinsViewCache& inputs, int nHeight)
     UpdateCoins(tx, inputs, txundo, nHeight);
 }
 
-bool UpdateRewards(const CBlock& block, CAmount blockReward, int nHeight, bool isUndo)
+bool UpdateRewards(const CBlock& block, CAmount blockReward, int nHeight)
 {
     if (block.vtx.size() > 1)
     {
         for (unsigned int j = 1; j < block.vtx.size(); j++)
         {
             const CTransaction &tx = block.vtx[j];
-            if (!paddrinfodb->UpdateRewardsByTX(tx, blockReward, nHeight, isUndo))
+            if (!paddrinfodb->UpdateRewardsByTX(tx, blockReward, nHeight))
                 return false;
         }
     }
 
-    if (!paddrinfodb->UpdateRewardsByTX(block.vtx[0], blockReward, nHeight, isUndo))
+    if (!paddrinfodb->UpdateRewardsByTX(block.vtx[0], blockReward, nHeight))
         return false;
 
     paddrinfodb->Commit(nHeight);
     paddrinfodb->ClearCache();
+
+    return true;
+}
+
+bool UndoRewards(const CBlock& block, CAmount blockReward, int nHeight)
+{
+    for (unsigned int j = 0; j < block.vtx.size(); j++)
+    {
+        const CTransaction &tx = block.vtx[j];
+        if (!paddrinfodb->UpdateRewardsByTX(tx, blockReward, nHeight, true))
+            return false;
+    }
 
     return true;
 }
@@ -2403,8 +2415,8 @@ bool DisconnectBlock(CBlock& block, CValidationState& state, CBlockIndex* pindex
         if (paddrinfodb->GetCurrentHeight() == pindex->nHeight)
         {
             LOCK2(cs_addrinfo, cs_clubinfo);
-            if (!UpdateRewards(block, nFees, pindex->nHeight, isUndo))
-                return error("DisconnectBlock(): UpdateRewards failed");
+            if (!UndoRewards(block, nFees, pindex->nHeight))
+                return error("DisconnectBlock(): UndoRewards failed");
             for (size_t k = block.vtx.size(); k-- > 0;)
             {
                 const CTransaction &tx = block.vtx[k];
