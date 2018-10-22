@@ -403,17 +403,22 @@ bool CAddrInfoDB::UpdateRewardsByTX(const CTransaction& tx, CAmount blockReward,
     string clubMinerAddress;
     if (!addr.ScriptPub2Addr(tx.vout[0].scriptPubKey, clubMinerAddress))
         return false;
-    CAmount memberTotalRewards = (nHeight < 45000) ? blockReward - tx.vout[0].nValue : 0;
+    CAmount memberTotalRewards = blockReward - tx.vout[0].nValue;
     if (blockReward > 0)
     {
-        int nHeightQuery = isUndo ? nHeight : nHeight - 1;
-        uint64_t MP = 0;
-        if (!GetMiningPower(clubMinerAddress, nHeightQuery, MP))
-            return false;
-        uint64_t memberTotalMP = GetHarvestPowerByAddress(clubMinerAddress, nHeightQuery) - MP;
-        if (!_pclubinfodb->UpdateRewardsByMinerAddress(clubMinerAddress, memberTotalRewards,
-                                                       memberTotalMP, distributedRewards, isUndo))
-            return false;
+        if (nHeight < 45000)
+        {
+            int nHeightQuery = isUndo ? nHeight : nHeight - 1;
+            uint64_t MP = 0;
+            if (!GetMiningPower(clubMinerAddress, nHeightQuery, MP))
+                return false;
+            uint64_t memberTotalMP = GetHarvestPowerByAddress(clubMinerAddress, nHeightQuery) - MP;
+            if (!_pclubinfodb->UpdateRewardsByMinerAddress(clubMinerAddress, memberTotalRewards,
+                                                           memberTotalMP, distributedRewards, isUndo))
+                return false;
+        }
+        else
+            _pclubinfodb->UpdateRewardByChange(clubMinerAddress, 0, memberTotalRewards, isUndo);
     }
 
     //Update the reward rate dataset(if required)
