@@ -170,12 +170,14 @@ bool CClubInfoDB::Commit(int nHeight)
 
 void CClubInfoDB::SetCurrentHeight(int nHeight)
 {
+    AssertLockHeld(cs_clubinfo);
     currentHeight = nHeight;
 }
 
 
 int CClubInfoDB::GetCurrentHeight() const
 {
+    LOCK(cs_clubinfo);
     return currentHeight;
 }
 
@@ -193,6 +195,7 @@ bool CClubInfoDB::LoadDBToMemory()
     }
     pcursor->SeekToFirst();
 
+    LOCK(cs_clubinfo);
     LogPrintf("%s: loading newest records from clubInfodb...\n", __func__);
     while (pcursor->Valid() && pcursor->GetKey(key))
     {
@@ -228,13 +231,10 @@ bool CClubInfoDB::WriteDataToDisk(int newestHeight, bool fSync)
     ss >> heightStr;
     WriteToBatch(make_pair(-1, heightStr), CMemberInfo());
 
+    AssertLockHeld(cs_clubinfo);
     for(map<string, vector<CMemberInfo> >::const_iterator it = cacheRecord.begin();
         it != cacheRecord.end(); it++)
-    {
-        string address = it->first;
-        vector<CMemberInfo> value = it->second;
-        WriteToBatch(address, value);
-    }
+        WriteToBatch(it->first, it->second);
 
     if (CommitDB(fSync))
     {

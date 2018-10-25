@@ -166,22 +166,6 @@ public:
     //! Init the father and mp of the address from genesis block
     bool InitGenesisDB(const std::vector<std::string>& addresses);
 
-    //! Init the distribution of the reward and check if everything is ok
-    bool InitRewardsDist(CAmount memberTotalRewards, const CScript& scriptPubKey, int nHeight, std::string& clubLeaderAddress,
-                         CAmount& distributedRewards, std::map<std::string, CAmount>& memberRewards);
-
-    //! Compute the reward of each member
-    bool ComputeMemberReward(const uint64_t& txCnt, const uint64_t& totalTXCnt,
-                             const CAmount& totalRewards, CAmount& memberReward) const;
-
-    //! Parse the record
-    bool ParseRecord(std::string inputStr, std::string &miner, std::string& father,
-                     uint64_t& mp, uint64_t &tmp, CAmount& value) const;
-
-    //! Generate a record
-    bool GenerateRecord(std::string miner, std::string father, uint64_t mp, uint64_t tmp,
-                        CAmount value, std::string& outputStr) const;
-
     //! Retrieve the miner for a given address
     std::string GetMiner(std::string address, int nHeight);
 

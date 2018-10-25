@@ -232,8 +232,11 @@ void Shutdown()
             if (!paddrinfodb->WriteNewestDataToDisk(chainActive.Height(), true))
                 LogPrintf("%s: Failed to write addrInfoDB to disk\n", __func__);
         }
+        {
+            LOCK(cs_clubinfo);
         if (!pclubinfodb->WriteDataToDisk(chainActive.Height(), true))
             LogPrintf("%s: Failed to write clubInfoDB to disk\n", __func__);
+        }
         delete paddrinfodb;
         paddrinfodb = NULL;
         delete pclubinfodb;

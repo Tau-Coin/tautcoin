@@ -110,6 +110,7 @@ bool CAddrInfoDB::Commit(int nHeight, bool isUndo)
 {
     _pclubinfodb->Commit(nHeight);
 
+    AssertLockHeld(cs_addrinfo);
     for(std::map<string, CTAUAddrInfo>::const_iterator it = cacheRecord.begin();
         it != cacheRecord.end(); it++)
     {
@@ -137,12 +138,14 @@ bool CAddrInfoDB::Commit(int nHeight, bool isUndo)
 
 void CAddrInfoDB::SetCurrentHeight(int nHeight)
 {
+    AssertLockHeld(cs_addrinfo);
     currentHeight = nHeight;
 }
 
 
 int CAddrInfoDB::GetCurrentHeight() const
 {
+    LOCK(cs_addrinfo);
     return currentHeight;
 }
 
@@ -162,6 +165,7 @@ bool CAddrInfoDB::LoadNewestDBToMemory()
     pcursor->Seek(make_pair(NEWESTHEIGHFLAG, string()));
 
     int keyHeight = 0;
+    LOCK(cs_addrinfo);
     LogPrintf("%s: loading newest records from addrInfodb...\n", __func__);
     while (pcursor->Valid() && pcursor->GetKey(key))
     {
@@ -209,14 +213,10 @@ bool CAddrInfoDB::WriteNewestDataToDisk(int newestHeight, bool fSync)
     ss >> heightStr;
     WriteToBatch(make_pair(-1, heightStr), CTAUAddrInfo());
 
-    LOCK(cs_clubinfo);
+    AssertLockHeld(cs_addrinfo);
     for(map<string, CTAUAddrInfo>::const_iterator it = cacheForRead.begin();
         it != cacheForRead.end(); it++)
-    {
-        string address = it->first;
-        CTAUAddrInfo value = it->second;
-        WriteNewestToBatch(address, value);
-    }
+        WriteNewestToBatch(it->first, it->second);
 
     if (CommitDB(fSync))
     {
@@ -784,7 +784,7 @@ bool CAddrInfoDB::UndoMiningPowerByTX(const CTransaction& tx, const CCoinsViewCa
             string curActualInputFather =
                     (curInputInfo.father.compare("0") == 0) ? bestFather : curInputInfo.father;
 
-            // In the entrust TX, the address is a new one on the chain and do anything
+            // In the entrust TX, the address is a new one on the chain and do nothing
             if ((tx.vout[i].nValue == 0) &&
                 (curActualVoutFather.compare(" ") == 0) && (curActualVoutMiner.compare(" ") == 0))
                 continue;
