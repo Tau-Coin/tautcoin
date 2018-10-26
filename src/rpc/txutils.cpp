@@ -18,7 +18,6 @@
 #include "primitives/transaction.h"
 #include "rpc/server.h"
 #include "random.h"
-#include "rewardman.h"
 #include "script/script.h"
 #include "script/script_error.h"
 #include "script/sign.h"
@@ -326,7 +325,7 @@ bool CTransactionUtils::AvailableRewards(const std::string& pubKey, std::vector<
         LogPrint("selectcoins", "%s addr:%s\n", __func__, addrStr);
     }
 
-    CAmount rewards = RewardManager::GetInstance()->GetRewardsByPubkey(pubKey);
+    CAmount rewards = paddrinfodb->GetRwdByPubkey(pubKey);
 
     vRewards.push_back(CTxReward(pubKey, rewards, (uint32_t)GetTime()));
 

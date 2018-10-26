@@ -195,6 +195,7 @@ bool CClubInfoDB::LoadDBToMemory()
     }
     pcursor->SeekToFirst();
 
+    uint64_t cnt = 0;
     LOCK(cs_clubinfo);
     LogPrintf("%s: loading newest records from clubInfodb...\n", __func__);
     while (pcursor->Valid() && pcursor->GetKey(key))
@@ -209,7 +210,7 @@ bool CClubInfoDB::LoadDBToMemory()
                 break;
             }
             cacheRecord[key] = vmemberInfo;
-
+            cnt++;
             pcursor->Next();
         }
         catch (const std::exception& e) {
@@ -217,7 +218,7 @@ bool CClubInfoDB::LoadDBToMemory()
         }
     }
 
-    LogPrintf("%s: loaded %d newest records from clubInfodb\n", __func__, cacheRecord.size());
+    LogPrintf("%s: loaded %d newest records from clubInfodb\n", __func__, cnt);
     SetCurrentHeight(nHeight);
     return true;
 }

@@ -7,7 +7,6 @@
 #include "amount.h"
 #include "chain.h"
 #include "chainparams.h"
-#include "clubman.h"
 #include "consensus/consensus.h"
 #include "consensus/params.h"
 #include "consensus/validation.h"
@@ -51,10 +50,6 @@ UniValue generateBlocksWithPot(boost::shared_ptr<CReserveScript> coinbaseScript,
      }
      UniValue blockHashes(UniValue::VARR);
 
-     static ClubManager* pClubMgr = NULL;
-     if (!pClubMgr)
-         pClubMgr = ClubManager::GetInstance();
-
      std::string currPubKey = coinbaseScript->pubkeyString;
      CPubKey pubkey(currPubKey.begin(), currPubKey.end());
      std::string strPubKey;
@@ -71,7 +66,7 @@ UniValue generateBlocksWithPot(boost::shared_ptr<CReserveScript> coinbaseScript,
          throw JSONRPCError(RPC_INTERNAL_ERROR, "fail to convert pubkey to address");
      }
 
-     uint64_t harverstPower = ClubManager::DEFAULT_HARVEST_POWER;
+     uint64_t harverstPower = 0;
 
      while (nHeight < nHeightEnd && !ShutdownRequested())
      {
@@ -85,7 +80,7 @@ UniValue generateBlocksWithPot(boost::shared_ptr<CReserveScript> coinbaseScript,
          PotErr error;
 
          harverstPower = paddrinfodb->GetHarvestPowerByAddress(strAddr, prevIndex->nHeight);
-         if (harverstPower <= ClubManager::DEFAULT_HARVEST_POWER)
+         if (harverstPower <= 0)
          {
              LogPrintf("%s harvest power:%d not support mining, stop mining\n", __func__, harverstPower);
              break;
@@ -218,7 +213,7 @@ UniValue generatetoaddress(const UniValue& params, bool fHelp)
 
     CBitcoinAddress dummyAddr;
     uint64_t dummyInt = 0;
-    if (!ClubManager::GetInstance()->IsForgeScript(coinbaseScript->reserveScript, dummyAddr, dummyInt))
+    if (!IsForgeScript(coinbaseScript->reserveScript, dummyAddr, dummyInt))
         throw JSONRPCError(RPC_TYPE_ERROR, "Address not allowed to forge");
 
     CKeyID keyID;

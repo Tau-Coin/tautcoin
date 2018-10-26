@@ -374,6 +374,9 @@ bool UpdateRewards(const CBlock& block, CAmount blockReward, int nHeight);
 /** Undo the rewards of this transaction on the reward database set */
 bool UndoRewards(const CBlock& block, CAmount blockReward, int nHeight);
 
+/** Check the script if it can forge */
+bool IsForgeScript(const CScript& script, CBitcoinAddress& addr, uint64_t& miningPower);
+
 /** Context-independent validity checks */
 bool CheckTransaction(const CTransaction& tx, CValidationState& state);
 

@@ -8,7 +8,6 @@
 #include "base58.h"
 #include "checkpoints.h"
 #include "chain.h"
-#include "clubman.h"
 #include "coincontrol.h"
 #include "consensus/consensus.h"
 #include "consensus/validation.h"
@@ -27,7 +26,6 @@
 #include "ui_interface.h"
 #include "utilmoneystr.h"
 #include "tool.h"
-#include "rewardman.h"
 
 #include <assert.h>
 
@@ -1926,7 +1924,7 @@ void CWallet::AvailableRewards(vector<CTxReward>& vRewards, const CCoinControl *
             CKey key;
             if (pwalletMain->GetKey(keyid, key)) {
                 string strPubkey = HexStr(ToByteVector(key.GetPubKey()));
-                CAmount value = RewardManager::GetInstance()->GetRewardsByPubkey(strPubkey);
+                CAmount value = paddrinfodb->GetRwdByPubkey(strPubkey);
                 if (value > 0)
                 {
                     // The rewards spent in mempool is not available
@@ -2367,7 +2365,7 @@ bool CWallet::CreateTransaction(const vector<CRecipient>& vecSend, CWalletTx& wt
                         age += 1;
                     dPriority += (double)nCredit * age;
 
-                    if (!bestChangeDestGot && ClubManager::GetInstance()->IsForgeScript(pcoin.first->vout[pcoin.second].scriptPubKey,
+                    if (!bestChangeDestGot && IsForgeScript(pcoin.first->vout[pcoin.second].scriptPubKey,
                             minerAddr, nMinerMemCnt) && nMinerMemCnt > 1) {
                         bestChangeDestGot = true;
                     }

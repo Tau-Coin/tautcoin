@@ -6,7 +6,6 @@
 #include "amount.h"
 #include "chain.h"
 #include "chainparams.h"
-#include "clubman.h"
 #include "consensus/consensus.h"
 #include "consensus/params.h"
 #include "consensus/validation.h"

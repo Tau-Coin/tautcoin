@@ -83,8 +83,6 @@ BITCOIN_CORE_H = \
   checkqueue.h \
   clientversion.h \
   coincontrol.h \
-  rewardman.h \
-  clubman.h \
   coins.h \
   coinsbyscript.h \
   compat.h \
@@ -295,8 +293,6 @@ libbitcoin_common_a_SOURCES = \
   base58.cpp \
   chainparams.cpp \
   tool.cpp \
-  rewardman.cpp \
-  clubman.cpp \
   coins.cpp \
   coinsbyscript.cpp \
   compressor.cpp \

@@ -1,4 +1,5 @@
 #include "addrinfodb.h"
+#include "tool.h"
 #include <boost/algorithm/string.hpp>
 #include <boost/function.hpp>
 #include <sstream>
@@ -165,6 +166,7 @@ bool CAddrInfoDB::LoadNewestDBToMemory()
     pcursor->Seek(make_pair(NEWESTHEIGHFLAG, string()));
 
     int keyHeight = 0;
+    uint64_t cnt = 0;
     LOCK(cs_addrinfo);
     LogPrintf("%s: loading newest records from addrInfodb...\n", __func__);
     while (pcursor->Valid() && pcursor->GetKey(key))
@@ -182,6 +184,7 @@ bool CAddrInfoDB::LoadNewestDBToMemory()
                 }
                 cacheForRead[key.second] = addrInfo;
                 DeleteToBatch(key);
+                cnt++;
             }
 //            else if(keyHeight > nHeight && nHeight >= 0)
 //            {
@@ -199,7 +202,7 @@ bool CAddrInfoDB::LoadNewestDBToMemory()
         }
     }
 
-    LogPrintf("%s: loaded %d newest records from addrInfodb\n", __func__, cacheForRead.size());
+    LogPrintf("%s: loaded %d newest records from addrInfodb\n", __func__, cnt);
     SetCurrentHeight(nHeight);
     return CommitDB();
 }
@@ -296,6 +299,15 @@ CAmount CAddrInfoDB::GetRwdBalance(std::string address, int nHeight)
     }
     else
         return 0;
+}
+
+CAmount CAddrInfoDB::GetRwdByPubkey(const string& pubkey)
+{
+    std::string addrStr;
+    if (!ConvertPubkeyToAddress(pubkey, addrStr))
+        return 0;
+
+    return GetRwdBalance(addrStr, currentHeight);
 }
 
 CTAUAddrInfo CAddrInfoDB::GetAddrInfo(string address, int nHeight)

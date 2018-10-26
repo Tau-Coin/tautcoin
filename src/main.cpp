@@ -12,7 +12,6 @@
 #include "chainparams.h"
 #include "checkpoints.h"
 #include "checkqueue.h"
-#include "clubman.h"
 #include "consensus/consensus.h"
 #include "consensus/merkle.h"
 #include "consensus/validation.h"
@@ -25,7 +24,6 @@
 #include "primitives/block.h"
 #include "primitives/transaction.h"
 #include "random.h"
-#include "rewardman.h"
 #include "script/script.h"
 #include "script/sigcache.h"
 #include "script/standard.h"
@@ -2001,6 +1999,25 @@ bool UndoRewards(const CBlock& block, CAmount blockReward, int nHeight)
     return true;
 }
 
+bool IsForgeScript(const CScript& script, CBitcoinAddress& addr, uint64_t& miningPower)
+{
+    std::string strAddr;
+    if (!addr.ScriptPub2Addr(script, strAddr)) {
+        LogPrintf("isForgeScript, ScriptPub2Addr fail\n");
+        return false;
+    }
+
+    int nHeight = paddrinfodb->GetCurrentHeight();
+    uint64_t power = paddrinfodb->GetHarvestPowerByAddress(strAddr, nHeight);
+    miningPower = power;
+    addr.SetString(strAddr);
+
+    if (power > 0)
+        return true;
+
+    return false;
+}
+
 bool CScriptCheck::operator()() {
     const CScript &scriptSig = ptxTo->vin[nIn].scriptSig;
     const CScriptWitness *witness = (nIn < ptxTo->wit.vtxinwit.size()) ? &ptxTo->wit.vtxinwit[nIn].scriptWitness : NULL;
@@ -2080,7 +2097,7 @@ bool CheckTxInputs(const CTransaction& tx, CValidationState& state, const CCoins
                 return state.DoS(100, false, REJECT_INVALID, "bad-txns-balance-outofrange");
             }
 
-            CAmount local = RewardManager::GetInstance()->GetRewardsByPubkey(reward.senderPubkey);
+            CAmount local = paddrinfodb->GetRwdByPubkey(reward.senderPubkey);
             if (reward.rewardBalance > local)
             {
                 return state.DoS(100, false, REJECT_INVALID, "bad-txns-balance-largethandb");
@@ -2200,9 +2217,9 @@ bool CheckRewards(const CTransaction& tx, CValidationState &state, bool fScriptC
     // this optimisation would allow an invalid chain to be accepted.
     if (fScriptChecks) {
         for (unsigned int i = 0; i < tx.vreward.size(); i++) {
-            const CAmount senderRewardInTx = tx.vreward[i].rewardBalance;
-            const CAmount senderRewardInDB = RewardManager::GetInstance()->GetRewardsByPubkey(tx.vreward[i].senderPubkey);
-            if (senderRewardInTx > senderRewardInDB)
+            const CAmount senderRwdInTx = tx.vreward[i].rewardBalance;
+            const CAmount senderRwdInDB = paddrinfodb->GetRwdByPubkey(tx.vreward[i].senderPubkey);
+            if (senderRwdInTx > senderRwdInDB)
                 return state.DoS(100,false, REJECT_INVALID, "reward-balance-verify-flag-failed");
 
             // Verify signature
@@ -2551,6 +2568,7 @@ bool ConnectBlock(const CBlock& block, CValidationState& state, CBlockIndex* pin
 
             if (!paddrinfodb->InitGenesisDB(addresses))
                 return error("%s: paddrinfodb::InitGenesisDB error", __func__);
+            LOCK2(cs_addrinfo, cs_clubinfo);
             pclubinfodb->SetCurrentHeight(0);
             paddrinfodb->SetCurrentHeight(0);
         }
@@ -2668,104 +2686,106 @@ bool ConnectBlock(const CBlock& block, CValidationState& state, CBlockIndex* pin
     vPos.reserve(block.vtx.size());
     blockundo.vtxundo.reserve(block.vtx.size() - 1);
 
-    LOCK2(cs_addrinfo, cs_clubinfo);
-    for (unsigned int i = 0; i < block.vtx.size(); i++)
     {
-        const CTransaction &tx = block.vtx[i];
-
-        nInputs += tx.vin.size();
-        nInputs += tx.vreward.size();
-
-        // Update the TX count and the father
-        if (!fJustCheck)
+        LOCK2(cs_addrinfo, cs_clubinfo);
+        for (unsigned int i = 0; i < block.vtx.size(); i++)
         {
-            if (pclubinfodb->GetCurrentHeight() < pindex->nHeight)
+            const CTransaction &tx = block.vtx[i];
+
+            nInputs += tx.vin.size();
+            nInputs += tx.vreward.size();
+
+            // Update the TX count and the father
+            if (!fJustCheck)
             {
-                if (!paddrinfodb->UpdateFatherAndMpByTX(tx, view, pindex->nHeight))
+                if (pclubinfodb->GetCurrentHeight() < pindex->nHeight)
                 {
-                    paddrinfodb->ClearCache();
-                    return error("ConnectBlock(): UpdateFatherAndMp failed");
-                }
-            }
-        }
-
-        if (!tx.IsCoinBase())
-        {
-            if (!view.HaveInputs(tx))
-                return state.DoS(100, error("ConnectBlock(): inputs missing/spent"),
-                                 REJECT_INVALID, "bad-txns-inputs-missingorspent");
-
-            // Check that transaction is BIP68 final
-            // BIP68 lock checks (as opposed to nLockTime checks) must
-            // be in ConnectBlock because they require the UTXO set
-            prevheights.resize(tx.vin.size());
-            for (size_t j = 0; j < tx.vin.size(); j++) {
-                prevheights[j] = view.AccessCoins(tx.vin[j].prevout.hash)->nHeight;
-            }
-
-            // Which orphan pool entries must we evict?
-            for (size_t j = 0; j < tx.vin.size(); j++) {
-                auto itByPrev = mapOrphanTransactionsByPrev.find(tx.vin[j].prevout);
-                if (itByPrev == mapOrphanTransactionsByPrev.end()) continue;
-                for (auto mi = itByPrev->second.begin(); mi != itByPrev->second.end(); ++mi) {
-                    const CTransaction& orphanTx = (*mi)->second.tx;
-                    const uint256& orphanHash = orphanTx.GetHash();
-                    vOrphanErase.push_back(orphanHash);
+                    if (!paddrinfodb->UpdateFatherAndMpByTX(tx, view, pindex->nHeight))
+                    {
+                        paddrinfodb->ClearCache();
+                        return error("ConnectBlock(): UpdateFatherAndMp failed");
+                    }
                 }
             }
 
-            if (!SequenceLocks(tx, nLockTimeFlags, &prevheights, *pindex)) {
-                return state.DoS(100, error("%s: contains a non-BIP68-final transaction", __func__),
-                                 REJECT_INVALID, "bad-txns-nonfinal");
+            if (!tx.IsCoinBase())
+            {
+                if (!view.HaveInputs(tx))
+                    return state.DoS(100, error("ConnectBlock(): inputs missing/spent"),
+                                     REJECT_INVALID, "bad-txns-inputs-missingorspent");
+
+                // Check that transaction is BIP68 final
+                // BIP68 lock checks (as opposed to nLockTime checks) must
+                // be in ConnectBlock because they require the UTXO set
+                prevheights.resize(tx.vin.size());
+                for (size_t j = 0; j < tx.vin.size(); j++) {
+                    prevheights[j] = view.AccessCoins(tx.vin[j].prevout.hash)->nHeight;
+                }
+
+                // Which orphan pool entries must we evict?
+                for (size_t j = 0; j < tx.vin.size(); j++) {
+                    auto itByPrev = mapOrphanTransactionsByPrev.find(tx.vin[j].prevout);
+                    if (itByPrev == mapOrphanTransactionsByPrev.end()) continue;
+                    for (auto mi = itByPrev->second.begin(); mi != itByPrev->second.end(); ++mi) {
+                        const CTransaction& orphanTx = (*mi)->second.tx;
+                        const uint256& orphanHash = orphanTx.GetHash();
+                        vOrphanErase.push_back(orphanHash);
+                    }
+                }
+
+                if (!SequenceLocks(tx, nLockTimeFlags, &prevheights, *pindex)) {
+                    return state.DoS(100, error("%s: contains a non-BIP68-final transaction", __func__),
+                                     REJECT_INVALID, "bad-txns-nonfinal");
+                }
             }
+
+            // GetTransactionSigOpCost counts 3 types of sigops:
+            // * legacy (always)
+            // * p2sh (when P2SH enabled in flags and excludes coinbase)
+            // * witness (when witness enabled in flags and excludes coinbase)
+            nSigOpsCost += GetTransactionSigOpCost(tx, view, flags);
+            if (nSigOpsCost > MAX_BLOCK_SIGOPS_COST)
+                return state.DoS(100, error("ConnectBlock(): too many sigops"),
+                                 REJECT_INVALID, "bad-blk-sigops");
+
+            if (!tx.IsCoinBase())
+            {
+                nFees += view.GetValueIn(tx)-tx.GetValueOut();
+
+                std::vector<CScriptCheck> vChecks;
+                bool fCacheResults = fJustCheck; /* Don't cache results if we're actually connecting blocks (still consult the cache, though) */
+                if (!CheckInputs(tx, state, view, fScriptChecks, flags, fCacheResults, nScriptCheckThreads ? &vChecks : NULL))
+                    return error("ConnectBlock(): CheckInputs on %s failed with %s",
+                                 tx.GetHash().ToString(), FormatStateMessage(state));
+                if (!CheckRewards(tx, state, fScriptChecks, STANDARD_SCRIPT_VERIFY_FLAGS, fCacheResults))
+                    return error("ConnectBlock(): CheckRewards on %s failed with %s",
+                                 tx.GetHash().ToString(), FormatStateMessage(state));
+                control.Add(vChecks);
+            }
+
+            CTxUndo undoDummy;
+
+            //uint256 temp;
+            if (i > 0) {
+                blockundo.vtxundo.push_back(CTxUndo());
+            }
+            UpdateCoins(tx, view, i == 0 ? undoDummy : blockundo.vtxundo.back(), pindex->nHeight);
+
+            vPos.push_back(std::make_pair(tx.GetHash(), pos));
+            pos.nTxOffset += ::GetSerializeSize(tx, SER_DISK, CLIENT_VERSION);
         }
 
-        // GetTransactionSigOpCost counts 3 types of sigops:
-        // * legacy (always)
-        // * p2sh (when P2SH enabled in flags and excludes coinbase)
-        // * witness (when witness enabled in flags and excludes coinbase)
-        nSigOpsCost += GetTransactionSigOpCost(tx, view, flags);
-        if (nSigOpsCost > MAX_BLOCK_SIGOPS_COST)
-            return state.DoS(100, error("ConnectBlock(): too many sigops"),
-                             REJECT_INVALID, "bad-blk-sigops");
-
-        if (!tx.IsCoinBase())
+        if (!fJustCheck && paddrinfodb->GetCurrentHeight() < pindex->nHeight)
         {
-            nFees += view.GetValueIn(tx)-tx.GetValueOut();
+            // Commit relationship
+            pclubinfodb->Commit(pindex->nHeight);
 
-            std::vector<CScriptCheck> vChecks;
-            bool fCacheResults = fJustCheck; /* Don't cache results if we're actually connecting blocks (still consult the cache, though) */
-            if (!CheckInputs(tx, state, view, fScriptChecks, flags, fCacheResults, nScriptCheckThreads ? &vChecks : NULL))
-                return error("ConnectBlock(): CheckInputs on %s failed with %s",
-                    tx.GetHash().ToString(), FormatStateMessage(state));
-            if (!CheckRewards(tx, state, fScriptChecks, STANDARD_SCRIPT_VERIFY_FLAGS, fCacheResults))
-                return error("ConnectBlock(): CheckRewards on %s failed with %s",
-                    tx.GetHash().ToString(), FormatStateMessage(state));
-            control.Add(vChecks);
-        }
-
-        CTxUndo undoDummy;
-
-        //uint256 temp;
-        if (i > 0) {
-            blockundo.vtxundo.push_back(CTxUndo());
-        }
-        UpdateCoins(tx, view, i == 0 ? undoDummy : blockundo.vtxundo.back(), pindex->nHeight);
-
-        vPos.push_back(std::make_pair(tx.GetHash(), pos));
-        pos.nTxOffset += ::GetSerializeSize(tx, SER_DISK, CLIENT_VERSION);
-    }
-
-    if (!fJustCheck && paddrinfodb->GetCurrentHeight() < pindex->nHeight)
-    {
-        // Commit relationship
-        pclubinfodb->Commit(pindex->nHeight);
-
-        // Update rewards
-        if (!UpdateRewards(block, nFees, pindex->nHeight))
-        {
-            paddrinfodb->ClearCache();
-            return error("ConnectBlock(): UpdateRewards failed");
+            // Update rewards
+            if (!UpdateRewards(block, nFees, pindex->nHeight))
+            {
+                paddrinfodb->ClearCache();
+                return error("ConnectBlock(): UpdateRewards failed");
+            }
         }
     }
 
