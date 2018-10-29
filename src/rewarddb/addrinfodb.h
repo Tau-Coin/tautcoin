@@ -180,6 +180,7 @@ public:
 
     //! Retrieve the reward balance for a given address
     CAmount GetRwdBalance(std::string address, int nHeight);
+    CAmount GetRwdByPubkey(const std::string& pubkey);
 
     //! Retrieve a full record for a given address
     CTAUAddrInfo GetAddrInfo(std::string address, int nHeight);

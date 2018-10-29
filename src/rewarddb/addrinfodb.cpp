@@ -488,7 +488,7 @@ bool CAddrInfoDB::EntrustByAddress(string inputAddr, string voutAddress, int nHe
     uint64_t inputAddrIndex = inputAddrInfo.index;
 
     string newMinerAddr = voutAddress;
-    // The address is a new one on the chain and do not change anything
+    // In the entrust TX, if the address is a new one that is not on the chain yet then do nothing
     if ((fatherOfVout.compare(" ") == 0) && (minerOfVout.compare(" ") == 0))
         return true;
 
@@ -796,7 +796,7 @@ bool CAddrInfoDB::UndoMiningPowerByTX(const CTransaction& tx, const CCoinsViewCa
             string curActualInputFather =
                     (curInputInfo.father.compare("0") == 0) ? bestFather : curInputInfo.father;
 
-            // In the entrust TX, the address is a new one on the chain and do nothing
+            // In the entrust TX, if the address is a new one that is not on the chain yet then do nothing
             if ((tx.vout[i].nValue == 0) &&
                 (curActualVoutFather.compare(" ") == 0) && (curActualVoutMiner.compare(" ") == 0))
                 continue;
