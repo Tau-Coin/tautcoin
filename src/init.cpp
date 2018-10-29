@@ -1316,11 +1316,16 @@ bool AppInit2(boost::thread_group& threadGroup, CScheduler& scheduler)
                 else
                     pclubinfodb = new CClubInfoDB(nTotalCache / 8);
                 if (!pclubinfodb->LoadDBToMemory())
-                    return error("%s: Failed to read clubInfoDB from disk\n", __func__);
+                {
+                    strLoadError = _("Error loading clubInfoDB from disk");
+                    break;
+                }
                 paddrinfodb = new CAddrInfoDB(nTotalCache / 8, pclubinfodb);
                 if (!paddrinfodb->LoadNewestDBToMemory())
-                    return error("%s: Failed to read addrInfoDB from disk\n", __func__);
-
+                {
+                    strLoadError = _("Error loading addrInfoDB from disk");
+                    break;
+                }
 
                 if (fReindex) {
                     pblocktree->WriteReindexing(true);
@@ -1430,6 +1435,15 @@ bool AppInit2(boost::thread_group& threadGroup, CScheduler& scheduler)
                 {
                     LOCK(cs_main);
                     CBlockIndex* tip = chainActive.Tip();
+                    if (!fReindex)
+                    {
+                        if ((paddrinfodb->GetCurrentHeight() != pclubinfodb->GetCurrentHeight()) ||
+                            (paddrinfodb->GetCurrentHeight() != tip->nHeight))
+                        {
+                            strLoadError = _("Error loading heights of addrInfoDB and clubInfoDB from disk");
+                            break;
+                        }
+                    }
                     if (tip && tip->nTime > GetAdjustedTime() + 2 * 60 * 60) {
                         strLoadError = _("The block database contains a block which appears to be from the future. "
                                 "This may be due to your computer's date and time being set incorrectly. "

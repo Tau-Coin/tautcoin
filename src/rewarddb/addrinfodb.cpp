@@ -159,8 +159,6 @@ bool CAddrInfoDB::LoadNewestDBToMemory()
     if (pcursor->Valid() && pcursor->GetKey(key))
     {
         nHeight = atoi(key.second);
-        if (nHeight != _pclubinfodb->GetCurrentHeight())
-            return false;
         Erase(key, true);
     }
     pcursor->Seek(make_pair(NEWESTHEIGHFLAG, string()));
