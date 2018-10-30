@@ -153,7 +153,8 @@ bool CTransactionUtils::SelectCoinsMinConf(const CAmount& nTargetValue, int nCon
 
         int n = output.n;
         CAmount v = coins.vout[output.n].nValue;
-
+        if (v < 0)
+            continue;
         std::pair<CAmount, COutPoint> coin = std::make_pair(v, COutPoint(output.hash, n));
 
         if (v == nTargetValue)
