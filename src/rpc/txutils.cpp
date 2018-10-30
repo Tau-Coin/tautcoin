@@ -609,6 +609,11 @@ bool CTransactionUtils::CreateTransaction(std::map<std::string, CAmount>& receip
 
             bool signSuccess;
             const CScript& scriptPubKey = coin.vout[outpoint.n].scriptPubKey;
+            if (outpoint.n >= coin.vout.size())
+            {
+                strFailReason = _("fail to get UTXOs in size");
+                return false;
+            }
             SignatureData sigdata;
             signSuccess = ProduceSignature(TransactionSignatureCreator(&keystore, &txNewConst, nIn, coin.vout[outpoint.n].nValue, SIGHASH_ALL),
                     scriptPubKey, sigdata);
