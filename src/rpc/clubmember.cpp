@@ -328,9 +328,13 @@ UniValue getmemberinfo(const UniValue& params, bool fHelp)
     uint64_t index = addrInfo.index;
     std::string miner = (addrInfo.miner.compare("0") == 0) ? addrStr : addrInfo.miner;
     std::string father = (addrInfo.father.compare("0") == 0) ? addrStr : addrInfo.father;
-    uint64_t selfMP = pclubinfodb->GetCacheRecord(father)[index].MP;
+    std::vector<CMemberInfo> vc = pclubinfodb->GetCacheRecord(father);
+    if(vc.empty()||index >=vc.size()){
+       throw JSONRPCError(RPC_INVALID_ADDRESS_OR_KEY, "Error: Invalid address,index out of range");
+    }
+    uint64_t selfMP = vc[index].MP;
     uint64_t clubMP = addrInfo.totalMP;
-    CAmount rewards = pclubinfodb->GetCacheRecord(father)[index].rwd;
+    CAmount rewards = vc[index].rwd;
 
     clubMP = paddrinfodb->GetHarvestPowerByAddress(miner, height);
 
