@@ -83,8 +83,6 @@ BITCOIN_CORE_H = \
   checkqueue.h \
   clientversion.h \
   coincontrol.h \
-  rewardman.h \
-  clubman.h \
   coins.h \
   coinsbyscript.h \
   compat.h \
@@ -138,10 +136,8 @@ BITCOIN_CORE_H = \
   timedata.h \
   torcontrol.h \
   txdb.h \
-  rewarddb/addrtrie.h \
   rewarddb/clubinfodb.h \
-  rewarddb/memberinfodb.h \
-  rewarddb/clubleaderdb.h \
+  rewarddb/addrinfodb.h \
   txmempool.h \
   ui_interface.h \
   undo.h \
@@ -202,10 +198,8 @@ libbitcoin_server_a_SOURCES = \
   timedata.cpp \
   torcontrol.cpp \
   txdb.cpp \
-  rewarddb/addrtrie.cpp \
   rewarddb/clubinfodb.cpp \
-  rewarddb/memberinfodb.cpp \
-  rewarddb/clubleaderdb.cpp \
+  rewarddb/addrinfodb.cpp \
   txmempool.cpp \
   ui_interface.cpp \
   validationinterface.cpp \
@@ -299,8 +293,6 @@ libbitcoin_common_a_SOURCES = \
   base58.cpp \
   chainparams.cpp \
   tool.cpp \
-  rewardman.cpp \
-  clubman.cpp \
   coins.cpp \
   coinsbyscript.cpp \
   compressor.cpp \

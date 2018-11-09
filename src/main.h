@@ -21,7 +21,7 @@
 #include "sync.h"
 #include "versionbits.h"
 #include "txdb.h"
-#include "rewarddb/memberinfodb.h"
+#include "rewarddb/addrinfodb.h"
 #include "rewarddb/clubinfodb.h"
 
 #include <algorithm>
@@ -192,7 +192,7 @@ extern CBlockIndex *pindexBestHeader;
 static const uint64_t nMinDiskSpace = 52428800;
 
 extern CRewardRateViewDB *prewardratedbview;
-extern CMemberInfoDB *pmemberinfodb;
+extern CAddrInfoDB *paddrinfodb;
 extern CClubInfoDB *pclubinfodb;
 
 /** Pruning-related variables and constants */
@@ -368,8 +368,14 @@ bool CheckRewards(const CTransaction& tx, CValidationState &state, bool fScriptC
 /** Apply the effects of this transaction on the UTXO set represented by view */
 void UpdateCoins(const CTransaction& tx, CCoinsViewCache& inputs, int nHeight);
 
-/** Apply the rewards of this transaction on the reward database set */
-bool UpdateRewards(const CBlock& block, CAmount blockReward, int nHeight, bool isUndo=false);
+/** Update the rewards of this transaction on the reward database set */
+bool UpdateRewards(const CBlock& block, CAmount blockReward, int nHeight);
+
+/** Undo the rewards of this transaction on the reward database set */
+bool UndoRewards(const CBlock& block, CAmount blockReward, int nHeight);
+
+/** Check the script if it can forge */
+bool IsForgeScript(const CScript& script, CBitcoinAddress& addr, uint64_t& miningPower);
 
 /** Context-independent validity checks */
 bool CheckTransaction(const CTransaction& tx, CValidationState& state);

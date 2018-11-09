@@ -23,10 +23,15 @@
 #include <boost/filesystem.hpp>
 #include <boost/test/unit_test.hpp>
 #include <boost/thread.hpp>
+#include <list>
+#include <map>
+#include <set>
+#include <stdlib.h>
+#include <time.h>
+#include <algorithm>
 
 //extern bool fPrintToConsole;
 extern void noui_connect();
-
 
 using namespace std;
 namespace TAURewardDB
@@ -53,16 +58,16 @@ TestingSetup::TestingSetup(const std::string& chainName) : BasicTestingSetup(cha
     // Ideally we'd move all the RPC tests to the functional testing framework
     // instead of unit tests, but for now we need these here.
     //RegisterAllCoreRPCCommands(tableRPC);
-    //ClearDatadirCache();
+    ClearDatadirCache();
     pathTemp = GetTempPath() / strprintf("test_bitcoin_%lu_%i", (unsigned long)GetTime(), (int)(GetRand(100000)));
     boost::filesystem::create_directories(pathTemp);
     mapArgs["-datadir"] = pathTemp.string();
-    pclubinfodb = new CClubInfoDB();
-    pmemberinfodb = new CMemberInfoDB(pclubinfodb);
+    pclubinfodb = new CClubInfoDB(0);
+    paddrinfodb = new CAddrInfoDB(0, pclubinfodb);
     //mempool.setSanityCheck(1.0);
     pblocktree = new CBlockTreeDB(1 << 20, true);
     pcoinsdbview = new CCoinsViewDB(1 << 23, true);
-    //pcoinsTip = new CCoinsViewCache(pcoinsdbview);
+    pcoinsTip = new CCoinsViewCache(pcoinsdbview);
     InitBlockIndex(chainparams);
     nScriptCheckThreads = 3;
     for (int i=0; i < nScriptCheckThreads-1; i++)
@@ -79,8 +84,8 @@ TestingSetup::~TestingSetup()
         delete pcoinsTip;
         delete pcoinsdbview;
         delete pblocktree;
-        delete pmemberinfodb;
-        pmemberinfodb = NULL;
+        delete paddrinfodb;
+        paddrinfodb = NULL;
         delete pclubinfodb;
         pclubinfodb = NULL;
         boost::filesystem::remove_all(pathTemp);
@@ -106,297 +111,240 @@ static string GetRandomAddress()
     return address;
 }
 
-BOOST_FIXTURE_TEST_SUITE(rewarddb_tests, TAURewardDB::TestingSetup)
-
-static const unsigned int NUM_SIMULATION_ITERATIONS = 40000;
-static const unsigned int NUM_SIMULATION_ADDRESSS = 1000000;
-
-BOOST_AUTO_TEST_CASE(coins_cache_simulation_test)
-{
-
-}
-
-BOOST_AUTO_TEST_SUITE_END()
-
-//TestChain100Setup::TestChain100Setup() : TestingSetup(CBaseChainParams::REGTEST)
-//{
-//    // Generate a 100-block chain:
-//    coinbaseKey.MakeNewKey(true);
-//    CScript scriptPubKey = CScript() <<  ToByteVector(coinbaseKey.GetPubKey()) << OP_CHECKSIG;
-//    for (int i = 0; i < COINBASE_MATURITY; i++)
-//    {
-//        std::vector<CMutableTransaction> noTxns;
-//        CBlock b = CreateAndProcessBlock(noTxns, scriptPubKey);
-//        coinbaseTxns.push_back(b.vtx[0]);
-//    }
-//}
-
-////
-//// Create a new block with just given transactions, coinbase paying to
-//// scriptPubKey, and try to add it to the current chain.
-////
-//CBlock
-//TestChain100Setup::CreateAndProcessBlock(const std::vector<CMutableTransaction>& txns, const CScript& scriptPubKey)
-//{
-//    const CChainParams& chainparams = Params();
-//    std::string pubkeyString = "this is a test network";
-//    CBlockTemplate *pblocktemplate = BlockAssembler(chainparams).CreateNewBlock(scriptPubKey,pubkeyString);
-//    CBlock& block = pblocktemplate->block;
-
-//    // Replace mempool-selected txns with just coinbase plus passed-in txns:
-//    block.vtx.resize(1);
-//    BOOST_FOREACH(const CMutableTransaction& tx, txns)
-//        block.vtx.push_back(tx);
-//    // IncrementExtraNonce creates a valid coinbase and merkleRoot
-//    unsigned int extraNonce = 0;
-//    IncrementExtraNonce(&block, chainActive.Tip(), extraNonce);
-
-//    //while (!CheckProofOfWork(block.GetHash(), block.nBits, chainparams.GetConsensus())) ++block.nNonce;
-
-//    CValidationState state;
-//    ProcessNewBlock(state, chainparams, NULL, &block, true, NULL);
-
-//    CBlock result = block;
-//    delete pblocktemplate;
-//    return result;
-//}
-
-//TestChain100Setup::~TestChain100Setup()
-//{
-//}
-
-
-//CTxMemPoolEntry TestMemPoolEntryHelper::FromTx(CMutableTransaction &tx, CTxMemPool *pool) {
-//    CTransaction txn(tx);
-//    return FromTx(txn, pool);
-//}
-
-//CTxMemPoolEntry TestMemPoolEntryHelper::FromTx(CTransaction &txn, CTxMemPool *pool) {
-//    bool hasNoDependencies = pool ? pool->HasNoInputsOf(txn) : hadNoDependencies;
-//    // Hack to assume either its completely dependent on other mempool txs or not at all
-//    CAmount inChainValue = hasNoDependencies ? txn.GetValueOut() : 0;
-
-//    return CTxMemPoolEntry(txn, nFee, nTime, dPriority, nHeight,
-//                           hasNoDependencies, inChainValue, spendsCoinbase, sigOpCost, lp);
-//}
-
-//void Shutdown(void* parg)
-//{
-//  exit(0);
-//}
-
-//void StartShutdown()
-//{
-//  exit(0);
-//}
-
-//bool ShutdownRequested()
-//{
-//  return false;
-//}
-
-
-
-
-
-
-
-
-
-//typedef unsigned int uint;
-//using namespace std;
-//namespace
-//{
-//class CCoinsViewTest : public CCoinsView
-//{
-//    uint256 hashBestBlock_;
-//    std::map<uint256, CCoins> map_;
-
-//public:
-//    bool GetCoins(const uint256& txid, CCoins& coins) const
-//    {
-//        std::map<uint256, CCoins>::const_iterator it = map_.find(txid);
-//        if (it == map_.end()) {
-//            return false;
-//        }
-//        coins = it->second;
-//        if (coins.IsPruned() && insecure_rand() % 2 == 0) {
-//            // Randomly return false in case of an empty entry.
-//            return false;
-//        }
-//        return true;
-//    }
-
-//    bool HaveCoins(const uint256& txid) const
-//    {
-//        CCoins coins;
-//        return GetCoins(txid, coins);
-//    }
-
-//    uint256 GetBestBlock() const { return hashBestBlock_; }
-
-//    bool BatchWrite(CCoinsMap& mapCoins, const uint256& hashBlock)
-//    {
-//        for (CCoinsMap::iterator it = mapCoins.begin(); it != mapCoins.end(); ) {
-//            if (it->second.flags & CCoinsCacheEntry::DIRTY) {
-//                // Same optimization used in CCoinsViewDB is to only write dirty entries.
-//                map_[it->first] = it->second.coins;
-//                if (it->second.coins.IsPruned() && insecure_rand() % 3 == 0) {
-//                    // Randomly delete empty entries on write.
-//                    map_.erase(it->first);
-//                }
-//            }
-//            mapCoins.erase(it++);
-//        }
-//        if (!hashBlock.IsNull())
-//            hashBestBlock_ = hashBlock;
-//        return true;
-//    }
-//};
-
-//class CCoinsViewCacheTest : public CCoinsViewCache
-//{
-//public:
-//    CCoinsViewCacheTest(CCoinsView* base) : CCoinsViewCache(base) {}
-
-//    void SelfTest() const
-//    {
-//        // Manually recompute the dynamic usage of the whole data, and compare it.
-//        size_t ret = memusage::DynamicUsage(cacheCoins);
-//        for (CCoinsMap::iterator it = cacheCoins.begin(); it != cacheCoins.end(); it++) {
-//            ret += it->second.coins.DynamicMemoryUsage();
-//        }
-//        BOOST_CHECK_EQUAL(DynamicMemoryUsage(), ret);
-//    }
-
-//};
-
-//}
-
-//BOOST_FIXTURE_TEST_SUITE(coins_tests, BasicTestingSetup)
+BOOST_FIXTURE_TEST_SUITE(crewarddb_tests, TAURewardDB::TestingSetup)
 
 //static const unsigned int NUM_SIMULATION_ITERATIONS = 40000;
 //static const unsigned int NUM_SIMULATION_ADDRESSS = 1000000;
 
-//// This is a large randomized insert/remove simulation test on a variable-size
-//// stack of caches on top of CCoinsViewTest.
-////
-//// It will randomly create/update/delete CCoins entries to a tip of caches, with
-//// txids picked from a limited list of random 256-bit hashes. Occasionally, a
-//// new tip is added to the stack of caches, or the tip is flushed and removed.
-////
-//// During the process, booleans are kept to make sure that the randomized
-//// operation hits all branches.
-//BOOST_AUTO_TEST_CASE(coins_cache_simulation_test)
+//BOOST_AUTO_TEST_CASE(rewarddb_performance_simulation_test)
 //{
-//    // Various coverage trackers.
-//    bool removed_all_caches = false;
-//    bool reached_4_caches = false;
-//    bool added_an_entry = false;
-//    bool removed_an_entry = false;
-//    bool updated_an_entry = false;
-//    bool found_an_entry = false;
-//    bool missed_an_entry = false;
-
-//    // A simple map to track what we expect the cache stack to represent.
-//    std::map<uint256, CCoins> result;
-
-//    // The cache stack.
-//    CCoinsViewTest base; // A CCoinsViewTest at the bottom.
-//    std::vector<CCoinsViewCacheTest*> stack; // A stack of CCoinsViewCaches on top.
-//    stack.push_back(new CCoinsViewCacheTest(&base)); // Start with one cache.
-
-//    // Use a limited set of random transaction ids, so we do test overwriting entries.
-//    std::vector<uint256> txids;
-//    txids.resize(NUM_SIMULATION_ITERATIONS / 8);
-//    for (unsigned int i = 0; i < txids.size(); i++) {
-//        txids[i] = GetRandHash();
-//    }
-
-//    for (unsigned int i = 0; i < NUM_SIMULATION_ITERATIONS; i++) {
-//        // Do a random modification.
+//    int num = 100000;
+//    vector<string> addresses;
+//    vector<string> addressesRandom;
+//    int numRandomly = 0;
+//    for(int i = 0; i < num; i++)
+//    {
+//        srand((unsigned)std::time(0));
+//        bool random = ((rand()%5) == 0);
+//        string addr = GetRandomAddress();
+//        addresses.push_back(addr);
+//        if (i != 0)
 //        {
-//            uint256 txid = txids[insecure_rand() % txids.size()]; // txid we're going to modify in this iteration.
-//            CCoins& coins = result[txid];
-//            CCoinsModifier entry = stack.back()->ModifyCoins(txid);
-//            BOOST_CHECK(coins == *entry);
-//            if (insecure_rand() % 5 == 0 || coins.IsPruned()) {
-//                if (coins.IsPruned()) {
-//                    added_an_entry = true;
-//                } else {
-//                    updated_an_entry = true;
-//                }
-//                coins.nVersion = insecure_rand();
-//                coins.vout.resize(1);
-//                coins.vout[0].nValue = insecure_rand();
-//                *entry = coins;
-//            } else {
-//                coins.Clear();
-//                entry->Clear();
-//                removed_an_entry = true;
-//            }
+//            for(int h = 0; h < 10; h++)
+//                paddrinfodb->Write(make_pair(addr, h), CTAUAddrInfo());
 //        }
-
-//        // Once every 1000 iterations and at the end, verify the full cache.
-//        if (insecure_rand() % 1000 == 1 || i == NUM_SIMULATION_ITERATIONS - 1) {
-//            for (std::map<uint256, CCoins>::iterator it = result.begin(); it != result.end(); it++) {
-//                const CCoins* coins = stack.back()->AccessCoins(it->first);
-//                if (coins) {
-//                    BOOST_CHECK(*coins == it->second);
-//                    found_an_entry = true;
-//                } else {
-//                    BOOST_CHECK(it->second.IsPruned());
-//                    missed_an_entry = true;
-//                }
-//            }
-//            BOOST_FOREACH(const CCoinsViewCacheTest *test, stack) {
-//                test->SelfTest();
-//            }
-//        }
-
-//        if (insecure_rand() % 100 == 0) {
-//            // Every 100 iterations, flush an intermediate cache
-//            if (stack.size() > 1 && insecure_rand() % 2 == 0) {
-//                unsigned int flushIndex = insecure_rand() % (stack.size() - 1);
-//                stack[flushIndex]->Flush();
-//            }
-//        }
-//        if (insecure_rand() % 100 == 0) {
-//            // Every 100 iterations, change the cache stack.
-//            if (stack.size() > 0 && insecure_rand() % 2 == 0) {
-//                //Remove the top cache
-//                stack.back()->Flush();
-//                delete stack.back();
-//                stack.pop_back();
-//            }
-//            if (stack.size() == 0 || (stack.size() < 4 && insecure_rand() % 2)) {
-//                //Add a new cache
-//                CCoinsView* tip = &base;
-//                if (stack.size() > 0) {
-//                    tip = stack.back();
-//                } else {
-//                    removed_all_caches = true;
-//                }
-//                stack.push_back(new CCoinsViewCacheTest(tip));
-//                if (stack.size() == 4) {
-//                    reached_4_caches = true;
-//                }
-//            }
+//        if (random && numRandomly < num/5)
+//        {
+//            addressesRandom.push_back(addr);
+//            numRandomly++;
 //        }
 //    }
+//    paddrinfodb->InitGenesisDB(addresses);
+//    paddrinfodb->Commit(9);
 
-//    // Clean up the stack.
-//    while (stack.size() > 0) {
-//        delete stack.back();
-//        stack.pop_back();
+//    int test1Num = num;
+//    std::clock_t start, finish;
+//    start = clock();
+//    double totaltime = 0;
+//    for(size_t t = 0; t < addressesRandom.size(); t++, test1Num*=10)
+//    {
+//        paddrinfodb->UpdateMpAndTotalMPByAddress(addressesRandom[t], 10, addresses[0]);
 //    }
+//    vector<string> members;
+//    pclubinfodb->GetTotalMembersByAddress(addresses[0], members);
+//    paddrinfodb->Commit(10);
 
-//    // Verify coverage.
-//    BOOST_CHECK(removed_all_caches);
-//    BOOST_CHECK(reached_4_caches);
-//    BOOST_CHECK(added_an_entry);
-//    BOOST_CHECK(removed_an_entry);
-//    BOOST_CHECK(updated_an_entry);
-//    BOOST_CHECK(found_an_entry);
-//    BOOST_CHECK(missed_an_entry);
+//    finish = clock();
+//    totaltime = (double)(finish - start) / CLOCKS_PER_SEC;
+//    cout<<"When updating "<<addressesRandom.size()<<" items, time comsume is "<<totaltime<<"s！"<<endl;
 //}
+
+BOOST_AUTO_TEST_CASE(clubInfodb_UpdateMembersByFatherAddress_test)
+{
+    // Init
+    vector<string> addresses;
+    int num = 5;
+    LOCK(cs_clubinfo);
+    for(int i = 0; i < num; i++)
+    {
+        srand((unsigned)std::time(0));
+        string addr = GetRandomAddress();
+        addresses.push_back(addr);
+    }
+
+    // Create inputs
+    const int addSize = 2;
+    const int fatherAddressSize = 2;
+    const int memberinfoSize = 2;
+    const int indexInSize = 4;
+    const int cacheRecordSize = 4;
+    const bool add[addSize] = {true, false};
+    const string fatherAddress[fatherAddressSize] = {"TP6t7swv4SDcDuN5pQxdk4MGGEcVpsExHG",
+                                                     "TNELcnfUUak1J1Cw1bUdF3UBXunfR71Hmb"};
+    CMemberInfo memberinfo[memberinfoSize];
+    memberinfo[0] = CMemberInfo("TNELcnfUUak1J1Cw1bUdF3UBXunfR71Hmb", 1, 1);
+    memberinfo[1] = CMemberInfo("THghrLpjMqNztfwEkT2ayWeopDo5vmnbLU", 1, 1);
+    const uint64_t indexIn[indexInSize] = {0, 1, 2, 3};
+
+    // Create true outputs
+    uint64_t indexRet[fatherAddressSize][memberinfoSize][cacheRecordSize] = {0};
+    for(int j = 0; j < fatherAddressSize; j++)
+    {
+        for(int k = 0; k < memberinfoSize; k++)
+        {
+            for(int m = 0; m < cacheRecordSize; m++)
+            {
+                if (j == 0)
+                    indexRet[j][k][m] = 1;
+                else if (j == 1 && k == 1)
+                    indexRet[j][k][m] = 1 + m;
+                else
+                    indexRet[j][k][m] = 0;
+            }
+        }
+    }
+    bool recordErased[fatherAddressSize][memberinfoSize][indexInSize][cacheRecordSize] = {false};
+    string addressMovedRet[fatherAddressSize][memberinfoSize][indexInSize][cacheRecordSize];
+    for(int m = 0; m < cacheRecordSize; m++)
+    {
+        for(int j = 0; j < fatherAddressSize; j++)
+        {
+            for(int k = 0; k < memberinfoSize; k++)
+            {
+                for(int l = 0; l < indexInSize; l++)
+                {
+                    if ((j == 0) || (j == 1 && m >= 1 && l >= m) || (j == 1 && l == 0))
+                        addressMovedRet[j][k][l][m] = NO_MOVED_ADDRESS;
+                    else if(m == 0)
+                    {
+                        recordErased[j][k][l][m] = true;
+                        addressMovedRet[j][k][l][m] = NO_MOVED_ADDRESS;
+                    }
+                    else if(l < m)
+                        addressMovedRet[j][k][l][m] = addresses[m-1];
+                }
+            }
+        }
+    }
+
+    // Execute tests
+    uint64_t indexOut[fatherAddressSize][memberinfoSize][indexInSize][cacheRecordSize] = {0};
+    CMemberInfo memberinfoOut[addSize][fatherAddressSize][memberinfoSize][indexInSize][cacheRecordSize]
+            = {CMemberInfo()};
+    string addressMovedOut[fatherAddressSize][memberinfoSize][indexInSize][cacheRecordSize];
+    for(int m = 0; m < cacheRecordSize; m++)
+    {
+        for(int i = 0; i < addSize; i++)
+        {
+            for(int j = 0; j < fatherAddressSize; j++)
+            {
+                for(int k = 0; k < memberinfoSize; k++)
+                {
+                    for(int l = 0; l < indexInSize; l++)
+                    {
+                        // Init
+                        paddrinfodb->ClearReadCache();
+                        pclubinfodb->ClearCache();
+                        string father = "TNELcnfUUak1J1Cw1bUdF3UBXunfR71Hmb";
+                        vector<string> inits;
+                        inits.push_back(father);
+                        paddrinfodb->InitGenesisDB(inits);
+                        uint64_t index = 0;
+                        for(int n = 0; n < m; n++)
+                            paddrinfodb->UpdateMpAndTotalMPByAddress(addresses[n], 1, father);
+                        paddrinfodb->Commit(1);
+                        assert(pclubinfodb->GetCacheRecord(father).size() == size_t(m+1));
+
+                        if (i == 0)
+                        {
+                            index = indexIn[l];
+                            pclubinfodb->UpdateMembersByFatherAddress(fatherAddress[j],
+                                                                      memberinfo[k],
+                                                                      index, 2, true);
+
+                            indexOut[j][k][l][m] = index;
+                            memberinfoOut[i][j][k][l][m] =
+                                    (pclubinfodb->GetCacheRecord(fatherAddress[j]))[indexOut[j][k][l][m]];
+                        }
+                        else
+                        {
+                            index = indexIn[l];
+                            addressMovedOut[j][k][l][m] =
+                                    pclubinfodb->UpdateMembersByFatherAddress(fatherAddress[j],
+                                                                              CMemberInfo(" ", 0, 0),
+                                                                              index, 2, add[i]);
+
+                            if (j == 1 && recordErased[j][k][l][m] == false)
+                            {
+                                if (pclubinfodb->GetCacheRecord(fatherAddress[j]).size() > indexIn[l])
+                                    memberinfoOut[i][j][k][l][m] =
+                                        (pclubinfodb->GetCacheRecord(fatherAddress[j]))[indexIn[l]];
+                            }
+                        }
+
+                        paddrinfodb->ClearReadCache();
+                        pclubinfodb->ClearCache();
+                    }
+                }
+            }
+        }
+    }
+
+    // Verify
+    for(int m = 0; m < cacheRecordSize; m++)
+    {
+        for(int i = 0; i < addSize; i++)
+        {
+            for(int j = 0; j < fatherAddressSize; j++)
+            {
+                for(int k = 0; k < memberinfoSize; k++)
+                {
+                    for(int l = 0; l < indexInSize; l++)
+                    {
+                        if (i == 0)
+                        {
+                            BOOST_CHECK_MESSAGE(indexOut[j][k][l][m] == indexRet[j][k][m], "index case: "<<j<<k<<m);
+                            BOOST_CHECK_MESSAGE(memberinfoOut[i][j][k][l][m].address.compare(memberinfo[k].address) == 0,
+                                                "i = 0, member case: "<<j<<k<<l<<m);
+                        }
+                        else
+                        {
+                            BOOST_CHECK_MESSAGE(addressMovedOut[j][k][l][m] == addressMovedRet[j][k][l][m], "i = 1, member case: "<<j<<k<<l<<m);
+                            if (addressMovedOut[j][k][l][m].compare("NO_MOVED_ADDRESS") != 0)
+                                BOOST_CHECK_MESSAGE(addressMovedOut[j][k][l][m].compare(memberinfoOut[i][j][k][l][m].address) == 0,
+                                                    "address moved case: "<<j<<k<<l<<m);
+                        }
+
+                    }
+                }
+            }
+        }
+    }
+
+}
+
+BOOST_AUTO_TEST_CASE(addrInfodb_EntrustByAddress_test)
+{
+    vector<string> addresses;
+    int num = 1;
+    for(int i = 0; i < num; i++)
+    {
+        srand((unsigned)std::time(0));
+        //bool random = ((rand()%5) == 0);
+        string addr = GetRandomAddress();
+        addresses.push_back(addr);
+    }
+
+    LOCK(cs_clubinfo);
+    string testFather = "TNELcnfUUak1J1Cw1bUdF3UBXunfR71Hmb";
+    paddrinfodb->UpdateMpAndTotalMPByAddress(addresses[0], 1, testFather);
+    cout<<addresses[0]<<endl;
+    paddrinfodb->Commit(1);
+
+    vector<string> members;
+    pclubinfodb->GetTotalMembersByAddress(testFather, members);
+    for(size_t i = 0; i < members.size(); i++)
+        cout<<members[i]<<endl;
+}
+
+BOOST_AUTO_TEST_SUITE_END()

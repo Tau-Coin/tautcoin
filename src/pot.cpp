@@ -9,7 +9,6 @@
 #include "chain.h"
 #include "chainparams.h"
 #include "checkpoints.h"
-#include "clubman.h"
 #include "coins.h"
 #include "consensus/validation.h"
 #include "core_io.h"

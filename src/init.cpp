@@ -227,8 +227,18 @@ void Shutdown()
 		
         delete pblocktree;
         pblocktree = NULL;
-        delete pmemberinfodb;
-        pmemberinfodb = NULL;
+        {
+            LOCK(cs_addrinfo);
+            if (!paddrinfodb->WriteNewestDataToDisk(chainActive.Height(), true))
+                LogPrintf("%s: Failed to write addrInfoDB to disk\n", __func__);
+        }
+        {
+            LOCK(cs_clubinfo);
+            if (!pclubinfodb->WriteDataToDisk(chainActive.Height(), true))
+                LogPrintf("%s: Failed to write clubInfoDB to disk\n", __func__);
+        }
+        delete paddrinfodb;
+        paddrinfodb = NULL;
         delete pclubinfodb;
         pclubinfodb = NULL;
         delete prewardratedbview;
@@ -350,8 +360,7 @@ std::string HelpMessage(HelpMessageMode mode)
 #endif
     strUsage += HelpMessageOpt("-txindex", strprintf(_("Maintain a full transaction index, used by the getrawtransaction rpc call (default: %u)"), DEFAULT_TXINDEX));
     strUsage += HelpMessageOpt("-txoutsbyaddressindex", strprintf(_("Maintain an address to unspent outputs index (rpc: gettxoutsbyaddress). The index is built on first use. (default: %u)"), 0));
-    strUsage += HelpMessageOpt("-updaterewardrate", strprintf(_("get a miner's reward rate to his members (rpc: getrewardrate). The index is built on first use. (default: %u)"), 0));
-
+	
     strUsage += HelpMessageGroup(_("Connection options:"));
     strUsage += HelpMessageOpt("-addnode=<ip>", _("Add a node to connect to and attempt to keep the connection open"));
     strUsage += HelpMessageOpt("-banscore=<n>", strprintf(_("Threshold for disconnecting misbehaving peers (default: %u)"), DEFAULT_BANSCORE_THRESHOLD));
@@ -586,14 +595,16 @@ void ThreadImport(std::vector<boost::filesystem::path> vImportFiles)
 
     // -reindex
     if (fReindex) {
-        // Then, remove rewards balance db records
-        std::string memberinfodb_path = GetDataDir(true).string() + std::string(MEMBERINFODBPATH);
-        if (boost::filesystem::exists(memberinfodb_path))
+        // Then, remove reward balance db records
+
+        int64_t nTotalCache = (GetArg("-dbcache", nDefaultDbCache) << 20);
+        std::string addrinfodb_path = GetDataDir(true).string() + "/" + std::string(ADDRINFODBPATH);
+        if (boost::filesystem::exists(addrinfodb_path))
         {
-            delete pmemberinfodb;
-            boost::filesystem::remove_all(memberinfodb_path);
+            delete paddrinfodb;
+            boost::filesystem::remove_all(addrinfodb_path);
         }
-        std::string clubinfodb_path = GetDataDir(true).string() + std::string(CLUBINFOPATH);
+        std::string clubinfodb_path = GetDataDir(true).string() + "/" + std::string(CLUBINFODBPATH);
         if (boost::filesystem::exists(clubinfodb_path))
         {
             delete pclubinfodb;
@@ -610,11 +621,11 @@ void ThreadImport(std::vector<boost::filesystem::path> vImportFiles)
                 prewardratedbview = new CRewardRateViewDB();
 
             }
-            pclubinfodb = new CClubInfoDB(prewardratedbview);
+            pclubinfodb = new CClubInfoDB(nTotalCache / 8, prewardratedbview);
         }
         else
-            pclubinfodb = new CClubInfoDB();
-        pmemberinfodb = new CMemberInfoDB(pclubinfodb);
+            pclubinfodb = new CClubInfoDB(nTotalCache / 8);
+        paddrinfodb = new CAddrInfoDB(nTotalCache / 8, pclubinfodb);
 
         int nFile = 0;
         InitBlockIndex(chainparams);
@@ -1287,7 +1298,7 @@ bool AppInit2(boost::thread_group& threadGroup, CScheduler& scheduler)
                 delete pcoinsdbview;
                 delete pcoinscatcher;
                 delete pblocktree;
-                delete pmemberinfodb;
+                delete paddrinfodb;
                 delete pclubinfodb;
                 delete prewardratedbview;
 
@@ -1300,11 +1311,21 @@ bool AppInit2(boost::thread_group& threadGroup, CScheduler& scheduler)
                     string flag = mapMultiArgs["-updaterewardrate"][0];
                     if (flag.compare("true") == 0)
                         prewardratedbview = new CRewardRateViewDB();
-                    pclubinfodb = new CClubInfoDB(prewardratedbview);
+                    pclubinfodb = new CClubInfoDB(nTotalCache / 8, prewardratedbview);
                 }
                 else
-                    pclubinfodb = new CClubInfoDB();
-                pmemberinfodb = new CMemberInfoDB(pclubinfodb);
+                    pclubinfodb = new CClubInfoDB(nTotalCache / 8);
+                if (!pclubinfodb->LoadDBToMemory())
+                {
+                    strLoadError = _("Error loading clubInfoDB from disk");
+                    break;
+                }
+                paddrinfodb = new CAddrInfoDB(nTotalCache / 8, pclubinfodb);
+                if (!paddrinfodb->LoadNewestDBToMemory())
+                {
+                    strLoadError = _("Error loading addrInfoDB from disk");
+                    break;
+                }
 
                 if (fReindex) {
                     pblocktree->WriteReindexing(true);
@@ -1414,6 +1435,15 @@ bool AppInit2(boost::thread_group& threadGroup, CScheduler& scheduler)
                 {
                     LOCK(cs_main);
                     CBlockIndex* tip = chainActive.Tip();
+                    if (!fReindex)
+                    {
+                        if ((paddrinfodb->GetCurrentHeight() != pclubinfodb->GetCurrentHeight()) ||
+                            (paddrinfodb->GetCurrentHeight() != tip->nHeight))
+                        {
+                            strLoadError = _("Error loading heights of addrInfoDB and clubInfoDB from disk");
+                            break;
+                        }
+                    }
                     if (tip && tip->nTime > GetAdjustedTime() + 2 * 60 * 60) {
                         strLoadError = _("The block database contains a block which appears to be from the future. "
                                 "This may be due to your computer's date and time being set incorrectly. "

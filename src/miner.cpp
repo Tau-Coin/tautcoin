@@ -12,13 +12,11 @@
 #include "consensus/consensus.h"
 #include "consensus/merkle.h"
 #include "consensus/validation.h"
-#include "clubman.h"
 #include "hash.h"
 #include "main.h"
 #include "net.h"
 #include "policy/policy.h"
 #include "primitives/transaction.h"
-#include "rewardman.h"
 #include "script/standard.h"
 #include "timedata.h"
 #include "txmempool.h"
@@ -202,7 +200,7 @@ CBlockTemplate* BlockAssembler::CreateNewBlock(const CScript& scriptPubKeyIn,std
     pblock->baseTarget     = getNextPotRequired(pindexPrev); //temporary formula
     std::string addrStr;
     assert(ConvertPubkeyToAddress(pubkeyString,addrStr));
-    pblock->harvestPower   = ClubManager::GetInstance()->GetHarvestPowerByAddress(addrStr, -1);
+    pblock->harvestPower = paddrinfodb->GetHarvestPowerByAddress(addrStr, chainActive.Height());
     pblock->generationSignature = raiseGenerationSignature(pubkeyString);
     pblock->pubKeyOfpackager = pubkeyString;
     pblock->cumulativeDifficulty = GetNextCumulativeDifficulty(pindexPrev, pblock->baseTarget, chainparams.GetConsensus());

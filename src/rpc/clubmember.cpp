@@ -6,7 +6,6 @@
 #include "amount.h"
 #include "chain.h"
 #include "chainparams.h"
-#include "clubman.h"
 #include "consensus/consensus.h"
 #include "consensus/params.h"
 #include "consensus/validation.h"
@@ -77,7 +76,7 @@ UniValue getminingpowerbyaddress(const UniValue& params, bool fHelp)
     if (!address.IsValid())
         throw JSONRPCError(RPC_INVALID_ADDRESS_OR_KEY, "Error: Invalid address");
     
-    uint64_t miningpower = pmemberinfodb->GetHarvestPowerByAddress(addrStr, height);
+    uint64_t miningpower = paddrinfodb->GetHarvestPowerByAddress(addrStr, height);
 
     UniValue result(UniValue::VOBJ);
     result.push_back(Pair("address", addrStr));
@@ -88,16 +87,15 @@ UniValue getminingpowerbyaddress(const UniValue& params, bool fHelp)
 
 UniValue dumpclubmembers(const UniValue& params, bool fHelp)
 {
-    if (fHelp || params.size() < 1 || params.size() > 2)
+    if (fHelp || params.size() != 1)
         throw runtime_error(
-            "dumpclubmembers \"filename\" height\n"
-            "\nDumps all mining clubs and members in a human-readable format.\n"
+            "dumpclubmembers \\\"filename\\\"\n"
+            "\nDumps all mining clubs and members in a readable format.\n"
             "\nArguments:\n"
             "1. \"filename\"    (string, required) The filename\n"
-            "2. height          (numberic, optional) The height\n"
             "\nExamples:\n"
-            + HelpExampleCli("dumpclubmembers", "\"test\" 1000")
-            + HelpExampleRpc("dumpclubmembers", "\"test\" 1000")
+            + HelpExampleCli("dumpclubmembers", "\"test\"")
+            + HelpExampleRpc("dumpclubmembers", "\"test\"")
         );
 
     RPCTypeCheck(params, boost::assign::list_of(UniValue::VSTR)(UniValue::VNUM), true);
@@ -108,57 +106,35 @@ UniValue dumpclubmembers(const UniValue& params, bool fHelp)
         throw JSONRPCError(RPC_INVALID_PARAMETER, "Cannot open dump file");
 
     int height = 0;
-    int chainHeight;
-    {
-        LOCK(cs_main);
-        chainHeight = chainActive.Height();
-    }
-    if (params.size() == 1)
-    {
-        LOCK(cs_main);
-        height = chainHeight;
-    }
-    else if (params.size() == 2)
-    {
-        height = params[1].get_int();
-    }
-
-    if (height < 0 || height > chainHeight)
-    {
-        throw JSONRPCError(RPC_INVALID_PARAMETER, "Invalid height");
-    }
+    LOCK(cs_main);
+    height = chainActive.Height();
 
     // produce output
     file << strprintf("Height %i \n", height);
 
-    std::vector<std::string> leaders;
-
-    bool result = pclubinfodb->GetAllClubLeaders(leaders, height);
-    if (!result)
-        throw JSONRPCError(RPC_INVALID_PARAMETER, "Get club leaders failed");
+    std::vector<std::string> miners;
+    miners = paddrinfodb->GetAllClubMiners();
 
     // Output clubinfo
     file << "club information table:\n";
     file << "\n";
-    file << "club leaders count:" << leaders.size() << "\n";
-    file << "index \t address \t\t\t\t mining power" << "\n";
+    file << "club miners count:" << miners.size() << "\n";
+    file << "index \t\t address \t\t\t\tmining power(MP)" << "\n";
 
     int i = 0;
-    uint64_t totalTTC = 0;
-    for (std::vector<std::string>::iterator it = leaders.begin();
-        it != leaders.end(); it++, i++)
+    uint64_t allTotalMP = 0;
+    for (std::vector<std::string>::iterator it = miners.begin();
+        it != miners.end(); it++, i++)
     {
         std::string address = *it;
-        uint64_t ttc = 0;//pmemberinfodb->GetTotalTXCnt(address, height);
-        std::string dummyStr;
-        uint64_t dummyInt;
-        CAmount  dummyValue;
-        pmemberinfodb->GetFullRecord(address, height, dummyStr, dummyStr, dummyInt, ttc, dummyValue, true);
-        totalTTC += ttc;
-        file << i + 1 << "\t\t" << address << "\t" << ttc << "\n";
+        CTAUAddrInfo addrInfo = paddrinfodb->GetAddrInfo(address, height);
+        uint64_t totalMP = addrInfo.totalMP;
+
+        allTotalMP += totalMP;
+        file << i + 1 << "\t\t" << address << "\t" << totalMP << "\n";
     }
     file << "\n";
-    file << "Total TTC:" << totalTTC  << "\n";
+    file << "All totalMP:" << allTotalMP  << "\n";
     file << "\n\n\n";
 
     file << "member information table:\n";
@@ -166,62 +142,64 @@ UniValue dumpclubmembers(const UniValue& params, bool fHelp)
     file << "\n";
 
     i = 1;
-    uint64_t totalTC = 0;
+    uint64_t allTotalMP_2 = 0;
     uint64_t totalRewards = 0;
-    for (std::vector<std::string>::iterator it = leaders.begin();
-        it != leaders.end(); it++, i++)
+    for (std::vector<std::string>::iterator it = miners.begin();
+        it != miners.end(); it++, i++)
     {
-        uint64_t  itTC = 0;
+        uint64_t  iTotalMP = 0;
         uint64_t  itRewards = 0;
         std::string address = *it;
-        uint64_t ttcleader = 0;//pmemberinfodb->GetTotalTXCnt(address, height);
-        std::string dummyStr;
-        uint64_t dummyInt;
-        CAmount  dummyValue;
-        pmemberinfodb->GetFullRecord(address, height, dummyStr, dummyStr, dummyInt, ttcleader, dummyValue, true);
-        file << i << " club:" << address << ", ttc:" << ttcleader << "\n";
-        file << "\t" << "index\t" << "address\t\t\t\t\t\t\t\t" << "packer\t" << "father\t"
-             << "tc\t" << "reward" << "\n";
+        CTAUAddrInfo addrInfo = paddrinfodb->GetAddrInfo(address, height);
+        uint64_t totalMP = addrInfo.totalMP;
+        file << i << " club:" << address << ", totalMP:" << totalMP << "\n";
+        file << "\t" << "index\t\t" << "address\t\t\t\t\t\t" << "miner\t\t\t\t\t\t" << "father\t\t\t\t\t"
+             << "MP\t\t   " << "reward" << "\n";
 
-        // Firstly, output leader info
-        std::string packer;
-        std::string father;
-        uint64_t    tc = 0;
-        uint64_t    ttc = 0;
-        CAmount     value = 0;
+        // Firstly, output miners info
+        //addrInfo = paddrinfodb->GetAddrInfo(address, height);
+        uint64_t index = addrInfo.index;
+        std::string miner = (addrInfo.miner.compare("0") == 0) ? address : addrInfo.miner;
+        std::string father = (addrInfo.father.compare("0") == 0) ? address : addrInfo.father;
+        uint64_t MP = pclubinfodb->GetCacheRecord(father)[index].MP;
+        CAmount value = pclubinfodb->GetCacheRecord(father)[index].rwd;
 
         int j = 1;
 
-        pmemberinfodb->GetFullRecord(address, height, packer, father, tc, ttc, value, true);
-        file << "\t" << j <<"\t\t" << address <<"\t" << packer <<"\t\t" << father << "\t\t"
-             << tc << "\t\t" << value << "\n";
-        itTC += tc;
+        file << "\t" << j <<"\t\t" << address <<"\t" << miner <<"\t\t" << father << "\t\t"
+             << MP << "\t\t" << value << "\n";
+        iTotalMP += MP;
         itRewards += value;
         j++;
 
-        std::vector<std::string> members
-            = pclubinfodb->GetTotalMembersByAddress(address, height, true);
+        // Secondly, output members info
+        std::vector<std::string> members;
+        pclubinfodb->GetTotalMembersByAddress(address, members);
+        std::string memberFather;
         for (std::vector<std::string>::iterator itr = members.begin();
             itr != members.end(); itr++, j++)
         {
-            pmemberinfodb->GetFullRecord(*itr, height, packer, father, tc, ttc, value, true);
-            file << "\t" << j <<"\t\t" << *itr <<"\t" << packer <<"\t\t" << father << "\t\t"
-                << tc << "\t\t" << value << "\n";
-            itTC += tc;
-            itRewards += value;
+            addrInfo = paddrinfodb->GetAddrInfo(*itr, height);
+            index = addrInfo.index;
+            memberFather = (addrInfo.father.compare("0") == 0) ? *itr : addrInfo.father;
+            file << "\t" << j <<"\t\t" << *itr <<"\t" << addrInfo.miner <<"\t\t" << addrInfo.father << "\t\t"
+                << pclubinfodb->GetCacheRecord(memberFather)[index].MP << "\t\t"
+                << pclubinfodb->GetCacheRecord(memberFather)[index].rwd << "\n";
+            iTotalMP += pclubinfodb->GetCacheRecord(memberFather)[index].MP;
+            itRewards += pclubinfodb->GetCacheRecord(memberFather)[index].rwd;
         }
 
-        file << "\n\n\ttotalTC:" << itTC
+        file << "\n\n\ttotalMP:" << iTotalMP
             << ", totalRewards:" << itRewards << "\n";
 
-        totalTC += itTC;
+        allTotalMP_2 += iTotalMP;
         totalRewards += itRewards;
 
         file << "\n\n";
     }
 
     file << "\n\n";
-    file << "Total TC:" << totalTC << ", total rewards:" << totalRewards << "\n";
+    file << "All totalMP:" << allTotalMP_2 << ", total rewards:" << totalRewards << "\n";
 
     file.close();
 
@@ -232,6 +210,20 @@ UniValue dumpclubmembers(const UniValue& params, bool fHelp)
 
 UniValue getrewardrate(const UniValue& params, bool fHelp)
 {
+    bool updateRewardRate = false;
+    if (mapArgs.count("-updaterewardrate") && mapMultiArgs["-updaterewardrate"].size() > 0)
+    {
+        string flag = mapMultiArgs["-updaterewardrate"][0];
+        if (flag.compare("true") == 0)
+            updateRewardRate = true;
+    }
+    if (!updateRewardRate)
+    {
+        throw runtime_error(
+                    "need by \"-updaterewardrate=true\" parameter\n"
+                    );
+    }
+
     if (fHelp || params.size() > 2)
         throw runtime_error(
             "getrewardrate height\n"
@@ -248,9 +240,7 @@ UniValue getrewardrate(const UniValue& params, bool fHelp)
             + HelpExampleCli("getrewardrate", "1000")
             + HelpExampleRpc("getrewardrate", "1000")
         );
-    if(mapMultiArgs["-updaterewardrate"].size() == 0){
-         throw JSONRPCError(RPC_INVALID_PARAMETER, "Error: updaterewardrate default is false");
-    }
+
     RPCTypeCheck(params, boost::assign::list_of(UniValue::VNUM), true);
 
     int chainHeight = 0;
@@ -303,75 +293,55 @@ UniValue getrewardrate(const UniValue& params, bool fHelp)
 
 UniValue getmemberinfo(const UniValue& params, bool fHelp)
 {
-    if (fHelp || params.size() < 1 || params.size() > 2)
+    if (fHelp || params.size() != 1)
         throw runtime_error(
-            "getmemberinfo address height\n"
-            "\nGet member information by address and chain height.\n"
+            "getmemberinfo \\\"address\\\"\n"
+            "\nGet member information by address.\n"
             "\nArguments:\n"
             "1. address    (string, required) The address to get member info.\n"
-            "2. height     (numeric, optinal) the blockchain height.\n"
             "\nResult\n"
             "{\n"
             "    \"height\": <height>\n"
             "    \"address\": <addr>\n"
-            "    \"clubleader\": <mining club leader>\n"
+            "    \"clubminer\": <mining club miner>\n"
             "    \"father\": <address father>\n"
             "    \"miningpower\": <address's miningpower>\n"
             "    \"rewards\": <address's rewards>\n"
             "}\n"
             "\nExamples:\n"
-            + HelpExampleCli("getmemberinfo", "\"myaddress\" 1000")
-            + HelpExampleRpc("getmemberinfo", "\"myaddress\" 1000")
+            + HelpExampleCli("getmemberinfo", "\"myaddress\"")
+            + HelpExampleRpc("getmemberinfo", "\"myaddress\"")
         );
 
     RPCTypeCheck(params, boost::assign::list_of(UniValue::VSTR)(UniValue::VNUM), true);
 
-    int chainHeight = 0;
-    {
-        LOCK(cs_main);
-        chainHeight = chainActive.Height();
-    }
-
     std::string addrStr = params[0].get_str();
 
-    int height = 0;
-    if (params.size() == 1)
-    {
-        height = chainHeight;
-    }
-    else if (params.size() == 2)
-    {
-        height = params[1].get_int();
-        if (height < 0 || height > chainHeight)
-            throw JSONRPCError(RPC_INVALID_PARAMETER, "Error: Invalid height");
-    }
+    LOCK(cs_main);
+    int height = chainActive.Height();
 
     CBitcoinAddress address(addrStr);
     if (!address.IsValid())
         throw JSONRPCError(RPC_INVALID_ADDRESS_OR_KEY, "Error: Invalid address");
 
-    std::string leader;
-    std::string father;
-    uint64_t selfMP;
-    uint64_t clubMP;
-    CAmount rewards;
-    pmemberinfodb->GetFullRecord(addrStr, height, leader, father, selfMP, clubMP, rewards, true);
+    CTAUAddrInfo addrInfo = paddrinfodb->GetAddrInfo(addrStr, height);
+    uint64_t index = addrInfo.index;
+    std::string miner = (addrInfo.miner.compare("0") == 0) ? addrStr : addrInfo.miner;
+    std::string father = (addrInfo.father.compare("0") == 0) ? addrStr : addrInfo.father;
+    std::vector<CMemberInfo> vc = pclubinfodb->GetCacheRecord(father);
+    if(vc.empty()||index >=vc.size()){
+       throw JSONRPCError(RPC_INVALID_ADDRESS_OR_KEY, "Error: Invalid address,index out of range");
+    }
+    uint64_t selfMP = vc[index].MP;
+    uint64_t clubMP = addrInfo.totalMP;
+    CAmount rewards = vc[index].rwd;
 
-    // In this case, addrStr is a mining club leader
-    if (leader.compare("0") == 0 && father.compare("0") == 0)
-    {
-        leader = addrStr;
-        father = addrStr;
-    }
-    else
-    {
-        clubMP = pmemberinfodb->GetHarvestPowerByAddress(leader, height);
-    }
+    clubMP = paddrinfodb->GetHarvestPowerByAddress(miner, height);
 
     UniValue result(UniValue::VOBJ);
     result.push_back(Pair("address", addrStr));
     result.push_back(Pair("height", height));
-    result.push_back(Pair("clubleader", leader));
+    result.push_back(Pair("clubminer", miner));
     result.push_back(Pair("clubpower", clubMP));
     result.push_back(Pair("selfpower", selfMP));
     result.push_back(Pair("father", father));

@@ -18,7 +18,6 @@
 #include "primitives/transaction.h"
 #include "rpc/server.h"
 #include "random.h"
-#include "rewardman.h"
 #include "script/script.h"
 #include "script/script_error.h"
 #include "script/sign.h"
@@ -154,7 +153,8 @@ bool CTransactionUtils::SelectCoinsMinConf(const CAmount& nTargetValue, int nCon
 
         int n = output.n;
         CAmount v = coins.vout[output.n].nValue;
-
+        if (v < 0)
+            continue;
         std::pair<CAmount, COutPoint> coin = std::make_pair(v, COutPoint(output.hash, n));
 
         if (v == nTargetValue)
@@ -326,7 +326,7 @@ bool CTransactionUtils::AvailableRewards(const std::string& pubKey, std::vector<
         LogPrint("selectcoins", "%s addr:%s\n", __func__, addrStr);
     }
 
-    CAmount rewards = RewardManager::GetInstance()->GetRewardsByPubkey(pubKey);
+    CAmount rewards = paddrinfodb->GetRwdByPubkey(pubKey);
 
     vRewards.push_back(CTxReward(pubKey, rewards, (uint32_t)GetTime()));
 
@@ -610,6 +610,11 @@ bool CTransactionUtils::CreateTransaction(std::map<std::string, CAmount>& receip
 
             bool signSuccess;
             const CScript& scriptPubKey = coin.vout[outpoint.n].scriptPubKey;
+            if (outpoint.n >= coin.vout.size())
+            {
+                strFailReason = _("fail to get UTXOs in size");
+                return false;
+            }
             SignatureData sigdata;
             signSuccess = ProduceSignature(TransactionSignatureCreator(&keystore, &txNewConst, nIn, coin.vout[outpoint.n].nValue, SIGHASH_ALL),
                     scriptPubKey, sigdata);
