@@ -2115,7 +2115,7 @@ bool CheckTxInputs(const CTransaction& tx, CValidationState& state, const CCoins
                     return state.DoS(100, false, REJECT_INVALID, "bad-txns-balance-largethandb");
                 }
             } else {
-                if ((reward.rewardBalance > local) && (reward.rewardBalance - local) > 30)
+                if ((reward.rewardBalance > local) && (reward.rewardBalance - local) > 300)
                 {
                     std::cout << "Balance - local:" << reward.rewardBalance - local << std::endl;
                     return state.DoS(100, false, REJECT_INVALID, "bad-txn-balance-largethandb");
@@ -2142,7 +2142,7 @@ bool CheckTxInputs(const CTransaction& tx, CValidationState& state, const CCoins
                         return state.DoS(100, false, REJECT_INVALID, "bad-txns-balance-largethandb");
                     }
                 } else {
-                    if (((reward.rewardBalance > local) && (reward.rewardBalance - local) > 30) || !MoneyRange(it->second))
+                    if (((reward.rewardBalance > local) && (reward.rewardBalance - local) > 300) || !MoneyRange(it->second))
                     {
                         std::cout << "Balance - local:" << reward.rewardBalance - local << std::endl;
                         return state.DoS(100, false, REJECT_INVALID, "bad-txn-balance-largethandb");
@@ -2259,7 +2259,7 @@ bool CheckRewards(const CTransaction& tx, CValidationState &state, const CCoinsV
                     return state.DoS(100, false, REJECT_INVALID, "bad-txns-balance-largethandb");
                 }
             } else {
-                if ((senderRwdInTx > local) && (senderRwdInTx - local) > 30)
+                if ((senderRwdInTx > local) && (senderRwdInTx - local) > 300)
                 {
                     std::cout << "Balance - local:" << senderRwdInTx - local << std::endl;
                     return state.DoS(100, false, REJECT_INVALID, "bad-txn-balance-largethandb");
@@ -4023,7 +4023,7 @@ bool ContextualCheckBlockHeader(const CBlockHeader& block, CValidationState& sta
             std::cout << "-nDiff:" << nDiff << std::endl;
         else if (nDiff > 0)
             std::cout << "+nDiff:" << nDiff << std::endl;
-        if (abs(nDiff) > 30)
+        if (abs(nDiff) > 300)
             return state.DoS(50, false, REJECT_INVALID, "bad-basetargetbit", false, "incorrect proof of tx");
     } else {
         if (block.baseTarget != getNextPotRequired(pindexPrev))
