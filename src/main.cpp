@@ -1057,8 +1057,19 @@ int64_t GetTransactionSigOpCost(const CTransaction& tx, const CCoinsViewCache& i
 
 bool CheckTxRewards(const CTransaction& tx, CValidationState &state)
 {
-    if (tx.vreward.empty())
-        return true;
+    CChainParams chainparams = ::Params();
+    if (chainActive.Height() <= chainparams.GetConsensus().NoRewardHeight)
+    {
+        if (tx.vreward.empty())
+            return true;
+    }
+    else
+    {
+        if (!tx.vreward.empty())
+            return false;
+        else
+            return true;
+    }
 
 //    static const int nOneMonth = 30 * 24 * 60 * 60;
 //    int64_t now = GetTime();
@@ -1587,7 +1598,7 @@ bool AcceptToMemoryPoolWorker(CTxMemPool& pool, CValidationState& state, const C
                 __func__, hash.ToString(), FormatStateMessage(state));
         }
 
-        if (!CheckRewards(tx, state, true, STANDARD_SCRIPT_VERIFY_FLAGS, true))
+        if (!CheckRewards(tx, state, view, true, STANDARD_SCRIPT_VERIFY_FLAGS, true))
             return false;
 
         // Remove conflicting transactions from the mempool
@@ -2053,6 +2064,7 @@ bool CheckTxInputs(const CTransaction& tx, CValidationState& state, const CCoins
         if (!inputs.HaveInputs(tx))
             return state.Invalid(false, 0, "", "Inputs unavailable");
 
+        CChainParams chainparams = ::Params();
         CAmount nValueIn = 0;
         CAmount nFees = 0;
         for (unsigned int i = 0; i < tx.vin.size(); i++)
@@ -2070,7 +2082,6 @@ bool CheckTxInputs(const CTransaction& tx, CValidationState& state, const CCoins
             }
 
             // If prev is genesis locked coinbase, check that it's matured
-            CChainParams chainparams = ::Params();
             if (prevout.hash == chainparams.GetConsensus().hashGenesisTx &&
                 prevout.n > GENESISCOIN_CNT - GENESISLOCK_ADDRCNT - 1) {
                 if (nSpendHeight - coins->nHeight < GENESISLOCK_MATURITY)
@@ -2098,9 +2109,17 @@ bool CheckTxInputs(const CTransaction& tx, CValidationState& state, const CCoins
             }
 
             CAmount local = paddrinfodb->GetRwdByPubkey(reward.senderPubkey);
-            if (reward.rewardBalance > local)
-            {
-                return state.DoS(100, false, REJECT_INVALID, "bad-txns-balance-largethandb");
+            if (nSpendHeight > chainparams.GetConsensus().NoRewardHeight) {
+                if (reward.rewardBalance > local)
+                {
+                    return state.DoS(100, false, REJECT_INVALID, "bad-txns-balance-largethandb");
+                }
+            } else {
+                if ((reward.rewardBalance > local) && (reward.rewardBalance - local) > 30)
+                {
+                    std::cout << "Balance - local:" << reward.rewardBalance - local << std::endl;
+                    return state.DoS(100, false, REJECT_INVALID, "bad-txn-balance-largethandb");
+                }
             }
 
             std::map<std::string, CAmount>::iterator it = mPubkeyToRewards.find(reward.senderPubkey);
@@ -2115,6 +2134,19 @@ bool CheckTxInputs(const CTransaction& tx, CValidationState& state, const CCoins
                 if (it->second > local || !MoneyRange(it->second))
                 {
                     return state.DoS(100, false, REJECT_INVALID, "bad-txns-balancetotal-outofrange");
+                }
+
+                if (nSpendHeight > chainparams.GetConsensus().NoRewardHeight) {
+                    if (reward.rewardBalance > local || !MoneyRange(it->second))
+                    {
+                        return state.DoS(100, false, REJECT_INVALID, "bad-txns-balance-largethandb");
+                    }
+                } else {
+                    if (((reward.rewardBalance > local) && (reward.rewardBalance - local) > 30) || !MoneyRange(it->second))
+                    {
+                        std::cout << "Balance - local:" << reward.rewardBalance - local << std::endl;
+                        return state.DoS(100, false, REJECT_INVALID, "bad-txn-balance-largethandb");
+                    }
                 }
             }
 
@@ -2200,7 +2232,7 @@ bool CheckInputs(const CTransaction& tx, CValidationState &state, const CCoinsVi
     return true;
 }
 
-bool CheckRewards(const CTransaction& tx, CValidationState &state, bool fScriptChecks, unsigned int flags, bool cacheStore)
+bool CheckRewards(const CTransaction& tx, CValidationState &state, const CCoinsViewCache &inputs, bool fScriptChecks, unsigned int flags, bool cacheStore)
 {
     if (!CheckTxRewards(tx, state))
         return false;
@@ -2216,11 +2248,23 @@ bool CheckRewards(const CTransaction& tx, CValidationState &state, bool fScriptC
     // the checkpoint is for a chain that's invalid due to false scriptSigs
     // this optimisation would allow an invalid chain to be accepted.
     if (fScriptChecks) {
+        int nSpendHeight = GetSpendHeight(inputs);
+        CChainParams chainparams = ::Params();
         for (unsigned int i = 0; i < tx.vreward.size(); i++) {
             const CAmount senderRwdInTx = tx.vreward[i].rewardBalance;
-            const CAmount senderRwdInDB = paddrinfodb->GetRwdByPubkey(tx.vreward[i].senderPubkey);
-            if (senderRwdInTx > senderRwdInDB)
-                return state.DoS(100,false, REJECT_INVALID, "reward-balance-verify-flag-failed");
+            const CAmount local = paddrinfodb->GetRwdByPubkey(tx.vreward[i].senderPubkey);
+            if (nSpendHeight > chainparams.GetConsensus().NoRewardHeight) {
+                if (senderRwdInTx > local)
+                {
+                    return state.DoS(100, false, REJECT_INVALID, "bad-txns-balance-largethandb");
+                }
+            } else {
+                if ((senderRwdInTx > local) && (senderRwdInTx - local) > 30)
+                {
+                    std::cout << "Balance - local:" << senderRwdInTx - local << std::endl;
+                    return state.DoS(100, false, REJECT_INVALID, "bad-txn-balance-largethandb");
+                }
+            }
 
             // Verify signature
             CScriptCheck check(tx, i, flags, cacheStore);
@@ -2757,7 +2801,7 @@ bool ConnectBlock(const CBlock& block, CValidationState& state, CBlockIndex* pin
                 if (!CheckInputs(tx, state, view, fScriptChecks, flags, fCacheResults, nScriptCheckThreads ? &vChecks : NULL))
                     return error("ConnectBlock(): CheckInputs on %s failed with %s",
                                  tx.GetHash().ToString(), FormatStateMessage(state));
-                if (!CheckRewards(tx, state, fScriptChecks, STANDARD_SCRIPT_VERIFY_FLAGS, fCacheResults))
+                if (!CheckRewards(tx, state, view, fScriptChecks, STANDARD_SCRIPT_VERIFY_FLAGS, fCacheResults))
                     return error("ConnectBlock(): CheckRewards on %s failed with %s",
                                  tx.GetHash().ToString(), FormatStateMessage(state));
                 control.Add(vChecks);
@@ -3972,8 +4016,19 @@ bool ContextualCheckBlockHeader(const CBlockHeader& block, CValidationState& sta
     }
 
     // Check proof of stake
-    if (block.baseTarget != getNextPotRequired(pindexPrev))
-        return state.DoS(50, false, REJECT_INVALID, "bad-basetargetbits", false, "incorrect proof of tx");
+    if (pindexPrev->nHeight < consensusParams.NoRewardHeight) {
+        uint64_t baseTargetRequired = getNextPotRequired(pindexPrev);
+        int nDiff = block.baseTarget - baseTargetRequired;
+        if (nDiff < -28)
+            std::cout << "-nDiff:" << nDiff << std::endl;
+        else if (nDiff > 0)
+            std::cout << "+nDiff:" << nDiff << std::endl;
+        if (abs(nDiff) > 30)
+            return state.DoS(50, false, REJECT_INVALID, "bad-basetargetbit", false, "incorrect proof of tx");
+    } else {
+        if (block.baseTarget != getNextPotRequired(pindexPrev))
+            return state.DoS(50, false, REJECT_INVALID, "bad-basetargetbits", false, "incorrect proof of tx");
+    }
 
     if (block.cumulativeDifficulty != GetNextCumulativeDifficulty(pindexPrev, block.baseTarget, consensusParams))
         return state.DoS(50, false, REJECT_INVALID, "bad-cumuldiffbits", false, "incorrect proof of tx");

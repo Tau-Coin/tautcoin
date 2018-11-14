@@ -1777,11 +1777,15 @@ CAmount CWallet::GetBalance() const
                 nTotal += pcoin->GetAvailableCredit();
         }
 
-        vector<CTxReward> vrewards;
-        AvailableRewards(vrewards);
-        BOOST_FOREACH(const CTxReward& reward, vrewards)
+        CChainParams chainparams = ::Params();
+        if (chainActive.Tip()->nHeight <= chainparams.GetConsensus().NoRewardHeight)
         {
-            nTotal += reward.rewardBalance;
+            vector<CTxReward> vrewards;
+            AvailableRewards(vrewards);
+            BOOST_FOREACH(const CTxReward& reward, vrewards)
+            {
+                nTotal += reward.rewardBalance;
+            }
         }
     }
 
@@ -2277,8 +2281,17 @@ bool CWallet::CreateTransaction(const vector<CRecipient>& vecSend, CWalletTx& wt
     assert(txNew.nLockTime <= (unsigned int)chainActive.Height());
     assert(txNew.nLockTime < LOCKTIME_THRESHOLD);
 
+    bool bRewardAvailable = false;
+
     {
         LOCK2(cs_main, cs_wallet);
+
+        CChainParams chainparams = ::Params();
+        if (chainActive.Height() <= chainparams.GetConsensus().NoRewardHeight)
+        {
+            bRewardAvailable = true;
+        }
+
         {
             std::vector<COutput> vAvailableCoins;
             AvailableCoins(vAvailableCoins, true, coinControl);
@@ -2336,9 +2349,17 @@ bool CWallet::CreateTransaction(const vector<CRecipient>& vecSend, CWalletTx& wt
                 CAmount nValueIn = 0;
                 if (!SelectCoins(vAvailableCoins, nValueToSelect, setCoins, nValueIn, coinControl))
                 {
-                    std::vector<CTxReward> vAvailableRewards;
-                    AvailableRewards(vAvailableRewards, coinControl);
-                    if (!SelectRewards(vAvailableRewards, nValueToSelect-nValueIn, setRewards, nValueIn, coinControl))
+                    if (bRewardAvailable)
+                    {
+                        std::vector<CTxReward> vAvailableRewards;
+                        AvailableRewards(vAvailableRewards, coinControl);
+                        if (!SelectRewards(vAvailableRewards, nValueToSelect-nValueIn, setRewards, nValueIn, coinControl))
+                        {
+                            strFailReason = _("Insufficient funds");
+                            return false;
+                        }
+                    }
+                    else
                     {
                         strFailReason = _("Insufficient funds");
                         return false;

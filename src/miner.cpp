@@ -168,17 +168,6 @@ CBlockTemplate* BlockAssembler::CreateNewBlock(const CScript& scriptPubKeyIn,std
     nLastBlockWeight = nBlockWeight;
     LogPrintf("CreateNewBlock(): total size %u txs: %u fees: %ld sigops %d\n", nBlockSize, nBlockTx, nFees, nBlockSigOpsCost);
 
-    // Recompute nFees
-    if (mapArgs.count("-leaderreward") && mapMultiArgs["-leaderreward"].size() > 0)
-    {
-        string ratiostr = mapMultiArgs["-leaderreward"][0];
-        double ratio = atof(ratiostr.c_str());
-        if (ratio > 0 && ratio < 1)
-            nFees = CAmount(nFees * ratio);
-    }
-    else
-        nFees = CAmount(nFees * DEFAULT_CLUB_LEADER_REWARD_RATIO);
-
     // Create coinbase transaction.
     CMutableTransaction coinbaseTx;
     coinbaseTx.vin.resize(1);
@@ -618,16 +607,4 @@ void IncrementExtraNonce(CBlock* pblock, const CBlockIndex* pindexPrev, unsigned
 
     pblock->vtx[0] = txCoinbase;
     pblock->hashMerkleRoot = BlockMerkleRoot(*pblock);
-}
-bool isPreparedtoPackage(std::string pubkeyString)
-{
-   string geneSignature = getLatestBlockGenerationSignature();
-   uint256 geneSignatureHash = getPotHash(geneSignature,pubkeyString);
-   uint64_t hit = calculateHitOfPOT(geneSignatureHash);
-   LOCK(cs_main);
-   CBlockIndex* pindexPrev = chainActive.Tip();
-   uint64_t target = getNextPotRequired(pindexPrev);
-   int64_t S = getPastTimeFromLastestBlock();
-   uint64_t Be = 88888;
-   return hit < target * S * Be;
 }

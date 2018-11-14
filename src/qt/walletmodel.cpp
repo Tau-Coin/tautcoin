@@ -66,11 +66,15 @@ CAmount WalletModel::getBalance(const CCoinControl *coinControl) const
             if(out.fSpendable)
                 nBalance += out.tx->vout[out.i].nValue;
 
-        std::vector<CTxReward> vrewards;
-        wallet->AvailableRewards(vrewards);
-        BOOST_FOREACH(const CTxReward& reward, vrewards)
+        CChainParams chainparams = ::Params();
+        if (chainActive.Height() <= chainparams.GetConsensus().NoRewardHeight)
         {
-            nBalance += reward.rewardBalance;
+            std::vector<CTxReward> vrewards;
+            wallet->AvailableRewards(vrewards);
+            BOOST_FOREACH(const CTxReward& reward, vrewards)
+            {
+                nBalance += reward.rewardBalance;
+            }
         }
 
         return nBalance;

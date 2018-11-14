@@ -149,8 +149,6 @@ static const int MAX_UNCONNECTING_HEADERS = 10;
 
 static const bool DEFAULT_PEERBLOOMFILTERS = true;
 
-static const double DEFAULT_CLUB_LEADER_REWARD_RATIO = 0.5;
-
 struct BlockHasher
 {
     size_t operator()(const uint256& hash) const { return hash.GetCheapHash(); }
@@ -363,7 +361,7 @@ int64_t GetTransactionSigOpCost(const CTransaction& tx, const CCoinsViewCache& i
 bool CheckInputs(const CTransaction& tx, CValidationState &state, const CCoinsViewCache &view, bool fScriptChecks,
                  unsigned int flags, bool cacheStore, std::vector<CScriptCheck> *pvChecks = NULL);
 
-bool CheckRewards(const CTransaction& tx, CValidationState &state, bool fScriptChecks, unsigned int flags, bool cacheStore);
+bool CheckRewards(const CTransaction& tx, CValidationState &state, const CCoinsViewCache &view, bool fScriptChecks, unsigned int flags, bool cacheStore);
 
 /** Apply the effects of this transaction on the UTXO set represented by view */
 void UpdateCoins(const CTransaction& tx, CCoinsViewCache& inputs, int nHeight);

@@ -389,9 +389,16 @@ bool CTransactionUtils::CreateTransaction(std::map<std::string, CAmount>& receip
     }
     keystore.AddKey(key);
 
+    bool bRewardAvailable = false;
     {
         LOCK(cs_main);
         tx.nLockTime = chainActive.Height();
+
+        CChainParams chainparams = ::Params();
+        if (chainActive.Height() <= chainparams.GetConsensus().NoRewardHeight)
+        {
+            bRewardAvailable = true;
+        }
     }
 
     if (GetRandInt(10) == 0)
@@ -407,10 +414,18 @@ bool CTransactionUtils::CreateTransaction(std::map<std::string, CAmount>& receip
     std::vector<CTxReward> vAvailableRewards;
     if (!AvailableCoins(pubKey, coins))
     {
-        AvailableRewards(pubKey, vAvailableRewards);
-        if (vAvailableRewards.size() == 0)
+        if (bRewardAvailable)
         {
-            strFailReason = _("fail to get UTXOs and rewards, invalid address");
+            AvailableRewards(pubKey, vAvailableRewards);
+            if (vAvailableRewards.size() == 0)
+            {
+                strFailReason = _("fail to get UTXOs and rewards, invalid address");
+                return false;
+            }
+        }
+        else
+        {
+            strFailReason = _("fail to get UTXOs, invalid address");
             return false;
         }
     }
@@ -488,14 +503,22 @@ bool CTransactionUtils::CreateTransaction(std::map<std::string, CAmount>& receip
         LogPrint("selectcoins", "selected value:%d\n", nValueToSelect);
         if (!SelectCoins(coins, nValueToSelect, setCoins, nValueIn))
         {
-            if (vAvailableRewards.size() == 0)
+            if (bRewardAvailable)
             {
-                AvailableRewards(pubKey, vAvailableRewards);
-            }
+                if (vAvailableRewards.size() == 0)
+                {
+                    AvailableRewards(pubKey, vAvailableRewards);
+                }
 
-            CAmount nRewardTargetValue = nValueToSelect - nValueIn;
-            LogPrint("selectcoins", "selected reward target value:%d  [\n", nRewardTargetValue);
-            if (!SelectRewards(vAvailableRewards, nRewardTargetValue, setRewards, nRewardIn))
+                CAmount nRewardTargetValue = nValueToSelect - nValueIn;
+                LogPrint("selectcoins", "selected reward target value:%d  [\n", nRewardTargetValue);
+                if (!SelectRewards(vAvailableRewards, nRewardTargetValue, setRewards, nRewardIn))
+                {
+                    strFailReason = _("Insufficient funds");
+                    return false;
+                }
+            }
+            else
             {
                 strFailReason = _("Insufficient funds");
                 return false;

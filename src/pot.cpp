@@ -136,16 +136,18 @@ uint64_t getNextPotRequired(const CBlockIndex* pindexLast){
    }
    uint64_t lastTime = pindexLast -> GetBlockTime();
    uint64_t lastBlockParentTime = ancestor->GetBlockTime();
-   uint64_t Sa = (lastTime - lastBlockParentTime)/3 ;
+   uint64_t Sa = 0;
+   if (lastTime > lastBlockParentTime)
+       Sa = (lastTime - lastBlockParentTime)/3;
    uint64_t newBaseTarget = 0;
-   if (Sa > 60){
+   if (Sa >= 60){
        uint64_t min = 0;
        if(Sa < MAXRATIO){
            min = Sa;
        }else{
            min = MAXRATIO;
        }
-       newBaseTarget = (min * pindexLast->baseTarget)/60;
+       newBaseTarget = (min * pindexLast->baseTarget) / 60;
    }else{
        uint64_t max = 0;
        if(Sa > MINRATIO){
@@ -153,7 +155,8 @@ uint64_t getNextPotRequired(const CBlockIndex* pindexLast){
        }else{
            max = MINRATIO;
        }
-       newBaseTarget = pindexLast->baseTarget - ((60 - max) * GAMMA * pindexLast->baseTarget)/60;
+       newBaseTarget = pindexLast->baseTarget - (pindexLast->baseTarget / 375) * (60 - max) * 4;
+       //newBaseTarget = pindexLast->baseTarget - ((60 - max) * 4 * pindexLast->baseTarget) / 375;
    }
    //LogPrintf("NewBaseTarget is %s last time is %s lastBlockParentTime %s\n",newBaseTarget,lastTime,lastBlockParentTime);
    return newBaseTarget;
