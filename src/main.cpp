@@ -2112,12 +2112,13 @@ bool CheckTxInputs(const CTransaction& tx, CValidationState& state, const CCoins
             if (nSpendHeight > chainparams.GetConsensus().NoRewardHeight) {
                 if (reward.rewardBalance > local)
                 {
+                    LogPrintf("%s: balance error value %i, %i\n", __func__, reward.rewardBalance, local);
                     return state.DoS(100, false, REJECT_INVALID, "bad-txns-balance-largethandb");
                 }
             } else {
                 if ((reward.rewardBalance > local) && (reward.rewardBalance - local) > 300)
                 {
-                    std::cout << "Balance - local:" << reward.rewardBalance - local << std::endl;
+                    LogPrintf("%s: balance error value %i, %i\n", __func__, reward.rewardBalance, local);
                     return state.DoS(100, false, REJECT_INVALID, "bad-txn-balance-largethandb");
                 }
             }
@@ -2131,21 +2132,17 @@ bool CheckTxInputs(const CTransaction& tx, CValidationState& state, const CCoins
             else
             {
                 it->second += reward.rewardBalance;
-                if (it->second > local || !MoneyRange(it->second))
-                {
-                    return state.DoS(100, false, REJECT_INVALID, "bad-txns-balancetotal-outofrange");
-                }
-
                 if (nSpendHeight > chainparams.GetConsensus().NoRewardHeight) {
-                    if (reward.rewardBalance > local || !MoneyRange(it->second))
+                    if (it->second > local || !MoneyRange(it->second))
                     {
-                        return state.DoS(100, false, REJECT_INVALID, "bad-txns-balance-largethandb");
+                        LogPrintf("%s: balance error value %i, %i\n", __func__, it->second, local);
+                        return state.DoS(100, false, REJECT_INVALID, "bad-txns-balancetotal-outofrange");
                     }
                 } else {
-                    if (((reward.rewardBalance > local) && (reward.rewardBalance - local) > 300) || !MoneyRange(it->second))
+                    if (((it->second > local) && (it->second - local) > 300) || !MoneyRange(it->second))
                     {
-                        std::cout << "Balance - local:" << reward.rewardBalance - local << std::endl;
-                        return state.DoS(100, false, REJECT_INVALID, "bad-txn-balance-largethandb");
+                        LogPrintf("%s: balance error value %i, %i\n", __func__, it->second, local);
+                        return state.DoS(100, false, REJECT_INVALID, "bad-txn-balancetotal-outofrange");
                     }
                 }
             }
@@ -2261,7 +2258,7 @@ bool CheckRewards(const CTransaction& tx, CValidationState &state, const CCoinsV
             } else {
                 if ((senderRwdInTx > local) && (senderRwdInTx - local) > 300)
                 {
-                    std::cout << "Balance - local:" << senderRwdInTx - local << std::endl;
+                    LogPrintf("%s: balance error value %i, %i\n", __func__, senderRwdInTx, local);
                     return state.DoS(100, false, REJECT_INVALID, "bad-txn-balance-largethandb");
                 }
             }
@@ -4019,15 +4016,15 @@ bool ContextualCheckBlockHeader(const CBlockHeader& block, CValidationState& sta
     if (pindexPrev->nHeight < consensusParams.NoRewardHeight) {
         uint64_t baseTargetRequired = getNextPotRequired(pindexPrev);
         int nDiff = block.baseTarget - baseTargetRequired;
-        if (nDiff < -28)
-            std::cout << "-nDiff:" << nDiff << std::endl;
-        else if (nDiff > 0)
-            std::cout << "+nDiff:" << nDiff << std::endl;
-        if (abs(nDiff) > 300)
+        if (abs(nDiff) > 300) {
+            LogPrintf("%s: base target error range %i\n", __func__, nDiff);
             return state.DoS(50, false, REJECT_INVALID, "bad-basetargetbit", false, "incorrect proof of tx");
+        }
     } else {
-        if (block.baseTarget != getNextPotRequired(pindexPrev))
+        if (block.baseTarget != getNextPotRequired(pindexPrev)) {
+            LogPrintf("%s: base target error value: %i, %i\n", __func__, block.baseTarget, getNextPotRequired(pindexPrev));
             return state.DoS(50, false, REJECT_INVALID, "bad-basetargetbits", false, "incorrect proof of tx");
+        }
     }
 
     if (block.cumulativeDifficulty != GetNextCumulativeDifficulty(pindexPrev, block.baseTarget, consensusParams))
