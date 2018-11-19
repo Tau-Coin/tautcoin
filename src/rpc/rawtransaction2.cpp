@@ -1129,13 +1129,10 @@ UniValue getbalancebypubkey(const UniValue& params, bool fHelp)
         UniValue o(UniValue::VOBJ);
         o.push_back(Pair("pubkey", pubkey));
         o.push_back(Pair("utxo", utxoTotal));
-        CChainParams chainparams = ::Params();
-        if (chainActive.Height() <= chainparams.GetConsensus().NoRewardHeight)
-        {
-            uint64_t rewards = 0;
-            rewards = paddrinfodb->GetRwdByPubkey(pubkey);
-            o.push_back(Pair("rewards", rewards));
-        }
+
+        uint64_t rewards = 0;
+        rewards = paddrinfodb->GetRwdByPubkey(pubkey);
+        o.push_back(Pair("rewards", rewards));
 
         results.push_back(o);
     }
