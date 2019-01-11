@@ -25,7 +25,7 @@ Resources
 2. [White Paper](https://www.taucoin.io/whitePaper/TAU%20White%20Paper%20v0.1.pdf)
 
 ## Getting Started
-Seen in [build-unix.md](https://github.com/Tau-Coin/taucoin/blob/master/build-unix.md).
+Seen in [build-unix.md](https://github.com/Tau-Coin/taucoin/blob/developer/docs/build-unix.md).
 
 ## Schedule
 The testnet is published from 2018-08-01 to 2018-09-01.
